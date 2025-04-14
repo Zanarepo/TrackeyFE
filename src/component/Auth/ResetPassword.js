@@ -34,7 +34,7 @@ const ResetPassword = () => {
     }
 
     try {
-      const response = await fetch("https://sprintifypassword.onrender.com/reset-password", {
+      const response = await fetch("https://trackitbe.onrender.com/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword: password }),

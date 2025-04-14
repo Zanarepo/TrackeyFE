@@ -40,14 +40,15 @@ const Navbar = () => {
 
       {/* Desktop Menu (visible on md and up) */}
       <div className="hidden md:flex gap-6 items-center pr-6">
-        <Link to="/allapps" className="hover:underline">
-          All-in-one
-        </Link>
+        
         <Link to="/register" className="hover:underline">
           Register
         </Link>
         <Link to="/login" className="hover:underline">
           Login
+        </Link>
+        <Link to="/forgot-password" className="hover:underline">
+          Forgot Password
         </Link>
         
       </div>
@@ -58,13 +59,7 @@ const Navbar = () => {
       {/* Mobile Menu (dropdown) */}
       {isMenuOpen && (
         <div className="absolute top-full left-0 w-full bg-yellow-800 text-white flex flex-col items-start p-4 md:hidden">
-          <Link
-            to="/allapps"
-            className="py-2 w-full hover:underline"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            All-in-one
-          </Link>
+          
          
           <Link
             to="/register"
@@ -80,6 +75,14 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen(false)}
           >
              Login
+          </Link>
+
+          <Link
+            to="/forgot-password"
+            className="py-2 w-full hover:underline"
+            onClick={() => setIsMenuOpen(false)}
+          >
+             Forgot Password
           </Link>
         
         </div>
