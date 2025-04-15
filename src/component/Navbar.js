@@ -47,9 +47,7 @@ const Navbar = () => {
         <Link to="/login" className="hover:underline">
           Login
         </Link>
-        <Link to="/forgot-password" className="hover:underline">
-          Forgot Password
-        </Link>
+
         
       </div>
 
@@ -77,14 +75,7 @@ const Navbar = () => {
              Login
           </Link>
 
-          <Link
-            to="/forgot-password"
-            className="py-2 w-full hover:underline"
-            onClick={() => setIsMenuOpen(false)}
-          >
-             Forgot Password
-          </Link>
-        
+       
         </div>
       )}
     </nav>
