@@ -1,13 +1,13 @@
 import React from "react";
-import { Linkedin, X, Mail, Phone } from "lucide-react";
+//import { Linkedin, X, Mail, Phone } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-yellow-800 text-white py-6">
+    <footer className="bg-indigo-800 text-white py-6">
       <div className="container mx-auto px-4">
-        {/* Social Icons & Contact Links aligned left */}
+        
         <div className="flex flex-col md:flex-row items-center md:items-start">
-          <div className="flex items-center space-x-4">
+         {/*  <div className="flex items-center space-x-4">
             <a
               href="https://www.linkedin.com/company/sprintifyhq/"
               target="_blank"
@@ -36,10 +36,10 @@ const Footer = () => {
             >
               <Phone size={24} />
             </a>
-          </div>
+          </div>*/}
           {/* Contact details */}
           <div className="mt-4 md:mt-0 md:ml-8 text-left">
-            <p className="text-sm">hello@sprintifyhq.com</p>
+            <p className="text-sm">hello@sellytics.com</p>
             <p className="text-sm">+234 7088 34 7620</p>
           </div>
         </div>

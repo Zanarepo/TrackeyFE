@@ -58,15 +58,15 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white p-6 rounded shadow">
-        <h1 className="text-3xl font-bold mb-6 text-center">Store Login</h1>
+        <h1 className="text-3xl font-bold text-indigo-800 mb-6 text-center">Store Login</h1>
         {notification && (
-          <div className="mb-4 p-2 bg-yellow-100 text-yellow-800 text-center rounded">
+          <div className="mb-4 p-2 text-indigo-800  text-center rounded">
             {notification}
           </div>
         )}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-gray-700 font-medium mb-1">Email Address</label>
+            <label className="block text-indigo-800 font-medium mb-1">Email Address</label>
             <input
               type="email"
               value={emailAddress}
@@ -77,7 +77,7 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block text-gray-700 font-medium mb-1">Password</label>
+            <label className="block text-indigo-800 font-medium mb-1">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -97,7 +97,7 @@ export default function Login() {
             </div>
           </div>
           <div className="text-right">
-            <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+            <a href="/forgot-password" className="text-sm text-indigo-800 hover:underline">
               Forgot password?
             </a>
           </div>
@@ -105,7 +105,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+              className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-blue-900 transition disabled:opacity-50"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>

@@ -62,14 +62,14 @@ const ResetPassword = () => {
 
   return (
     <div className="max-w-md mx-auto mt-40 p-6 border rounded-lg shadow-md bg-white">
-      <h2 className="text-2xl font-semibold text-center text-yellow-800">Reset Password</h2>
+      <h2 className="text-2xl font-bold text-center text-indigo-800">Reset Password</h2>
 
       {message && <p className="text-green-600 text-center mt-2">{message}</p>}
       {error && <p className="text-red-600 text-center mt-2">{error}</p>}
 
       <form onSubmit={handleSubmit} className="mt-4">
         <div className="mb-4">
-          <label className="block text-yellow-800">New Password</label>
+          <label className="block text-indigo-800">New Password</label>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -89,7 +89,7 @@ const ResetPassword = () => {
         </div>
 
         <div className="mb-4">
-          <label className="block text-yellow-800">Confirm Password</label>
+          <label className="block text-indigo-800">Confirm Password</label>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -102,14 +102,15 @@ const ResetPassword = () => {
         </div>
 
         <button
-          type="submit"
-          className={`w-full py-2 mt-2 text-white font-semibold rounded-md ${
-            loading ? "bg-gray-400" : "bg-yellow-800 hover:bg-yellow-700"
-          }`}
-          disabled={loading}
-        >
-          {loading ? "Resetting..." : "Reset Password"}
-        </button>
+  type="submit"
+  className={`w-full py-2 mt-2 text-white font-bold rounded-md ${
+    loading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
+  }`}
+  disabled={loading}
+>
+  {loading ? "Resetting..." : "Reset Password"}
+</button>
+
       </form>
     </div>
   );

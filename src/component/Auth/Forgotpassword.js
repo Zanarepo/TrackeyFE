@@ -37,12 +37,12 @@ const ForgotPassword = () => {
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md mt-40">
       <h2 className="text-xl font-bold text-yellow-800 text-center mb-4">Forgot Password</h2>
       
-      {message && <p className="text-green-500 text-center">{message}</p>}
+      {message && <p className="text-indigo-500 text-center">{message}</p>}
       {error && <p className="text-red-500 text-center">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-yellow-800">Email Address</label>
+          <label className="block text-sm font-medium text-indigo-800">Email Address</label>
           <input
             type="email"
             className="w-full p-2 border rounded-md"
@@ -55,7 +55,7 @@ const ForgotPassword = () => {
 
         <button
           type="submit"
-          className="w-full bg-yellow-900 text-white py-2 rounded-md"
+          className="w-full bg-indigo-600 text-white py-2 rounded-md"
           disabled={loading}
         >
           {loading ? "Sending..." : "Reset Password"}
