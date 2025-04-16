@@ -36,35 +36,46 @@ export default function Login() {
       const hashedPassword = await hashPassword(password);
 
       // Try to query the 'stores' table first for a store owner.
-      const { data: ownerData, } = await supabase
+      const { data: ownerData, error: ownerError } = await supabase
         .from('stores')
         .select('*')
         .eq('email_address', emailAddress)
         .eq('password', hashedPassword)
         .maybeSingle();
 
+      if (ownerError) {
+        console.error(ownerError);
+      }
+      
       if (ownerData) {
         // Found a store owner.
         localStorage.setItem('store_id', ownerData.id);
+        // Optionally store a user_id if needed for owners
+        localStorage.setItem('user_id', ownerData.id);
         setNotification('Login successful! Redirecting to your dashboard...');
         setTimeout(() => {
-          navigate('/dashboard'); // Store owner dashboard.
+          navigate('/dashboard'); // Redirect to store owner dashboard.
         }, 1000);
       } else {
-        // If not a store owner, try the 'store_users' table.
-        const { data: teamData,  } = await supabase
+        // Try the 'store_users' table for a team member.
+        const { data: teamData, error: teamError } = await supabase
           .from('store_users')
           .select('*')
           .eq('email_address', emailAddress)
           .eq('password', hashedPassword)
           .maybeSingle();
 
+        if (teamError) {
+          console.error(teamError);
+        }
+        
         if (teamData) {
-          // Found a team member.
+          // Found a team member. Save both the team user's id and the store id.
           localStorage.setItem('store_id', teamData.store_id);
+          localStorage.setItem('user_id', teamData.id);
           setNotification('Login successful! Redirecting to the team dashboard...');
           setTimeout(() => {
-            navigate('/team-dashboard'); // Team member dashboard.
+            navigate('/team-dashboard'); // Redirect to team dashboard.
           }, 1000);
         } else {
           setNotification('Invalid email or password. Please try again.');

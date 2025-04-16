@@ -205,7 +205,7 @@ const DailySalesDashboard = () => {
           />
           <button
             onClick={() => setShowModal(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-green-700"
           >
             Add Sale
           </button>

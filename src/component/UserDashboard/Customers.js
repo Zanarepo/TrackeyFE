@@ -1,196 +1,235 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FaUsers, 
-  FaUserShield, 
-  FaCreditCard, 
-  FaCog, 
-  FaBell, 
-  FaTools, 
-  FaStar, 
-  FaBars, 
- 
-  FaTimes 
-} from 'react-icons/fa';
+import React, { useEffect, useState, useCallback } from 'react';
+import { supabase } from '../../supabaseClient';
 
+export default function CustomerManagement() {
+  const storeId = Number(localStorage.getItem('store_id'));
 
-const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Welcome');
-  const [darkMode, setDarkMode] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [form, setForm] = useState({
+    fullname: '',
+    phone_number: '',
+    birthday: '',
+    address: '',
+    email: ''
+  });
 
-  // Toggle dark mode by adding or removing the "dark" class on <html>
+  // Memoized fetch function to satisfy ESLint dependencies
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('customer')
+      .select('*')
+      .eq('store_id', storeId)
+      .order('fullname', { ascending: true });
+    if (error) console.error('Fetch error:', error.message);
+    else setCustomers(data || []);
+    setLoading(false);
+  }, [storeId]);
+
+  // Fetch on mount and whenever storeId changes
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-  }, [darkMode]);
+    fetchCustomers();
+  }, [fetchCustomers]);
 
-  // Render main content based on active tab without any padding
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'Welcome':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow">
-           
-          </div>
-        );
-      case 'reviews':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow">
-          
-          </div>
-        );
-      case 'Tools':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow">
-           
-          </div>
-        );
-     
-      case 'subscriptions':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow">
-            {/* Subscriptions content */}
-          </div>
-        );
-      case 'settings':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow">
-            {/* Settings content */}
-          </div>
-        );
-      case 'notifications':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow">
-            Notifications Section Content
-          </div>
-        );
-      default:
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow">
-            Dashboard Content
-          </div>
-        );
+  const openNewModal = () => {
+    setEditingCustomer(null);
+    setForm({ fullname: '', phone_number: '', birthday: '', address: '', email: '' });
+    setModalOpen(true);
+  };
+
+  const openEditModal = (cust) => {
+    setEditingCustomer(cust.id);
+    setForm({
+      fullname: cust.fullname || '',
+      phone_number: cust.phone_number || '',
+      birthday: cust.birthday || '',
+      address: cust.address || '',
+      email: cust.email || ''
+    });
+    setModalOpen(true);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      store_id: storeId,
+      fullname: form.fullname,
+      phone_number: form.phone_number,
+      birthday: form.birthday || null,
+      address: form.address || null,
+      email: form.email || null
+    };
+
+    let res;
+    if (editingCustomer) {
+      res = await supabase
+        .from('customer')
+        .update(payload)
+        .eq('id', editingCustomer);
+    } else {
+      res = await supabase
+        .from('customer')
+        .insert([payload]);
+    }
+
+    if (res.error) {
+      console.error('Save error:', res.error.message);
+    } else {
+      setModalOpen(false);
+      fetchCustomers();
     }
   };
 
-  // Handle navigation click: update active tab and close sidebar on mobile
-  const handleNavClick = (tab) => {
-    setActiveTab(tab);
-    setSidebarOpen(false);
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this customer?')) return;
+    const { error } = await supabase
+      .from('customer')
+      .delete()
+      .eq('id', id);
+    if (error) console.error('Delete error:', error.message);
+    else fetchCustomers();
   };
 
   return (
-    <div className="flex h-screen bg-gray-500 dark:bg-gray-900 mt-20">
-      {/* Sidebar remains unchanged */}
-      <aside 
-        className={`transition-all duration-300 bg-white dark:bg-gray-800 ${sidebarOpen ? "w-64" : "w-0"} md:w-64 flex-shrink-0`}
-      >
-        <div className={`${sidebarOpen ? "block" : "hidden"} md:block`}>
-          <div className="p-6">
-            {/* Mobile Header inside sidebar */}
-            <div className="flex md:hidden items-center justify-between">
-              <h2 className="text-xl font-bold text-yellow-800 dark:text-white">Menu</h2>
-              <button onClick={() => setSidebarOpen(false)} className="text-yellow-800 dark:text-white">
-                <FaTimes size={24} />
-              </button>
-            </div>
-            <nav className="mt-4">
-              <ul className="space-y-2">
-                <li 
-                  onClick={() => handleNavClick('Welcome')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-yellow-800 transition ${activeTab === 'RegisteredHomePage2' ? 'bg-gray-300 dark:bg-yellow-800' : ''}`}
-                >
-                  <FaUsers className="text-yellow-800 dark:text-gray-300 mr-3" />
-                  <span className="text-yellow-800 dark:text-gray-300">Dashboard</span>
-                </li>
+    <div className="p-4 max-w-3xl mx-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-indigo-800 font-bold">Customers</h2>
+        <button
+          onClick={openNewModal}
+          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+        >
+          New Customer
+        </button>
+      </div>
 
-                <li 
-                  onClick={() => handleNavClick('Tools')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-yellow-800 transition ${activeTab === 'Tools' ? 'bg-gray-300 dark:bg-yellow-800' : ''}`}
-                >
-                  <FaTools  className="text-yellow-800 dark:text-gray-300 mr-3" />
-                  <span className="text-yellow-800 dark:text-gray-300">Product Tools</span>
-                </li>
-              
-                <li 
-                  onClick={() => handleNavClick('admins')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-yellow-700 transition ${activeTab === 'admins' ? 'bg-gray-300 dark:bg-yellow-800' : ''}`}
-                >
-                  <FaUserShield className="text-yellow-800 dark:text-gray-300 mr-3" />
-                  <span className="text-yellow-800 dark:text-gray-300">Admins</span>
-                </li> 
-                
-                <li 
-                  onClick={() => handleNavClick('reviews')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-yellow-800 transition ${activeTab === 'reviews' ? 'bg-gray-300 dark:bg-yellow-800' : ''}`}
-                >
-                  <FaStar className="text-yellow-800 dark:text-gray-300 mr-3" />
-                  <span className="text-yellow-800 dark:text-gray-300">Reviews</span>
-                </li>
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2">Name</th>
+                <th className="p-2">Phone</th>
+                <th className="p-2">Email</th>
+                <th className="p-2">Birthday</th>
+                <th className="p-2">Address</th>
+                <th className="p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.map((c) => (
+                <tr key={c.id} className="border-t">
+                  <td className="p-2">{c.fullname}</td>
+                  <td className="p-2">{c.phone_number}</td>
+                  <td className="p-2">{c.email}</td>
+                  <td className="p-2">{c.birthday}</td>
+                  <td className="p-2">{c.address}</td>
+                  <td className="p-2 space-x-2">
+                    <button
+                      onClick={() => openEditModal(c)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      className="text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-                <li 
-                  onClick={() => handleNavClick('subscriptions')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-yellow-800 transition ${activeTab === 'subscriptions' ? 'bg-gray-300 dark:bg-yellow-800' : ''}`}
-                >
-                  <FaCreditCard className="text-yellow-800 dark:text-gray-300 mr-3" />
-                  <span className="text-yellow-800 dark:text-gray-300">Payments</span>
-                </li>
-              
-                <li 
-                  onClick={() => handleNavClick('notifications')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-yellow-800 transition ${activeTab === 'notifications' ? 'bg-gray-300 dark:bg-yellow-800' : ''}`}
-                >
-                  <FaBell className="text-yellow-800 dark:text-gray-300 mr-3" />
-                  <span className="text-yellow-800 dark:text-gray-300">Notifications</span>
-                </li>
-
-                <li 
-                  onClick={() => handleNavClick('settings')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-yellow-800 transition ${activeTab === 'settings' ? 'bg-gray-300 dark:bg-yellow-800' : ''}`}
-                >
-                  <FaCog className="text-yellow-800 dark:text-gray-300 mr-3" />
-                  <span className="text-yellow-800 dark:text-gray-300">Settings</span>
-                </li>
-              </ul>
-            </nav>
-          </div>
-          {/* Dark/Light Mode Toggle */}
-          <div className="p-6 mt-auto flex items-center justify-between">
-            <span className="text-yellow-800 dark:text-gray-300">{darkMode ? 'Dark Mode' : 'Light Mode'}</span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox"
-                className="sr-only"
-                checked={darkMode}
-                onChange={() => setDarkMode(!darkMode)}
-              />
-              <div className="w-11 h-6 bg-yellow-800 dark:bg-gray-600 rounded-full transition-colors duration-300">
-                <span 
-                  className={`absolute left-1 top-1 bg-white dark:bg-yellow-700 w-4 h-4 rounded-full transition-transform duration-300 ${darkMode ? 'translate-x-5' : ''}`}
-                ></span>
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-center justify-center overflow-auto p-4 mt-24">
+          <div className="bg-white p-6 rounded shadow-lg w-full sm:w-2/3 max-h-full overflow-auto">
+            <h3 className="text-xl text-indigo-600 font-semibold mb-4">
+              {editingCustomer ? 'Edit Customer' : 'New Customer'}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex flex-col">
+                <label className="mb-1">Full Name *</label>
+                <input
+                  name="fullname"
+                  value={form.fullname}
+                  onChange={handleChange}
+                  required
+                  className="p-2 border rounded"
+                />
               </div>
-            </label>
+              <div className="flex flex-col">
+                <label className="mb-1">Phone Number *</label>
+                <input
+                  name="phone_number"
+                  value={form.phone_number}
+                  onChange={handleChange}
+                  required
+                  className="p-2 border rounded"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label className="mb-1">Email</label>
+                  <input
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    className="p-2 border rounded"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="mb-1">Birthday</label>
+                  <input
+                    type="date"
+                    name="birthday"
+                    value={form.birthday}
+                    onChange={handleChange}
+                    className="p-2 border rounded"
+                  />
+                </div>
+                <div className="sm:col-span-2 flex flex-col">
+                  <label className="mb-1">Address</label>
+                  <textarea
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                    className="p-2 border rounded"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-        {/* Mobile Header */}
-        <header className="flex md:hidden items-center justify-between p-4 bg-white dark:bg-gray-800">
-          <button onClick={() => setSidebarOpen(true)} className="text-gray-800 dark:text-white">
-            <FaBars size={24} />
-          </button>
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white">
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </h1>
-          <div style={{ width: 24 }}></div>
-        </header>
-        <main className="flex-1 overflow-y-auto">
-          {renderContent()}
-        </main>
-      </div>
+      )}
     </div>
   );
-};
-
-export default Dashboard;
+}

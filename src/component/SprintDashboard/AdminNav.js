@@ -40,7 +40,7 @@ const Navbar = () => {
         </button>
         {/* Home Link always visible */}
          <Link to="/">
-         <img src="/Sprintify.png" alt="Sprintify Logo" className="h-20 w-auto ml-2" />
+         <img src="/Sellytics.jpg" alt="Sellytics Logo" className="h-20 w-auto ml-2" />
         
                 
                       </Link>

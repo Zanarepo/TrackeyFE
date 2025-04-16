@@ -1,81 +1,84 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-//import AppLauncher from "./AppLauncher";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // Toggle the mobile menu state
+  
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    setIsMenuOpen((prev) => !prev);
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full font-bold bg-gray-100 p-0 text-yellow-800 flex justify-between items-center z-50 shadow-md">
-      <span className="absolute left-0 bottom-2 w-full border-b-4 border-double border-yellow-800"></span>
-      {/* Left side: Hamburger menu and Home link */}
-      <div className="flex items-center">
-        {/* Hamburger Icon (visible on mobile only) */}
-        <button onClick={toggleMenu} className="md:hidden mr-2 focus:outline-none">
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16M4 18h16"
+    <nav className="fixed top-0 left-0 w-full z-50 shadow-lg">
+      <div className="flex">
+        {/* Left Side: Logo with white background */}
+        <div className="flex items-center bg-white w-1/2 px-4 md:px-8">
+          <Link to="/">
+            <img
+              src="/Sellytics.jpg"
+              alt="Sellytics Logo"
+              className="h-14 md:h-16 w-auto"
             />
-          </svg>
-        </button>
-        {/* Home Link always visible */}
-        <Link to="/">
-        <img src="/Sprintify.png" alt="Sprintify Logo" className="h-20 w-auto ml-2" />
-
-              </Link>
-      </div>
-
-      {/* Desktop Menu (visible on md and up) */}
-      <div className="hidden md:flex gap-6 items-center pr-6">
+          </Link>
+        </div>
         
-        <Link to="/register" className="hover:underline">
-          Register
-        </Link>
-        <Link to="/login" className="hover:underline">
-          Login
-        </Link>
-
-        
+        {/* Right Side: Menu with gradient background */}
+        <div className="flex justify-end items-center bg-gradient-to-r from-white to-indigo-800 w-1/2 px-4 md:px-8 font-bold">
+          {/* Desktop Menu (visible on md and larger screens) */}
+          <div className="hidden md:flex gap-6 items-center">
+            <Link 
+              to="/register" 
+              className="hover:underline text-white font-bold"
+            >
+              Register
+            </Link>
+            <Link 
+              to="/login" 
+              className="hover:underline text-white font-bold"
+            >
+              Login
+            </Link>
+          </div>
+          
+          {/* Hamburger Icon (visible on mobile only) */}
+          <button
+            onClick={toggleMenu}
+            className="md:hidden ml-2 focus:outline-none"
+          >
+            <svg
+              className="w-6 h-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
-
-      {/* Right side: Registered Users App Launcher *
-      <AppLauncher />/}
-
+      
       {/* Mobile Menu (dropdown) */}
       {isMenuOpen && (
-        <div className="absolute top-full left-0 w-full bg-yellow-800 text-white flex flex-col items-start p-4 md:hidden">
-          
-         
+        <div className="md:hidden bg-white text-indigo-800 flex flex-col items-start p-4 space-y-2">
           <Link
             to="/register"
-            className="py-2 w-full hover:underline"
             onClick={() => setIsMenuOpen(false)}
+            className="hover:underline w-full font-bold"
           >
-             Register
+            Register
           </Link>
-
           <Link
             to="/login"
-            className="py-2 w-full hover:underline"
             onClick={() => setIsMenuOpen(false)}
+            className="hover:underline w-full font-bold"
           >
-             Login
+            Login
           </Link>
-
-       
         </div>
       )}
     </nav>

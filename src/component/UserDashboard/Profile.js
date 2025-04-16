@@ -181,7 +181,7 @@ const StoreOwnerDashboard = () => {
       {/* Details Section */}
       <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
+          <h2 className="text-2xl font-bold text-indigo-800 dark:text-white">
             Store Details
           </h2>
           {!isEditing && (
