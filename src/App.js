@@ -4,7 +4,7 @@ import HomePage from "./component/HomePage";
 
 import Navbar from "./component/Navbar";
 import Footer from "./component/Footer";
-import RegisteredHomePage from './component/UserDashboard/RegisteredHomePage'
+//import RegisteredHomePage from './component/UserDashboard/RegisteredHomePage'
 // Registered Users components
 import Registration from './component/Auth/Registration'
 
@@ -16,11 +16,15 @@ import AdminRegistration from './component/Auth/AdminRegistration';
 import Login from "./component/Auth/Login";
 import Forgotpassword from './component/Auth/Forgotpassword'
 import ResetPassword from './component/Auth/ResetPassword'
-
+import RegisteredNavbar from './component/RegisteredNavbar'
+import Tools from './component/Tools'
 
 import RegisteredDashboards from './component/RegisteredDashboards'
 
 
+// Registered Users components
+import UserHomepage from './component/UserDashboard/UserHomepage'
+import  TeamSignup from './component/Auth/TeamSignup'
 
 
 
@@ -60,6 +64,7 @@ const App = () => {
 
             
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/team-signup" element={<TeamSignup/>} />
 
             {/* premium routes duplicates */}
             
@@ -76,7 +81,7 @@ const App = () => {
           
           <Route path="/regdashboard" element={<RegisteredDashboards />} />
          
-          
+          <Route path="/dashboard" element={<UserHomepage />} />
             
                     </Routes>
 
@@ -86,15 +91,23 @@ const App = () => {
 
           <Routes>
             {/* Routes using the RegisteredNavbar layout */}
-           
+            <Route element={<RegisteredNavbar />}>
+            <Route element={<RegisteredDashboards />}>
+            <Route path="/tools" element={<Tools />} />
+            
+     
+
+            </Route>
+            </Route>
             <Route element={<RegisteredDashboards />}>
            
             </Route>
-              <Route path="/dashboard" element={<RegisteredHomePage />} />
+             
             
-       
-
+            <Route element={<RegisteredNavbar />}>
+              <Route path="/dashboard" element={<UserHomepage />} />
             
+            </Route>
           </Routes>
 
 

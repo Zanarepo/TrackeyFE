@@ -10,14 +10,16 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState('');
 
-  const navigate = useNavigate(); // react-router-dom hook
+  const navigate = useNavigate();
 
+  // Helper: Convert array buffer into hex string.
   const arrayBufferToHex = (buffer) => {
     return Array.prototype.map
       .call(new Uint8Array(buffer), (x) => ('00' + x.toString(16)).slice(-2))
       .join('');
   };
 
+  // Helper: Hash the password with SHA-256.
   const hashPassword = async (plainText) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(plainText);
@@ -33,20 +35,40 @@ export default function Login() {
     try {
       const hashedPassword = await hashPassword(password);
 
-      const { data, error } = await supabase
+      // Try to query the 'stores' table first for a store owner.
+      const { data: ownerData, } = await supabase
         .from('stores')
         .select('*')
         .eq('email_address', emailAddress)
         .eq('password', hashedPassword)
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
-        setNotification('Invalid email or password. Please try again.');
-      } else {
-        setNotification('Login successful! Redirecting...');
+      if (ownerData) {
+        // Found a store owner.
+        localStorage.setItem('store_id', ownerData.id);
+        setNotification('Login successful! Redirecting to your dashboard...');
         setTimeout(() => {
-          navigate('/dashboard'); // redirect after login
-        }, 1000); // small delay for feedback
+          navigate('/dashboard'); // Store owner dashboard.
+        }, 1000);
+      } else {
+        // If not a store owner, try the 'store_users' table.
+        const { data: teamData,  } = await supabase
+          .from('store_users')
+          .select('*')
+          .eq('email_address', emailAddress)
+          .eq('password', hashedPassword)
+          .maybeSingle();
+
+        if (teamData) {
+          // Found a team member.
+          localStorage.setItem('store_id', teamData.store_id);
+          setNotification('Login successful! Redirecting to the team dashboard...');
+          setTimeout(() => {
+            navigate('/team-dashboard'); // Team member dashboard.
+          }, 1000);
+        } else {
+          setNotification('Invalid email or password. Please try again.');
+        }
       }
     } catch (err) {
       setNotification(`Error: ${err.message}`);
@@ -60,7 +82,7 @@ export default function Login() {
       <div className="w-full max-w-md bg-white p-6 rounded shadow">
         <h1 className="text-3xl font-bold text-indigo-800 mb-6 text-center">Store Login</h1>
         {notification && (
-          <div className="mb-4 p-2 text-indigo-800  text-center rounded">
+          <div className="mb-4 p-2 text-indigo-800 text-center rounded">
             {notification}
           </div>
         )}
