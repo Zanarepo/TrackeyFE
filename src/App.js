@@ -26,6 +26,7 @@ import RegisteredDashboards from './component/RegisteredDashboards'
 import UserHomepage from './component/UserDashboard/UserHomepage'
 import  TeamSignup from './component/Auth/TeamSignup'
 import StoreUsersHome from './component/UserDashboard/StoreUsersHome'
+import Admins from './component/AdminAuth/Admins'
 
 
 
@@ -65,6 +66,7 @@ const App = () => {
             
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/team-signup" element={<TeamSignup/>} />
+            
 
             {/* premium routes duplicates */}
             
@@ -77,8 +79,10 @@ const App = () => {
           <Routes>
           <Route element={<AdminNav />}>
           <Route path="/admindashboard" element={<AdminDasboard/>} />
+
+
           <Route path="/adminregister" element={<AdminRegistration/>} /> </Route>
-          
+          <Route path="/admins" element={<Admins/>} />
           <Route path="/regdashboard" element={<RegisteredDashboards />} />
          
           <Route path="/dashboard" element={<UserHomepage />} />

@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  FaUsers,
+
   FaMoneyBillWave,
-  FaFileInvoiceDollar,
-  FaBoxOpen,
-  FaChartLine,
-  FaUserFriends,
+
+  FaUser,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaStore,
+  FaConciergeBell,
+  FaIdBadge
+  
 } from 'react-icons/fa';
 
-import Customers from './Customers';
-import DebtTracker from './DebtTracker';
-import ExpenseTracker from './ExpenseTracker';
-import ProductList from './ProductList';
-import SalesTracker from './SalesTracker';
 import Employees from './Employees';
 import Profile from './Profile';
+import ShopOwner from './ShopOwner';
+import ServicesDashboard from './ServicesDashboard';
+import TrackingTools from './TrackingTools';
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Customers');
+  const [activeTab, setActiveTab] = useState('Profile');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -31,40 +31,39 @@ const Dashboard = () => {
   // Render main content based on active tab
   const renderContent = () => {
     switch (activeTab) {
-      case 'Customers':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <Customers />
-          </div>
-        );
-      case 'DebtTracker':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <DebtTracker />
-          </div>
-        );
-      case 'ExpenseTracker':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <ExpenseTracker />
-          </div>
-        );
-      case 'ProductList':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <ProductList />
-          </div>
+     
 
 
-        );
-      case 'SalesTracker':
+      
+        case 'TrackingTools':
+          return (
+            <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+              <TrackingTools />
+            </div>
+  
+  
+          );
+
+
+  
+      case 'ShopOwner':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <SalesTracker />
+            <ShopOwner />
           </div>
+        ); 
+
+        case 'ServicesDashboard':
+        return (
+          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <ServicesDashboard />
+          </div>
+        ); 
+       
+        
 
 
-        );
+
       case 'Employees':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
@@ -120,66 +119,62 @@ const Dashboard = () => {
             <nav className="mt-4">
               <ul className="space-y-2">
                 
-                <li 
-                  onClick={() => handleNavClick('Customers')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Customers' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+              <li 
+                  onClick={() => handleNavClick('ShopOwner')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaUsers className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Customers</span>
+                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Business Dashboard</span>
                 </li>
 
 
+
                 <li 
-                  onClick={() => handleNavClick('DebtTracker')}
+                  onClick={() => handleNavClick('ServicesDashboard')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Services Dashboard</span>
+                </li>
+
+
+
+
+           
+
+                <li 
+                  onClick={() => handleNavClick('TrackingTools')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'DebtTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Debt Tracker</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Tracking Tools</span>
                 </li>
 
 
-                <li 
-                  onClick={() => handleNavClick('ExpenseTracker')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'ExpenseTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaFileInvoiceDollar className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Expense Tracker</span>
-                </li>
+                
+
+             
 
 
-
-                <li 
-                  onClick={() => handleNavClick('ProductList')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'ProductList' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaBoxOpen className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Product List</span>
-                </li>
+               
 
 
-
-                <li 
-                  onClick={() => handleNavClick('SalesTracker')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'SalesTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaChartLine className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Sales Tracker</span>
-                </li>
 
                 <li 
                   onClick={() => handleNavClick('Employees')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaUserFriends className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaIdBadge  className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Employees</span>
                 </li>
 
+             
 
                 <li 
                   onClick={() => handleNavClick('Profile')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaUserFriends className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaUser className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Profile</span>
                 </li>
 

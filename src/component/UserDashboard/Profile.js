@@ -27,7 +27,7 @@ const StoreOwnerDashboard = () => {
   // Separate state for the logo file (if uploaded)
   const [logoFile, setLogoFile] = useState(null);
   // Placeholder logo if no logo is provided.
-  const placeholderLogo = 'https://via.placeholder.com/150';
+  //const placeholderLogo = 'https://via.placeholder.com/150';
 
   // Fetch store details from the database.
   useEffect(() => {
@@ -58,16 +58,6 @@ const StoreOwnerDashboard = () => {
   };
 
   // Handler for file input changes.
-  const handleLogoFileChange = (e) => {
-    if (e.target.files.length > 0) {
-      setLogoFile(e.target.files[0]);
-      // Optionally, update the business_logo to a temporary preview URL.
-      setStoreDetails({
-        ...storeDetails,
-        business_logo: URL.createObjectURL(e.target.files[0]),
-      });
-    }
-  };
 
   // Utility function to hash password using SHA-256.
   const hashPassword = async (plainText) => {
@@ -156,13 +146,13 @@ const StoreOwnerDashboard = () => {
     <div className="max-w-4xl mx-auto p-4">
       {/* Header with Logo and Logout */}
       <div className="flex flex-col items-center mb-6">
-        <img
+       {/* Header with Logo and Logout  <img
           src={storeDetails.business_logo || placeholderLogo}
           alt="Business Logo"
           className="w-32 h-32 object-cover rounded-full border mb-4"
-        />
+        />*/}
         <h1 className="text-3xl font-bold text-indigo-800 mb-2">
-          Store Owner Dashboard
+          My Store Profile
         </h1>
         <button
           onClick={handleLogout}
@@ -181,7 +171,7 @@ const StoreOwnerDashboard = () => {
       {/* Details Section */}
       <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-indigo-800 dark:text-white">
+          <h2 className="text-2xl font-boldfont-bold text-indigo-800 dark:text-white">
             Store Details
           </h2>
           {!isEditing && (
@@ -358,11 +348,11 @@ const StoreOwnerDashboard = () => {
             )}
           </div>
 
-          {/* Business Logo */}
+          {/* Business Logo 
           <div className="flex flex-col">
             <label className="text-gray-700 dark:text-gray-300">
-              Business Logo
-            </label>
+              Business Logo*/}
+          {/* </label>
             {isEditing ? (
               <>
                 <input

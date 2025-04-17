@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  FaUsers,
   FaMoneyBillWave,
-  FaFileInvoiceDollar,
 
-  FaChartLine,
-  FaUserFriends,
+
+  FaUser,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaConciergeBell,
+  FaIdBadge
 } from 'react-icons/fa';
 
 import Customers from './Customers';
@@ -18,6 +18,8 @@ import SalesTracker from './SalesTracker';
 
 import StoreUserProfile  from './StoreUsersProfile';
 import Colleagues from './Colleagues';
+import TackingTools from './TrackingTools';
+import ServicesTools from './ServicesTools';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Profile');
@@ -53,7 +55,23 @@ const Dashboard = () => {
           </div>
         );
 
+        case 'TackingTools':
+        return (
+          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <TackingTools />
+          </div>
+        );
 
+
+
+        case 'ServicesTools':
+        return (
+          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <ServicesTools />
+          </div>
+        );
+
+        
 
       case 'DebtTracker':
         return (
@@ -122,45 +140,28 @@ const Dashboard = () => {
               <ul className="space-y-2">
                 
 
-              <li 
-                  onClick={() => handleNavClick('SalesTracker')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'SalesTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaChartLine className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Sales Tracker</span>
-                </li>
-
 
                 
+                
                 <li 
-                  onClick={() => handleNavClick('ExpenseTracker')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'ExpenseTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaFileInvoiceDollar className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Expense Tracker</span>
-                </li>
-
-
-                <li 
-                  onClick={() => handleNavClick('DebtTracker')}
+                  onClick={() => handleNavClick('TackingTools')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'DebtTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Debt Tracker</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Business Tools</span>
                 </li>
-
-            
-
-
 
                 <li 
-                  onClick={() => handleNavClick('Customers')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Customers' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('ServicesTools')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'DebtTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaUsers className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Customers</span>
+                  <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Services Tools</span>
                 </li>
+                
 
+                
+               
 
 
 
@@ -171,15 +172,17 @@ const Dashboard = () => {
                   onClick={() => handleNavClick('Colleagues')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaUserFriends className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaIdBadge className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Colleagues</span>
                 </li>
+
+          
 
                 <li 
                   onClick={() => handleNavClick('Profile')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaUserFriends className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaUser className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Profile</span>
                 </li>
 
