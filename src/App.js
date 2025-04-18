@@ -27,7 +27,7 @@ import UserHomepage from './component/UserDashboard/UserHomepage'
 import  TeamSignup from './component/Auth/TeamSignup'
 import StoreUsersHome from './component/UserDashboard/StoreUsersHome'
 import Admins from './component/AdminAuth/Admins'
-
+import AdminHome from './component/AdminDashboard/AdminHome'
 
 
 
@@ -82,10 +82,11 @@ const App = () => {
 
 
           <Route path="/adminregister" element={<AdminRegistration/>} /> </Route>
-          <Route path="/admins" element={<Admins/>} />
+          <Route path="/admin" element={<Admins/>} />
           <Route path="/regdashboard" element={<RegisteredDashboards />} />
          
           <Route path="/dashboard" element={<UserHomepage />} />
+          <Route path="/admin-dashboard" element={<AdminHome />} />
           <Route path="/team-dashboard" element={< StoreUsersHome />} />
             
                     </Routes>
@@ -111,6 +112,8 @@ const App = () => {
             
             <Route element={<RegisteredNavbar />}>
               <Route path="/dashboard" element={<UserHomepage />} />
+              <Route path="/admin-dashboard" element={<AdminHome />} />
+
               <Route path="/team-dashboard" element={< StoreUsersHome />} />
               
             

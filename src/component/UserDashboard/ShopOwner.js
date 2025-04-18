@@ -5,7 +5,8 @@ import DebtTracker from './DebtTracker';
 import ProductList from './ProductList';
 import SalesTracker from './SalesTracker';
 import Customers from './Customers';
-import { FaRegMoneyBillAlt, FaMoneyCheckAlt, FaBoxes, FaChartLine, FaUsers } from 'react-icons/fa';
+import Inventory from './Inventory';
+import { FaRegMoneyBillAlt, FaMoneyCheckAlt, FaBoxes, FaChartLine, FaUsers , FaTasks   } from 'react-icons/fa';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('expense');
@@ -56,7 +57,18 @@ const Dashboard = () => {
           </>
         );
 
-
+        case 'Inventory':
+          return (
+            <>
+              <h2 className="text-2xl font-semibold text-indigo-700 dark:text-indigo-200 mb-2">Inventory</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Manage your inventory: add new products, update stock levels, and track product performance to ensure optimal stock management.
+              </p>
+              <Inventory />
+            </>
+          );
+         
+  
 
         case 'customers':
             return (
@@ -81,6 +93,7 @@ const Dashboard = () => {
     { key: 'products',  label: 'Products', icon: <FaBoxes className="text-4xl text-indigo-600 mb-2" /> },
     { key: 'sales',     label: 'Sales',    icon: <FaChartLine className="text-4xl text-indigo-600 mb-2" /> },
     { key: 'customers',     label: 'Customers',    icon: <FaUsers className="text-4xl text-indigo-600 mb-2" /> },
+    { key: 'Inventory', label: 'Inventory',icon: <FaTasks    className="text-4xl text-indigo-600 mb-2" /> },
   ];
 
   return (

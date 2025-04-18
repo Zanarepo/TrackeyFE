@@ -1,298 +1,252 @@
-// ExpenseTracker.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
+import { format } from 'date-fns';
+import { toast } from 'react-toastify';
 
-export default function ExpenseTracker() {
-  const storeId = Number(localStorage.getItem('store_id'));
-  const userId  = Number(localStorage.getItem('user_id'));
-  const isOwner = userId === storeId;
-
-  const [showTable, setShowTable] = useState(false);
-  const [expenses,  setExpenses]  = useState([]);
-  const [types,     setTypes]     = useState([
-    'Utility Bill',
-    'Water',
-    'Tax',
-    'Transportation',
-    'Fuel',
-  ]);
+const ExpenseManager = () => {
   const [form, setForm] = useState({
     expense_date: '',
     expense_type: '',
-    new_type: '',
     amount: '',
     description: '',
   });
-  const [editingId,  setEditingId]  = useState(null);
-  const [notification, setNotification] = useState('');
+  const [expenses, setExpenses] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  // Fetch all expenses for this store
+  const storeId = Number(localStorage.getItem('store_id'));
+  const userId = localStorage.getItem('user_id'); // null if owner
+  const isOwner = !userId; // if no userId, assume owner
+
   const fetchExpenses = useCallback(async () => {
     const { data, error } = await supabase
       .from('expense_tracker')
       .select('*')
       .eq('store_id', storeId)
       .order('expense_date', { ascending: false });
+
     if (error) {
-      console.error(error);
-      setNotification('Unable to load expenses.');
+      toast.error('Failed to fetch expenses');
     } else {
       setExpenses(data);
-      // also collect any types not in our default list
-      const extra = Array.from(new Set(data.map(e => e.expense_type)))
-        .filter(t => !types.includes(t));
-      if (extra.length) setTypes(prev => [...prev, ...extra]);
     }
-  }, [storeId, types]);
+  }, [storeId]);
 
+  // 2️⃣ Now include fetchExpenses in the deps array
   useEffect(() => {
     fetchExpenses();
   }, [fetchExpenses]);
 
-  // Handle form inputs
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
+  const handleInputChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const resetForm = () => {
     setForm({
       expense_date: '',
       expense_type: '',
-      new_type: '',
       amount: '',
       description: '',
     });
     setEditingId(null);
   };
 
-  // Create or update an expense
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const type = form.expense_type === 'ADD_NEW' ? form.new_type : form.expense_type;
-    if (!type) return setNotification('Please choose or add an expense type.');
+
+    if (!form.expense_date || !form.expense_type || !form.amount) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
     const payload = {
       store_id: storeId,
       expense_date: form.expense_date,
-      expense_type: type,
+      expense_type: form.expense_type,
       amount: Number(form.amount),
       description: form.description || null,
-      created_by_user:  isOwner ? null : userId,
-      created_by_owner: isOwner ? userId : null,
+      created_by_user: isOwner ? null : Number(userId),
+      created_by_owner: isOwner ? storeId : null,
     };
 
-    let res;
-    if (editingId && isOwner) {
-      res = await supabase
+    let response;
+
+    if (editingId) {
+      response = await supabase
         .from('expense_tracker')
         .update(payload)
         .eq('id', editingId);
     } else {
-      res = await supabase.from('expense_tracker').insert(payload);
+      response = await supabase.from('expense_tracker').insert(payload);
     }
 
-    if (res.error) {
-      console.error(res.error);
-      setNotification('Error saving expense.');
-    } else {
-      setNotification(editingId ? 'Expense updated!' : 'Expense created!');
-      resetForm();
-      fetchExpenses();
+    const { error } = response;
+
+    if (error) {
+      toast.error('Error saving expense');
+      return;
     }
+
+    toast.success(`Expense ${editingId ? 'updated' : 'added'} successfully`);
+    resetForm();
+    setShowForm(false);
+    fetchExpenses();
   };
 
-  // Owner-only delete
-  const handleDelete = async id => {
-    if (!isOwner) return;
+  const handleEdit = (expense) => {
+    setForm({
+      expense_date: format(new Date(expense.expense_date), 'yyyy-MM-dd'),
+      expense_type: expense.expense_type,
+      amount: expense.amount,
+      description: expense.description || '',
+    });
+    setEditingId(expense.id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!isOwner) {
+      toast.error('Only the store owner can delete expenses');
+      return;
+    }
+
     const { error } = await supabase
       .from('expense_tracker')
       .delete()
       .eq('id', id);
-    if (error) {
-      console.error(error);
-      setNotification('Error deleting expense.');
-    } else {
-      setNotification('Expense deleted.');
-      fetchExpenses();
-    }
-  };
 
-  // Populate form for editing
-  const startEdit = exp => {
-    setEditingId(exp.id);
-    setForm({
-      expense_date: exp.expense_date,
-      expense_type: types.includes(exp.expense_type)
-        ? exp.expense_type
-        : 'ADD_NEW',
-      new_type: types.includes(exp.expense_type)
-        ? ''
-        : exp.expense_type,
-      amount: exp.amount,
-      description: exp.description || '',
-    });
+    if (error) {
+      toast.error('Failed to delete expense');
+      return;
+    }
+
+    toast.success('Expense deleted');
+    fetchExpenses();
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-4">
-      {notification && (
-        <div className="p-2 bg-green-100 text-green-800 rounded text-center">
-          {notification}
-        </div>
-      )}
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Expense Manager</h2>
+        <button
+          className="bg-indigo-600 text-white px-4 py-2 rounded"
+          onClick={() => {
+            resetForm();
+            setShowForm(!showForm);
+          }}
+        >
+          {showForm ? 'Close Form' : 'Add Expense'}
+        </button>
+      </div>
 
-      <button
-        onClick={() => setShowTable(v => !v)}
-        className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-      >
-        {showTable ? 'Hide Expenses' : 'Show Expenses'}
-      </button>
-
-      {showTable && (
-        <div className="overflow-x-auto">
-          <table className="w-full border">
-            <thead>
-              <tr className="bg-indigo-200">
-                <th className="p-2">Date</th>
-                <th className="p-2">Type</th>
-                <th className="p-2">Amount</th>
-                <th className="p-2">Description</th>
-                {isOwner && <th className="p-2">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map(exp => (
-                <tr key={exp.id} className="border-t">
-                  <td className="p-2">{exp.expense_date}</td>
-                  <td className="p-2">{exp.expense_type}</td>
-                  <td className="p-2">{exp.amount.toFixed(2)}</td>
-                  <td className="p-2">{exp.description}</td>
-                  {isOwner && (
-                    <td className="p-2 space-x-2">
-                      <button
-                        onClick={() => startEdit(exp)}
-                        className="text-blue-600 hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(exp.id)}
-                        className="text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow space-y-4">
-        <h2 className="text-xl font-semibold">
-          {editingId ? 'Edit Expense' : 'Add Expense'}
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Date */}
-          <div className="flex flex-col">
-            <label>Date</label>
+      {showForm && (
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white p-4 rounded shadow mb-4 space-y-4"
+        >
+          <div>
+            <label className="block font-medium">Date</label>
             <input
               type="date"
               name="expense_date"
               value={form.expense_date}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              className="border rounded px-3 py-2 w-full"
               required
-              className="p-2 border rounded"
             />
           </div>
 
-          {/* Type */}
-          <div className="flex flex-col">
-            <label>Type</label>
-            <select
+          <div>
+            <label className="block font-medium">Expense Type</label>
+            <input
+              type="text"
               name="expense_type"
               value={form.expense_type}
-              onChange={handleChange}
+              onChange={handleInputChange}
+              className="border rounded px-3 py-2 w-full"
               required
-              className="p-2 border rounded"
-            >
-              <option value="" disabled>
-                Select type…
-              </option>
-              {types.map(t => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-              <option value="ADD_NEW">+ Add new…</option>
-            </select>
-          </div>
-
-          {/* New Type Input */}
-          {form.expense_type === 'ADD_NEW' && (
-            <div className="flex flex-col">
-              <label>New Type</label>
-              <input
-                type="text"
-                name="new_type"
-                value={form.new_type}
-                onChange={handleChange}
-                required
-                className="p-2 border rounded"
-                placeholder="Enter new expense type"
-              />
-            </div>
-          )}
-
-          {/* Amount */}
-          <div className="flex flex-col">
-            <label>Amount</label>
-            <input
-              type="number"
-              step="0.01"
-              name="amount"
-              value={form.amount}
-              onChange={handleChange}
-              required
-              className="p-2 border rounded"
             />
           </div>
 
-          {/* Description */}
-          <div className="flex flex-col sm:col-span-2">
-            <label>Description</label>
+          <div>
+            <label className="block font-medium">Amount</label>
+            <input
+              type="number"
+              name="amount"
+              value={form.amount}
+              onChange={handleInputChange}
+              className="border rounded px-3 py-2 w-full"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block font-medium">Description</label>
             <textarea
               name="description"
               value={form.description}
-              onChange={handleChange}
-              className="p-2 border rounded"
-              placeholder="Optional notes…"
+              onChange={handleInputChange}
+              className="border rounded px-3 py-2 w-full"
             />
           </div>
-        </div>
 
-        <div className="flex flex-col sm:flex-row sm:space-x-4">
           <button
             type="submit"
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
+            className="bg-green-600 text-white px-4 py-2 rounded"
           >
-            {editingId ? 'Update' : 'Create'}
+            {editingId ? 'Update Expense' : 'Add Expense'}
           </button>
-          {editingId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="ml-0 sm:ml-2 mt-2 sm:mt-0 text-gray-600 underline"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
+        </form>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border rounded shadow">
+          <thead>
+            <tr className="bg-gray-100 text-left">
+              <th className="p-2">Date</th>
+              <th className="p-2">Type</th>
+              <th className="p-2">Amount</th>
+              <th className="p-2">Description</th>
+              <th className="p-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {expenses.map((expense) => (
+              <tr key={expense.id} className="border-t">
+                <td className="p-2">{format(new Date(expense.expense_date), 'PPP')}</td>
+                <td className="p-2">{expense.expense_type}</td>
+                <td className="p-2">₦{expense.amount}</td>
+                <td className="p-2">{expense.description}</td>
+                <td className="p-2 space-x-2">
+                  <button
+                    className="text-blue-600"
+                    onClick={() => handleEdit(expense)}
+                  >
+                    Edit
+                  </button>
+                  {isOwner && (
+                    <button
+                      className="text-red-600"
+                      onClick={() => handleDelete(expense.id)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {expenses.length === 0 && (
+              <tr>
+                <td colSpan="5" className="text-center py-4 text-gray-500">
+                  No expenses found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
-}
+};
+
+export default ExpenseManager;

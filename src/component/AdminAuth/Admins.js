@@ -37,7 +37,7 @@ export default function AdminCreate() {
       if (error) throw error;
       setNotification('Admin account created successfully!');
       setForm({ fullname: '', email: '', role: 'admin', password: '' });
-      setTimeout(() => navigate('/admin/dashboard'), 1000);
+      setTimeout(() => navigate('/admin-dashboard'), 1000);
     } catch (err) {
       setNotification(`Error: ${err.message}`);
     } finally {

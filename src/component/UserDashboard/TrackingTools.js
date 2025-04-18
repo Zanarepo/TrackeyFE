@@ -4,6 +4,7 @@ import ExpenseTracker from './ExpenseTracker';
 import DebtTracker from './DebtTracker';
 import SalesTracker from './SalesTracker';
 import Customers from './Customers';
+import Inventory from './Inventory';
 import {
   FaRegMoneyBillAlt,
   FaMoneyCheckAlt,
@@ -25,6 +26,7 @@ const Dashboard = () => {
             <ExpenseTracker />
           </>
         );
+        
       case 'debt':
         return (
           <>
@@ -34,6 +36,8 @@ const Dashboard = () => {
             <DebtTracker />
           </>
         );
+
+
       case 'sales':
         return (
           <>
@@ -42,7 +46,19 @@ const Dashboard = () => {
             </p>
             <SalesTracker />
           </>
+
         );
+
+case 'Inventory':
+        return (
+          <>
+            <p className="mb-4 text-gray-700 dark:text-gray-300">
+              Manage your inventory: add new products, update stock levels, and track product performance to ensure optimal stock management.
+            </p>
+            <Inventory />
+          </>
+        );
+       
       case 'customers':
         return (
           <>
@@ -62,6 +78,7 @@ const Dashboard = () => {
     { key: 'debt',      label: 'Debts',    icon: <FaMoneyCheckAlt className="text-4xl text-indigo-600 mb-2" /> },
     { key: 'sales',     label: 'Sales',    icon: <FaChartLine className="text-4xl text-indigo-600 mb-2" /> },
     { key: 'customers', label: 'Customers',icon: <FaUsers className="text-4xl text-indigo-600 mb-2" /> },
+    { key: 'Inventory', label: 'Inventory',icon: <FaUsers className="text-4xl text-indigo-600 mb-2" /> },
   ];
 
   return (

@@ -1,301 +1,197 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback} from 'react';
 import { supabase } from '../../supabaseClient';
+import { toast } from 'react-toastify';
+import DebtHistory from './DebtHistory';
 
 const DebtTracker = () => {
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
   const [debts, setDebts] = useState([]);
-  const [formOpen, setFormOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-
-  const [form, setForm] = useState({
-    product_name: '',
-    description: '',
-    amount_owed: '',
-    amount_deposited: '',
+  const [formData, setFormData] = useState({
     customer_id: '',
-    customer_name: '',
-    phone_number: '',
-    status: 'pending',
+    product_id: '',
+    amount_owed: '',
   });
 
-  const storeId = localStorage.getItem('store_id');
-  const userId = localStorage.getItem('user_id');
+  const store_id = localStorage.getItem('store_id');
+  const user_id = localStorage.getItem('user_id');
+  const fetchCustomers = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('customer')
+      .select('id, fullname')
+      .eq('store_id', store_id);
+    if (error) toast.error('Failed to load customers');
+    else setCustomers(data);
+  }, [store_id]);
 
+  const fetchProducts = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name')
+      .eq('store_id', store_id);
+    if (error) toast.error('Failed to load products');
+    else setProducts(data);
+  }, [store_id]);
+
+  const fetchDebts = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('debt_tracker')
+      .select(`
+        id,
+        amount_owed,
+        amount_deposited,
+        amount_remaining,
+        debt_date,
+        customer:customer_id (fullname),
+        product:product_id (name)
+      `)
+      .eq('store_id', store_id);
+    if (error) toast.error('Failed to load debts');
+    else setDebts(data);
+  }, [store_id]);
+
+  // ✅ Now safe to add as dependencies
   useEffect(() => {
-    const fetchDebts = async () => {
-      const { data, error } = await supabase
-        .from('debt_tracker')
-        .select('*')
-        .eq('store_id', storeId)
-        .order('debt_date', { ascending: false });
-
-      if (error) console.error('Error fetching debts:', error.message);
-      else setDebts(data);
+    const fetchAll = async () => {
+      await fetchCustomers();
+      await fetchProducts();
+      await fetchDebts();
     };
-
-    fetchDebts();
-  }, [storeId]);
+    fetchAll();
+  }, [fetchCustomers, fetchProducts, fetchDebts]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const payload = {
-      store_id: parseInt(storeId),
-      product_name: form.product_name,
-      description: form.description,
-      amount_owed: parseFloat(form.amount_owed),
-      amount_deposited: parseFloat(form.amount_deposited),
-      customer_id: form.customer_id ? parseInt(form.customer_id) : null,
-      customer_name: form.customer_id ? null : form.customer_name,
-      phone_number: form.phone_number,
-      status: form.status,
+    let created_by_owner = null;
+    let created_by_user = null;
+
+    if (store_id) {
+      created_by_owner = parseInt(store_id);
+    } else if (user_id) {
+      created_by_user = parseInt(user_id);
+    }
+
+    const insertData = {
+      store_id: parseInt(store_id),
+      customer_id: formData.customer_id ? parseInt(formData.customer_id) : null,
+      product_id: formData.product_id ? parseInt(formData.product_id) : null,
+      amount_owed: parseFloat(formData.amount_owed),
+      amount_deposited: 0,
+      created_by_owner,
+      created_by_user,
     };
 
-    if (userId) {
-      payload.created_by_user = parseInt(userId);
-    } else {
-      payload.created_by_owner = parseInt(storeId);
-    }
+    const { error } = await supabase.from('debt_tracker').insert([insertData]);
 
-    let error;
-    if (isEditing && editId) {
-      const { error: updateError } = await supabase
-        .from('debt_tracker')
-        .update(payload)
-        .eq('id', editId);
-      error = updateError;
-    } else {
-      const { error: insertError } = await supabase
-        .from('debt_tracker')
-        .insert([payload]);
-      error = insertError;
-    }
-
-    if (error) {
-      console.error('Error saving debt:', error.message);
-    } else {
-      resetForm();
-      const { data } = await supabase
-        .from('debt_tracker')
-        .select('*')
-        .eq('store_id', storeId)
-        .order('debt_date', { ascending: false });
-      setDebts(data);
+    if (error) toast.error(error.message || 'Failed to insert debt');
+    else {
+      toast.success('Debt added');
+      setFormData({ customer_id: '', product_id: '', amount_owed: '' });
+      fetchDebts();
     }
   };
 
-  const resetForm = () => {
-    setFormOpen(false);
-    setIsEditing(false);
-    setEditId(null);
-    setForm({
-      product_name: '',
-      description: '',
-      amount_owed: '',
-      amount_deposited: '',
-      customer_id: '',
-      customer_name: '',
-      phone_number: '',
-      status: 'pending',
-    });
-  };
-
-  const handleDelete = async (id, debt) => {
-    if (String(debt.created_by_owner) !== storeId) {
-      alert('Only the store owner can delete this record.');
-      return;
-    }
-
-    const { error } = await supabase.from('debt_tracker').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting debt:', error.message);
-    } else {
-      setDebts(prev => prev.filter(d => d.id !== id));
-    }
-  };
-
-  const handleEdit = (debt) => {
-    const editable = (userId && debt.created_by_user === parseInt(userId)) ||
-                     (!userId && String(debt.created_by_owner) === storeId);
-
-    if (!editable) {
-      alert('You are not allowed to edit this record.');
-      return;
-    }
-
-    setFormOpen(true);
-    setIsEditing(true);
-    setEditId(debt.id);
-    setForm({
-      product_name: debt.product_name,
-      description: debt.description,
-      amount_owed: debt.amount_owed,
-      amount_deposited: debt.amount_deposited,
-      customer_id: debt.customer_id || '',
-      customer_name: debt.customer_name || '',
-      phone_number: debt.phone_number || '',
-      status: debt.status,
-    });
-  };
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <button
-        onClick={() => {
-          resetForm();
-          setFormOpen(!formOpen);
-        }}
-        className="bg-indigo-600 text-white px-4 py-2 rounded mb-4 w-full sm:w-auto"
+    <div className="max-w-4xl mx-auto p-4">
+      <h2 className="text-xl font-bold mb-4">Track Customer Debt</h2>
+
+      <form
+        onSubmit={handleSubmit}
+        className="grid md:grid-cols-3 gap-4 bg-gray-100 p-4 rounded-lg"
       >
-        {formOpen ? 'Close Form' : 'Add New Debt'}
-      </button>
+        <select
+          name="customer_id"
+          value={formData.customer_id}
+          onChange={handleChange}
+          required
+          className="p-2 rounded border"
+        >
+          <option value="">Select Customer</option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.fullname}
+            </option>
+          ))}
+        </select>
 
-      {formOpen && (
-        <form onSubmit={handleSubmit} className="space-y-4 bg-white p-4 rounded shadow w-full sm:w-2/3 mx-auto">
-          <input
-            type="text"
-            name="product_name"
-            value={form.product_name}
-            onChange={handleChange}
-            placeholder="Product/Service Name"
-            required
-            className="w-full border px-3 py-2 rounded"
-          />
-          <input
-            type="text"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            placeholder="Description"
-            className="w-full border px-3 py-2 rounded"
-          />
-          <input
-            type="number"
-            name="amount_owed"
-            value={form.amount_owed}
-            onChange={handleChange}
-            placeholder="Amount Owed"
-            required
-            className="w-full border px-3 py-2 rounded"
-          />
-          <input
-            type="number"
-            name="amount_deposited"
-            value={form.amount_deposited}
-            onChange={handleChange}
-            placeholder="Amount Deposited"
-            className="w-full border px-3 py-2 rounded"
-          />
-          <input
-            type="text"
-            name="customer_id"
-            value={form.customer_id}
-            onChange={handleChange}
-            placeholder="Customer ID (optional)"
-            className="w-full border px-3 py-2 rounded"
-          />
-          {!form.customer_id && (
-            <>
-              <input
-                type="text"
-                name="customer_name"
-                value={form.customer_name}
-                onChange={handleChange}
-                placeholder="Customer Name"
-                className="w-full border px-3 py-2 rounded"
-              />
-              <input
-                type="text"
-                name="phone_number"
-                value={form.phone_number}
-                onChange={handleChange}
-                placeholder="Phone Number"
-                className="w-full border px-3 py-2 rounded"
-              />
-            </>
-          )}
-          <select
-            name="status"
-            value={form.status}
-            onChange={handleChange}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-          </select>
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2 rounded"
-          >
-            {isEditing ? 'Update Debt' : 'Save Debt'}
-          </button>
-        </form>
-      )}
+        <select
+          name="product_id"
+          value={formData.product_id}
+          onChange={handleChange}
+          className="p-2 rounded border"
+        >
+          <option value="">Select Product (optional)</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
 
-      <div className="overflow-x-auto mt-6">
-        <table className="min-w-full bg-white shadow rounded text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-2">Product</th>
-              <th className="px-4 py-2">Customer</th>
-              <th className="px-4 py-2">Owed</th>
-              <th className="px-4 py-2">Deposited</th>
-              <th className="px-4 py-2">Remaining</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {debts.map((d) => {
-              const canDelete = String(d.created_by_owner) === storeId;
-              const canEdit =
-                (userId && d.created_by_user === parseInt(userId)) ||
-                (!userId && String(d.created_by_owner) === storeId);
+        <input
+          type="number"
+          name="amount_owed"
+          value={formData.amount_owed}
+          onChange={handleChange}
+          placeholder="Amount Owed"
+          required
+          className="p-2 rounded border"
+        />
 
-              return (
-                <tr key={d.id} className="border-t">
-                  <td className="px-4 py-2">{d.product_name}</td>
-                  <td className="px-4 py-2">{d.customer_name || `Customer #${d.customer_id}`}</td>
-                  <td className="px-4 py-2">₦{d.amount_owed}</td>
-                  <td className="px-4 py-2">₦{d.amount_deposited}</td>
-                  <td className="px-4 py-2">₦{d.amount_remaining}</td>
-                  <td className="px-4 py-2">{d.status}</td>
-                  <td className="px-4 py-2 space-x-2">
-                    {canEdit && (
-                      <button
-                        onClick={() => handleEdit(d)}
-                        className="text-indigo-600 hover:underline"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDelete(d.id, d)}
-                        className="text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    )}
+        <button
+          type="submit"
+          className="col-span-3 bg-indigo-600 text-white py-2 rounded hover:bg-blue-700"
+        >
+          Add Debt
+        </button>
+      </form>
+
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-2">Existing Debts</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="p-2 border">Customer</th>
+                <th className="p-2 border">Product</th>
+                <th className="p-2 border">Amount Owed</th>
+                <th className="p-2 border">Deposited</th>
+                <th className="p-2 border">Remaining</th>
+                <th className="p-2 border">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {debts.map((d) => (
+                <tr key={d.id}>
+                  <td className="p-2 border">{d.customer?.fullname || '—'}</td>
+                  <td className="p-2 border">{d.product?.name || '—'}</td>
+                  <td className="p-2 border">₦{Number(d.amount_owed).toLocaleString()}</td>
+                  <td className="p-2 border">₦{Number(d.amount_deposited).toLocaleString()}</td>
+                  <td className="p-2 border font-semibold text-red-600">
+                    ₦{Number(d.amount_remaining).toLocaleString()}
+                  </td>
+                  <td className="p-2 border">
+                    {new Date(d.debt_date).toLocaleDateString()}
                   </td>
                 </tr>
-              );
-            })}
-            {debts.length === 0 && (
-              <tr>
-                <td colSpan="7" className="text-center py-4 text-gray-500">
-                  No debts found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+          {debts.length === 0 && <p className="text-center py-4">No debts found.</p>} <br/> 
+        </div>
+        <DebtHistory />
       </div>
+      
+      
     </div>
   );
 };

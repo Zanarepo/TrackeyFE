@@ -1,150 +1,208 @@
+// Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 
 export default function Login() {
-  const [emailAddress, setEmailAddress] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState('');
-
+  const [accessOptions, setAccessOptions] = useState(null);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Helper: Convert array buffer into hex string.
-  const arrayBufferToHex = (buffer) => {
-    return Array.prototype.map
-      .call(new Uint8Array(buffer), (x) => ('00' + x.toString(16)).slice(-2))
+  // SHA-256 → hex
+  const hashPwd = async (plain) => {
+    const buf = new TextEncoder().encode(plain);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
   };
 
-  // Helper: Hash the password with SHA-256.
-  const hashPassword = async (plainText) => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(plainText);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return arrayBufferToHex(hashBuffer);
+  // Called when user picks which dashboard to enter
+  const pickAccess = (opt) => {
+    localStorage.clear();
+    switch (opt.type) {
+      case 'owner':
+        localStorage.setItem('store_id', opt.storeId);
+        localStorage.setItem('role', 'owner');
+        navigate('/dashboard');
+        break;
+      case 'team':
+        localStorage.setItem('store_id', opt.storeId);
+        localStorage.setItem('user_id', opt.userId);
+        localStorage.setItem('role', opt.role);
+        navigate('/team-dashboard');
+        break;
+      case 'admin':
+      case 'superadmin':
+        localStorage.setItem('admin_id', opt.adminId);
+        localStorage.setItem('role', opt.role);
+        navigate('/admin-dashboard');
+        break;
+      default:
+        break;
+    }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setNotification('');
+    setError('');
     setLoading(true);
 
     try {
-      const hashedPassword = await hashPassword(password);
+      const hashed = await hashPwd(password);
 
-      // Try to query the 'stores' table first for a store owner.
-      const { data: ownerData, error: ownerError } = await supabase
+      // 1) Fetch store owners
+      const { data: owners = [], error: ownerErr } = await supabase
         .from('stores')
-        .select('*')
-        .eq('email_address', emailAddress)
-        .eq('password', hashedPassword)
-        .maybeSingle();
+        .select('id, shop_name')
+        .eq('email_address', email)
+        .eq('password', hashed);
 
-      if (ownerError) {
-        console.error(ownerError);
+      // 2) Fetch team members + store name via foreign select
+      const { data: teamData = [], error: teamErr } = await supabase
+        .from('store_users')
+        .select('id, role, store_id, stores(id, shop_name)')
+        .eq('email_address', email)
+        .eq('password', hashed);
+
+      // 3) Fetch admins
+      const { data: adminData = [], error: adminErr } = await supabase
+        .from('admins')
+        .select('id, role')
+        .eq('email', email)
+        .eq('password', hashed);
+
+      if (ownerErr || teamErr || adminErr) {
+        console.error(ownerErr, teamErr, adminErr);
+        setError('An error occurred. Please try again.');
+        setLoading(false);
+        return;
       }
-      
-      if (ownerData) {
-        // Found a store owner.
-        localStorage.setItem('store_id', ownerData.id);
-        // Optionally store a user_id if needed for owners
-        localStorage.setItem('user_id', ownerData.id);
-        setNotification('Login successful! Redirecting to your dashboard...');
-        setTimeout(() => {
-          navigate('/dashboard'); // Redirect to store owner dashboard.
-        }, 1000);
+
+      // Build all possible accesses
+      const opts = [];
+
+      owners.forEach((o) => {
+        opts.push({
+          type: 'owner',
+          label: `Store Owner: ${o.shop_name}`,
+          storeId: o.id,
+        });
+      });
+
+      teamData.forEach((u) => {
+        opts.push({
+          type: 'team',
+          label: `${u.role.charAt(0).toUpperCase() + u.role.slice(1)} @ ${u.stores.shop_name}`,
+          storeId: u.store_id,
+          userId: u.id,
+          role: u.role,
+        });
+      });
+
+      adminData.forEach((a) => {
+        opts.push({
+          type: a.role === 'superadmin' ? 'superadmin' : 'admin',
+          label: `${a.role.charAt(0).toUpperCase() + a.role.slice(1)} Panel`,
+          adminId: a.id,
+          role: a.role,
+        });
+      });
+
+      if (opts.length === 0) {
+        setError('Invalid credentials or no access.');
+      } else if (opts.length === 1) {
+        // Only one access, go straight there
+        pickAccess(opts[0]);
       } else {
-        // Try the 'store_users' table for a team member.
-        const { data: teamData, error: teamError } = await supabase
-          .from('store_users')
-          .select('*')
-          .eq('email_address', emailAddress)
-          .eq('password', hashedPassword)
-          .maybeSingle();
-
-        if (teamError) {
-          console.error(teamError);
-        }
-        
-        if (teamData) {
-          // Found a team member. Save both the team user's id and the store id.
-          localStorage.setItem('store_id', teamData.store_id);
-          localStorage.setItem('user_id', teamData.id);
-          setNotification('Login successful! Redirecting to the team dashboard...');
-          setTimeout(() => {
-            navigate('/team-dashboard'); // Redirect to team dashboard.
-          }, 1000);
-        } else {
-          setNotification('Invalid email or password. Please try again.');
-        }
+        // Multiple accesses: show selection UI
+        setAccessOptions(opts);
       }
-    } catch (err) {
-      setNotification(`Error: ${err.message}`);
+    } catch (e) {
+      console.error(e);
+      setError('Unexpected error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Selection UI if multiple accesses
+  if (accessOptions) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+        <div className="bg-white p-6 rounded shadow max-w-md w-full text-center">
+          <h2 className="text-xl font-semibold text-indigo-800 mb-4">
+            Choose Your Dashboard
+          </h2>
+          {accessOptions.map((opt, i) => (
+            <button
+              key={i}
+              onClick={() => pickAccess(opt)}
+              className="block w-full mb-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Default: Login form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white p-6 rounded shadow">
-        <h1 className="text-3xl font-bold text-indigo-800 mb-6 text-center">Store Login</h1>
-        {notification && (
-          <div className="mb-4 p-2 text-indigo-800 text-center rounded">
-            {notification}
-          </div>
-        )}
-        <form onSubmit={handleLogin} className="space-y-4">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white p-6 rounded shadow max-w-md w-full"
+      >
+        <h1 className="text-2xl font-bold text-indigo-800 mb-6 text-center">
+          Sign In
+        </h1>
+        {error && <div className="mb-4 text-red-600 text-center">{error}</div>}
+        <div className="space-y-4">
           <div>
-            <label className="block text-indigo-800 font-medium mb-1">Email Address</label>
+            <label className="block text-indigo-800 mb-1">Email</label>
             <input
               type="email"
-              value={emailAddress}
-              onChange={(e) => setEmailAddress(e.target.value)}
-              placeholder="Enter your email"
-              className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
+              className="w-full p-2 border rounded"
             />
           </div>
           <div>
-            <label className="block text-indigo-800 font-medium mb-1">Password</label>
+            <label className="block text-indigo-800 mb-1">Password</label>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPwd ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
                 required
+                className="w-full p-2 border rounded"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
+                onClick={() => setShowPwd((s) => !s)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600"
               >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                {showPwd ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
           </div>
-          <div className="text-right">
-            <a href="/forgot-password" className="text-sm text-indigo-800 hover:underline">
-              Forgot password?
-            </a>
-          </div>
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-blue-900 transition disabled:opacity-50"
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-          </div>
-        </form>
-      </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {loading ? 'Logging in…' : 'Login'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -1,301 +1,220 @@
-// ProductDashboard.js
+// Products.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
-import { MdEdit, MdDelete } from 'react-icons/md';
+import {
+  FaEdit,
+  FaTrashAlt,
+  FaFileCsv,
+  FaFilePdf,
+  FaPlus,
+} from 'react-icons/fa';
 
-const currencyTable = [
-  { code: 'NGN', name: 'Naira', rate: 1 },
-  { code: 'USD', name: 'US Dollar', rate: 0.0026 },
-  { code: 'EUR', name: 'Euro', rate: 0.0024 },
-  { code: 'GBP', name: 'British Pound', rate: 0.0021 },
-];
-
-const pageSize = 10; // products per page
-
-const ProductDashboard = () => {
+export default function Products() {
   const storeId = localStorage.getItem('store_id');
-
   const [products, setProducts] = useState([]);
-  const [notification, setNotification] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [editProduct, setEditProduct] = useState(null);
-  const [formData, setFormData] = useState({
-    product_name: '',
+  const [filtered, setFiltered] = useState([]);
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: '',
+    description: '',
     purchase_price: '',
-    quantity: '',
     markup_percent: '',
   });
-  const [customMarkup, setCustomMarkup] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCurrency, setSelectedCurrency] = useState(currencyTable[0].code);
-  const [conversionRate, setConversionRate] = useState(currencyTable[0].rate);
 
-  // Wrap fetchProducts with useCallback to fix missing dependency warnings.
+  // Memoized fetch to satisfy useEffect deps
   const fetchProducts = useCallback(async () => {
+    if (!storeId) return;
     const { data, error } = await supabase
       .from('products')
-      .select('*')
-      .eq('store_id', storeId);
-    if (error) {
-      console.error(error.message);
-      setNotification(error.message);
-    } else {
+      .select('id, name, description, purchase_price, markup_percent, selling_price, created_at')
+      .eq('store_id', storeId)
+      .order('id', { ascending: true });
+    if (!error) {
       setProducts(data);
+      setFiltered(data);
     }
   }, [storeId]);
 
+  // Initial load
   useEffect(() => {
-    if (storeId) fetchProducts();
-  }, [storeId, fetchProducts]);
+    fetchProducts();
+  }, [fetchProducts]);
 
-  // Update conversion rate when selectedCurrency changes.
+  // Search filtering
   useEffect(() => {
-    const currency = currencyTable.find((c) => c.code === selectedCurrency);
-    if (currency) {
-      setConversionRate(currency.rate);
+    if (!search) setFiltered(products);
+    else {
+      const q = search.toLowerCase();
+      setFiltered(
+        products.filter(p => p.name.toLowerCase().includes(q))
+      );
     }
-  }, [selectedCurrency]);
+  }, [search, products]);
 
-  // Handle form input changes.
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // Handlers
+  const handleFormChange = e => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Handle markup dropdown.
-  const handleMarkupChange = (e) => {
-    const value = e.target.value;
-    if (value === 'custom') {
-      setFormData({ ...formData, markup_percent: '' });
-    } else {
-      setFormData({ ...formData, markup_percent: value });
-    }
+  const handleAddChange = e => {
+    setAddForm({ ...addForm, [e.target.name]: e.target.value });
   };
 
-  // Submit handler for add/update.
-  const handleSubmit = async (e) => {
+  const createProduct = async e => {
     e.preventDefault();
-    const markup = formData.markup_percent || customMarkup;
-    const payload = {
-      store_id: storeId,
-      product_name: formData.product_name,
-      purchase_price: parseFloat(formData.purchase_price),
-      quantity: parseInt(formData.quantity),
-      markup_percent: parseFloat(markup),
-    };
-
-    if (editProduct) {
-      const { error } = await supabase
-        .from('products')
-        .update(payload)
-        .eq('id', editProduct.id);
-      if (error) {
-        setNotification(error.message);
-      } else {
-        setNotification('Product updated successfully!');
-        setEditProduct(null);
-        setShowModal(false);
-        fetchProducts();
-      }
-    } else {
-      const { error } = await supabase.from('products').insert(payload);
-      if (error) {
-        setNotification(error.message);
-      } else {
-        setNotification('Product added successfully!');
-        setShowModal(false);
-        fetchProducts();
-      }
-    }
-    setFormData({
-      product_name: '',
-      purchase_price: '',
-      quantity: '',
-      markup_percent: '',
-    });
-    setCustomMarkup('');
+    await supabase
+      .from('products')
+      .insert([{ store_id: storeId, ...addForm }]);
+    setShowAdd(false);
+    setAddForm({ name: '', description: '', purchase_price: '', markup_percent: '' });
+    fetchProducts();
   };
 
-  // Delete product.
-  const handleDelete = async (id) => {
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) {
-      setNotification(error.message);
-    } else {
-      setNotification('Product deleted successfully!');
+  const startEdit = p => {
+    setEditing(p);
+    setForm({
+      name: p.name,
+      description: p.description || '',
+      purchase_price: p.purchase_price,
+      markup_percent: p.markup_percent,
+    });
+  };
+
+  const saveEdit = async () => {
+    await supabase
+      .from('products')
+      .update(form)
+      .eq('id', editing.id);
+    setEditing(null);
+    fetchProducts();
+  };
+
+  const deleteProduct = async p => {
+    if (window.confirm(`Delete product "${p.name}"?`)) {
+      await supabase.from('products').delete().eq('id', p.id);
       fetchProducts();
     }
   };
 
-  // Open edit modal.
-  const openEditModal = (product) => {
-    setEditProduct(product);
-    setFormData({
-      product_name: product.product_name,
-      purchase_price: product.purchase_price,
-      quantity: product.quantity,
-      markup_percent: product.markup_percent,
-    });
-    setShowModal(true);
-  };
-
-  // Search filtering.
-  const filteredProducts = products.filter((prod) =>
-    prod.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Pagination calculations.
-  const totalPages = Math.ceil(filteredProducts.length / pageSize);
-  const displayedProducts = filteredProducts.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  // Export CSV.
+  // Export CSV
   const exportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Product Name,Purchase Price,Quantity,Markup %,Selling Price,Unit Selling Price,Created At\n";
-    filteredProducts.forEach((prod) => {
-      // Convert prices using conversionRate.
-      const purchasePrice = (prod.purchase_price * conversionRate).toFixed(2);
-      const sellingPrice = (prod.selling_price * conversionRate).toFixed(2);
-      const unitSellingPrice = (prod.unit_selling_price * conversionRate).toFixed(2);
+    let csv = "data:text/csv;charset=utf-8,";
+    csv += "Name,Description,Purchase Price,Markup %,Selling Price,Created At\n";
+    filtered.forEach(p => {
       const row = [
-        prod.product_name,
-        purchasePrice,
-        prod.quantity,
-        prod.markup_percent,
-        sellingPrice,
-        unitSellingPrice,
-        prod.created_at,
-      ].join(",");
-      csvContent += row + "\n";
+        p.name,
+        (p.description || '').replace(/,/g, ' '),
+        p.purchase_price.toFixed(2),
+        p.markup_percent.toFixed(2),
+        p.selling_price.toFixed(2),
+        p.created_at,
+      ].join(',');
+      csv += row + "\n";
     });
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "products.csv");
+    const encodedUri = encodeURI(csv);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'products.csv');
     document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
-  // Export PDF using jsPDF.
+  // Export PDF
   const exportPDF = () => {
-    import("jspdf").then(({ jsPDF }) => {
+    import('jspdf').then(({ jsPDF }) => {
       const doc = new jsPDF();
       let y = 10;
-      doc.text("Products List", 10, y);
+      doc.text('Products List', 10, y);
       y += 10;
-      filteredProducts.forEach((prod) => {
-        const purchasePrice = (prod.purchase_price * conversionRate).toFixed(2);
-        const sellingPrice = (prod.selling_price * conversionRate).toFixed(2);
-        const line = `Name: ${prod.product_name}, Price: ${purchasePrice}, Qty: ${prod.quantity}, Markup: ${prod.markup_percent}, Selling: ${sellingPrice}`;
+      filtered.forEach(p => {
+        const line = `Name: ${p.name}, Purchase: ${p.purchase_price.toFixed(2)}, Markup: ${p.markup_percent.toFixed(2)}%, Sell: ${p.selling_price.toFixed(2)}`;
         doc.text(line, 10, y);
         y += 10;
       });
-      doc.save("products.pdf");
+      doc.save('products.pdf');
     });
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      {/* Header with Currency, Search, Add & Export Buttons */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-4 space-y-2 md:space-y-0">
-        <h1 className="text-2xl font-bold text-indigo-800">Products Dashboard</h1>
-        <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2">
-          <select
-            value={selectedCurrency}
-            onChange={(e) => setSelectedCurrency(e.target.value)}
-            className="p-2 border rounded"
+    <div className="p-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="flex-1 p-2 border rounded"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
           >
-            {currencyTable.map((cur) => (
-              <option key={cur.code} value={cur.code}>
-                {cur.name} ({cur.code})
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="p-2 border rounded"
-          />
-          <button 
-            onClick={() => setShowModal(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-          >
-            Add Product
+            <FaPlus /> Add Product
           </button>
-          <button 
-            onClick={exportCSV}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Export CSV
+          <button onClick={exportCSV} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            <FaFileCsv /> CSV
           </button>
-          <button 
-            onClick={exportPDF}
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-          >
-            Export PDF
+          <button onClick={exportPDF} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            <FaFilePdf /> PDF
           </button>
         </div>
       </div>
 
-      {notification && (
-        <div className="mb-4 p-2 bg-green-100 text-green-800 rounded">
-          {notification}
+      {/* Add Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <form onSubmit={createProduct} className="bg-white p-6 rounded shadow w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add Product</h2>
+            {['name','description','purchase_price','markup_percent'].map(field => (
+              <div className="mb-3" key={field}>
+                <label className="block mb-1 capitalize">{field.replace('_',' ')}</label>
+                <input
+                  type={field.includes('price')||field.includes('percent') ? 'number' : 'text'}
+                  step="0.01"
+                  name={field}
+                  value={addForm[field]}
+                  onChange={handleAddChange}
+                  required={field==='name' || field==='purchase_price'}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            ))}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* Products Table */}
+      {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white dark:bg-gray-800 border">
-          <thead className="bg-indigo-200">
-            <tr>
-              <th className="p-2 border">Product Name</th>
-              <th className="p-2 border">Purchase Price</th>
-              <th className="p-2 border">Quantity</th>
-              <th className="p-2 border">Markup %</th>
-              <th className="p-2 border">Selling Price</th>
-              <th className="p-2 border">Unit Selling Price</th>
-              <th className="p-2 border">Created At</th>
-              <th className="p-2 border">Actions</th>
+        <table className="min-w-full bg-white rounded shadow">
+          <thead>
+            <tr className="bg-gray-200">
+              {['Name','Description','Purchase','Markup %','Selling','Created','Actions'].map(h => (
+                <th key={h} className="p-2 text-left">{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {displayedProducts.map((prod) => (
-              <tr key={prod.id} className="border-t">
-                <td className="p-2">{prod.product_name}</td>
-                <td className="p-2">
-                  {(prod.purchase_price * conversionRate).toFixed(2)}
-                </td>
-                <td className="p-2">{prod.quantity}</td>
-                <td className="p-2">{prod.markup_percent}</td>
-                <td className="p-2">
-                  {(prod.selling_price * conversionRate).toFixed(2)}
-                </td>
-                <td className="p-2">
-                  {(prod.unit_selling_price * conversionRate).toFixed(2)}
-                </td>
-                <td className="p-2">
-                  {new Date(prod.created_at).toLocaleString()}
-                </td>
-                <td className="p-2 flex space-x-2">
-                  <button 
-                    onClick={() => openEditModal(prod)}
-                    className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 flex items-center"
-                    title="Edit"
-                  >
-                    <MdEdit size={18} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(prod.id)}
-                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 flex items-center"
-                    title="Delete"
-                  >
-                    <MdDelete size={18} />
-                  </button>
+            {filtered.map(p => (
+              <tr key={p.id} className="border-t hover:bg-gray-50">
+                <td className="p-2">{p.name}</td>
+                <td className="p-2">{p.description}</td>
+                <td className="p-2">{p.purchase_price.toFixed(2)}</td>
+                <td className="p-2">{p.markup_percent.toFixed(2)}</td>
+                <td className="p-2">{p.selling_price.toFixed(2)}</td>
+                <td className="p-2">{new Date(p.created_at).toLocaleDateString()}</td>
+                <td className="p-2 flex items-center space-x-2">
+                  <button onClick={() => startEdit(p)} aria-label="Edit product" className="p-1 hover:bg-gray-200 rounded"><FaEdit className="text-indigo-600" /></button>
+                  <button onClick={() => deleteProduct(p)} aria-label="Delete product" className="p-1 hover:bg-gray-200 rounded"><FaTrashAlt className="text-red-600" /></button>
                 </td>
               </tr>
             ))}
@@ -303,141 +222,32 @@ const ProductDashboard = () => {
         </table>
       </div>
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-4 space-x-2">
-          <button 
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400"
-            disabled={currentPage === 1}
-          >
-            Prev
-          </button>
-          <span className="px-3 py-1">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button 
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400"
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </div>
-      )}
-
-      {/* Modal for Add/Edit Product */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 mt-24">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-indigo-800">
-              {editProduct ? 'Edit Product' : 'Add Product'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex flex-col">
-                <label className="text-gray-700 dark:text-gray-300">Product Name</label>
+      {/* Edit Modal */}
+      {editing && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Edit {editing.name}</h2>
+            {['name','description','purchase_price','markup_percent'].map(field => (
+              <div className="mb-3" key={field}>
+                <label className="block mb-1 capitalize">{field.replace('_',' ')}</label>
                 <input
-                  type="text"
-                  name="product_name"
-                  value={formData.product_name}
-                  onChange={handleInputChange}
-                  required
-                  className="p-2 border rounded mt-1"
-                  placeholder="Enter product name"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-gray-700 dark:text-gray-300">Purchase Price</label>
-                <input
-                  type="number"
+                  type={field.includes('price')||field.includes('percent') ? 'number' : 'text'}
                   step="0.01"
-                  name="purchase_price"
-                  value={formData.purchase_price}
-                  onChange={handleInputChange}
-                  required
-                  className="p-2 border rounded mt-1"
-                  placeholder="Enter purchase price"
+                  name={field}
+                  value={form[field]}
+                  onChange={handleFormChange}
+                  required={field==='name' || field==='purchase_price'}
+                  className="w-full p-2 border rounded"
                 />
               </div>
-              <div className="flex flex-col">
-                <label className="text-gray-700 dark:text-gray-300">Quantity</label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleInputChange}
-                  required
-                  className="p-2 border rounded mt-1"
-                  placeholder="Enter quantity"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-gray-700 dark:text-gray-300">Markup %</label>
-                <div className="flex flex-col sm:flex-row sm:space-x-2">
-                  <select
-                    name="markup_percent"
-                    value={formData.markup_percent}
-                    onChange={handleMarkupChange}
-                    className="p-2 border rounded mt-1 sm:w-1/2"
-                    required
-                  >
-                    <option value="">Select markup</option>
-                    <option value="5">5%</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                    <option value="20">20</option>
-                    <option value="25">25%</option>
-                    <option value="30">30%</option>
-                    <option value="35">35%</option>
-                    <option value="40">40%</option>
-                    <option value="45">45%</option>
-                    <option value="50">55%</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                  {formData.markup_percent === '' && (
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={customMarkup}
-                      onChange={(e) => setCustomMarkup(e.target.value)}
-                      placeholder="Enter markup %"
-                      className="p-2 border rounded mt-1 sm:w-1/2"
-                      required
-                    />
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditProduct(null);
-                    setFormData({
-                      product_name: '',
-                      purchase_price: '',
-                      quantity: '',
-                      markup_percent: '',
-                    });
-                    setCustomMarkup('');
-                  }}
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-                >
-                  {editProduct ? 'Update Product' : 'Add Product'}
-                </button>
-              </div>
-            </form>
+            ))}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
+              <button onClick={saveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-export default ProductDashboard;
+}
