@@ -24,10 +24,12 @@ import RegisteredDashboards from './component/RegisteredDashboards'
 
 // Registered Users components
 import UserHomepage from './component/UserDashboard/UserHomepage'
-import  TeamSignup from './component/Auth/TeamSignup'
+import TeamSignup from './component/Auth/TeamSignup'
 import StoreUsersHome from './component/UserDashboard/StoreUsersHome'
 import Admins from './component/AdminAuth/Admins'
 import AdminHome from './component/AdminDashboard/AdminHome'
+import SalesMetrics from "./component/UserDashboard/SalesMetrics";
+import PoductPurchaseCost from "./component/UserDashboard/ProductsPurchaseCost";
 
 
 
@@ -81,6 +83,7 @@ const App = () => {
           <Route path="/admindashboard" element={<AdminDasboard/>} />
 
 
+
           <Route path="/adminregister" element={<AdminRegistration/>} /> </Route>
           <Route path="/admin" element={<Admins/>} />
           <Route path="/regdashboard" element={<RegisteredDashboards />} />
@@ -88,6 +91,8 @@ const App = () => {
           <Route path="/dashboard" element={<UserHomepage />} />
           <Route path="/admin-dashboard" element={<AdminHome />} />
           <Route path="/team-dashboard" element={< StoreUsersHome />} />
+          <Route path="/sales-metrics" element={<SalesMetrics />} />
+          <Route path="/product-cost" element={<PoductPurchaseCost />} />
             
                     </Routes>
 
@@ -113,14 +118,12 @@ const App = () => {
             <Route element={<RegisteredNavbar />}>
               <Route path="/dashboard" element={<UserHomepage />} />
               <Route path="/admin-dashboard" element={<AdminHome />} />
-
+              <Route path="/sales-metrics" element={<SalesMetrics />} />
               <Route path="/team-dashboard" element={< StoreUsersHome />} />
-              
+              <Route path="/product-cost" element={<PoductPurchaseCost />} />
             
             </Route>
           </Routes>
-
-
 
 
 

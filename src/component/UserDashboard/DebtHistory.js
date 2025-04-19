@@ -115,7 +115,7 @@ const DebtPaymentTracker = () => {
           name="debt_tracker_id"
           value={form.debt_tracker_id}
           onChange={handleChange}
-          className="border p-2 w-full sm:w-auto rounded"
+          className="border p-2 w-full sm:w-auto rounded dark:bg-gray-800 dark:text-white"
           required
         >
           <option value="">Select Debt</option>
@@ -133,20 +133,26 @@ const DebtPaymentTracker = () => {
           placeholder="Amount Paid"
           value={form.amount_paid}
           onChange={handleChange}
-          className="border p-2 w-full sm:w-auto rounded"
+          className="border p-2 w-full sm:w-auto rounded dark:bg-gray-800 dark:text-white"
           required
         />
 
-        <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          Record Payment
-        </button>
+      <div className="w-full sm:w-auto max-w-full">
+  <button
+    type="submit"
+    className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-center text-sm sm:text-base"
+  >
+    Record Payment
+  </button>
+</div>
+
       </form>
 
-      <h3 className="text-lg font-semibold mb-2">Debts Overview</h3>
+      <h3 className="text-lg font-semibold mb-2 ">Debts Overview</h3>
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm table-auto border border-collapse">
+        <table className="min-w-full text-sm table-auto border border-collapse ">
           <thead>
-            <tr className="bg-gray-200">
+            <tr className="bg-gray-200 dark:bg-gray-800 dark:text-indigo-500">
               <th className="p-2 text-left">Customer</th>
               <th className="p-2 text-left">Owed</th>
               <th className="p-2 text-left">Deposited</th>
@@ -169,11 +175,11 @@ const DebtPaymentTracker = () => {
         </table>
       </div>
 
-      <h3 className="text-lg font-semibold mt-6 mb-2">Payment History</h3>
+      <h3 className="text-lg font-semibold mt-6 mb-2 ">Payment History</h3>
 <div className="overflow-x-auto">
   <table className="min-w-full text-sm table-auto border border-collapse">
     <thead>
-      <tr className="bg-gray-100">
+      <tr className="bg-gray-100 dark:bg-gray-800 dark:text-indigo-500">
         <th className="p-2 text-left">Customer</th>
         <th className="p-2 text-left">Amount Paid</th>
         <th className="p-2 text-left">Payment Date</th>

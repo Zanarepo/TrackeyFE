@@ -28,13 +28,13 @@ const InviteGenerator = () => {
   };
 
   return (
-    <div className="p-4 bg-white dark:bg-gray-700 rounded shadow max-w-xl mx-auto">
-      <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mb-4">
+    <div className="p-4 dark:bg-gray-800 dark:text-white rounded shadow max-w-xl mx-auto">
+      <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mb-4 dark:bg-gray-800 dark:text-white">
         Create Invite
       </h2>
       <button
         onClick={generateInvite}
-        className="px-4 py-2 bg-indigo-800 text-white rounded hover:bg-indigo-700 mb-4"
+        className="px-4 py-2 bg-indigo-800 text-white rounded hover:bg-indigo-700 mb-4 "
       >
         Generate Invite Link
       </button>
@@ -44,17 +44,17 @@ const InviteGenerator = () => {
           <label className="block text-indigo-800 dark:text-indigo-200">
             Share this Invite Link with your team:
           </label>
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch ">
             <input
               type="text"
               readOnly
               value={inviteLink}
-              className="flex-1 p-2 border rounded text-sm"
+              className="flex-1 p-2 border rounded text-sm dark:bg-gray-800 dark:text-white"
               onFocus={(e) => e.target.select()}
             />
             <button
               onClick={copyToClipboard}
-              className="flex items-center justify-center px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+              className="flex items-center justify-center px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm dark:bg-indigo-600 dark:text-white"
             >
               <FaCopy className="mr-2" /> Copy
             </button>

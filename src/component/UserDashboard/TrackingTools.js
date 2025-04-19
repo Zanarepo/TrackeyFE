@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fa';
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('expense');
+  const [activeTab, setActiveTab] = useState('sales');
 
   const renderContent = () => {
     switch (activeTab) {

@@ -141,22 +141,24 @@ export default function Products() {
 
   return (
     <div className="p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
+      {/* Header */} 
+      <div className=" flex flex-col sm:flex-row items-center dark:bg-gray-800 dark:text-white justify-between mb-4 gap-2 ">
         <input
           type="text"
           placeholder="Search products..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 p-2 border rounded"
+          className="flex-1 p-2 border rounded dark:bg-gray-800 dark:text-white"
         />
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            <FaPlus /> Add Product
-          </button>
+  <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-start gap-2">
+  <button
+    onClick={() => setShowAdd(true)}
+    className="flex items-center justify-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 w-full sm:w-auto"
+  >
+   
+   
+    <FaPlus /> Add Product
+  </button>
           <button onClick={exportCSV} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
             <FaFileCsv /> CSV
           </button>
@@ -168,7 +170,7 @@ export default function Products() {
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ">
           <form onSubmit={createProduct} className="bg-white p-6 rounded shadow w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Add Product</h2>
             {['name','description','purchase_price','markup_percent'].map(field => (
@@ -195,18 +197,18 @@ export default function Products() {
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded shadow">
+        <table className="min-w-full bg-white rounded shadow dark:bg-gray-800 dark:text-white">
           <thead>
-            <tr className="bg-gray-200">
+            <tr className="bg-gray-200 dark:bg-gray-800 dark:text-white">
               {['Name','Description','Purchase','Markup %','Selling','Created','Actions'].map(h => (
-                <th key={h} className="p-2 text-left">{h}</th>
+                <th key={h} className="p-2 text-left dark:bg-gray-800 dark:text-indigo-500">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.map(p => (
-              <tr key={p.id} className="border-t hover:bg-gray-50">
-                <td className="p-2">{p.name}</td>
+              <tr key={p.id} className="border-t hover:bg-gray-50 dark:bg-gray=-800 dark:hover:bg-gray-800">
+                <td className="p-2 ">{p.name}</td>
                 <td className="p-2">{p.description}</td>
                 <td className="p-2">{p.purchase_price.toFixed(2)}</td>
                 <td className="p-2">{p.markup_percent.toFixed(2)}</td>

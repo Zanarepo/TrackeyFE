@@ -143,7 +143,7 @@ const StoreOwnerDashboard = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="max-w-4xl mx-auto p-4 dark:bg-gray-800 dark:text-white mt">
       {/* Header with Logo and Logout */}
       <div className="flex flex-col items-center mb-6">
        {/* Header with Logo and Logout  <img
@@ -151,7 +151,7 @@ const StoreOwnerDashboard = () => {
           alt="Business Logo"
           className="w-32 h-32 object-cover rounded-full border mb-4"
         />*/}
-        <h1 className="text-3xl font-bold text-indigo-800 mb-2">
+        <h1 className="text-3xl font-bold text-indigo-800 mb-2 dark:bg-gray-800 dark:text-white">
           My Store Profile
         </h1>
         <button
@@ -195,9 +195,9 @@ const StoreOwnerDashboard = () => {
               onChange={handleInputChange}
               readOnly={!isEditing}
               className={`p-2 border rounded mt-1 ${
-                isEditing ? 'bg-white' : 'bg-gray-100'
+                isEditing ? 'bg-white' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'
               }`}
-              placeholder="Enter your shop name"
+              placeholder="Enter your shop name dark:bg-gray-800 dark:text-white"
             />
           </div>
 
@@ -211,7 +211,7 @@ const StoreOwnerDashboard = () => {
               onChange={handleInputChange}
               readOnly={!isEditing}
               className={`p-2 border rounded mt-1 ${
-                isEditing ? 'bg-white' : 'bg-gray-100'
+                isEditing ? 'bg-white' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'
               }`}
               placeholder="Enter your full name"
             />
@@ -229,7 +229,7 @@ const StoreOwnerDashboard = () => {
               onChange={handleInputChange}
               readOnly={!isEditing}
               className={`p-2 border rounded mt-1 ${
-                isEditing ? 'bg-white' : 'bg-gray-100'
+                isEditing ? 'bg-white' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'
               }`}
               placeholder="Enter your email address"
             />
@@ -247,7 +247,7 @@ const StoreOwnerDashboard = () => {
               onChange={handleInputChange}
               readOnly={!isEditing}
               className={`p-2 border rounded mt-1 ${
-                isEditing ? 'bg-white' : 'bg-gray-100'
+                isEditing ? 'bg-white' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'
               }`}
               placeholder="e.g., Retail, Services"
             />
@@ -265,7 +265,7 @@ const StoreOwnerDashboard = () => {
               onChange={handleInputChange}
               readOnly={!isEditing}
               className={`p-2 border rounded mt-1 ${
-                isEditing ? 'bg-white' : 'bg-gray-100'
+                isEditing ? 'bg-white' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'
               }`}
               placeholder="Enter your phone number"
             />
@@ -282,7 +282,7 @@ const StoreOwnerDashboard = () => {
               onChange={handleInputChange}
               readOnly={!isEditing}
               className={`p-2 border rounded mt-1 resize-none ${
-                isEditing ? 'bg-white' : 'bg-gray-100'
+                isEditing ? 'bg-white' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'
               }`}
               placeholder="Enter your address"
             ></textarea>
@@ -298,7 +298,7 @@ const StoreOwnerDashboard = () => {
                 name="state"
                 value={storeDetails.state}
                 onChange={handleInputChange}
-                className="p-2 border rounded mt-1 bg-white"
+                className="p-2 border rounded mt-1 bg-white "
               >
                 <option value="">Select your state/region</option>
                 <option value="lagos">Lagos</option>
@@ -313,7 +313,7 @@ const StoreOwnerDashboard = () => {
                 name="state"
                 value={storeDetails.state}
                 readOnly
-                className="p-2 border rounded mt-1 bg-gray-100"
+                className="p-2 border rounded mt-1 bg-gray-100 dark:bg-gray-800 dark:text-white"
               />
             )}
           </div>
@@ -343,7 +343,7 @@ const StoreOwnerDashboard = () => {
                 name="default_currency"
                 value={storeDetails.default_currency}
                 readOnly
-                className="p-2 border rounded mt-1 bg-gray-100"
+                className="p-2 border rounded mt-1 bg-gray-100 dark:bg-gray-800 dark:text-white"
               />
             )}
           </div>
@@ -406,7 +406,7 @@ const StoreOwnerDashboard = () => {
               placeholder="Enter new password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded mt-1 bg-white"
+              className="w-full p-2 border rounded mt-1 bg-white dark:bg-gray-800 dark:text-white"
             />
           </div>
           <button

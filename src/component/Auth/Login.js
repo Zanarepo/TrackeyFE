@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
+import { Link } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -194,6 +195,14 @@ export default function Login() {
               </button>
             </div>
           </div>
+
+            {/* Forgot Password Link */}
+            <div className="text-right">
+            <Link to="/forgot-password" className="text-sm text-indigo-600 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={loading}

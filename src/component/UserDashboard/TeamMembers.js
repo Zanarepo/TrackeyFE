@@ -85,7 +85,7 @@ const TeamManagement = () => {
       <div className="overflow-x-auto">
         <table className="w-full min-w-full border">
           <thead>
-            <tr className="bg-indigo-200 text-left">
+            <tr className="bg-indigo-200 text-left dark:bg-gray-800 dark:text-white">
               <th className="p-2">Full Name</th>
               <th className="p-2">Email</th>
               <th className="p-2">Phone</th>
@@ -95,7 +95,7 @@ const TeamManagement = () => {
           </thead>
           <tbody>
             {teamMembers.map((member) => (
-              <tr key={member.id} className="border-t">
+              <tr key={member.id} className="border-t dark:bg-gray-800 dark:text-white">
                 <td className="p-2">{member.full_name}</td>
                 <td className="p-2">{member.email_address}</td>
                 <td className="p-2">{member.phone_number}</td>
@@ -124,7 +124,7 @@ const TeamManagement = () => {
                   )}
                   <button
                     onClick={() => setEditingPasswordId(member.id)}
-                    className="text-blue-600 hover:underline"
+                    className="text-indigo-600 hover:underline dark:bg-gray-800 dark:text-gray-400"
                   >
                     Change Password
                   </button>

@@ -126,8 +126,8 @@ const ExpenseManager = () => {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Expense Manager</h2>
+      <div className="flex justify-between items-center mb-4 ">
+        <h2 className="text-xl font-semibold  dark:bg-gray-800 dark:text-white">Expense Manager</h2>
         <button
           className="bg-indigo-600 text-white px-4 py-2 rounded"
           onClick={() => {
@@ -142,16 +142,16 @@ const ExpenseManager = () => {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white p-4 rounded shadow mb-4 space-y-4"
+          className="bg-white p-4 rounded shadow mb-4 space-y-4 dark:bg-gray-800 dark:text-white"
         >
           <div>
-            <label className="block font-medium">Date</label>
+            <label className="block font-medium dark:bg-gray-800 dark:text-white">Date</label>
             <input
               type="date"
               name="expense_date"
               value={form.expense_date}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
               required
             />
           </div>
@@ -159,11 +159,12 @@ const ExpenseManager = () => {
           <div>
             <label className="block font-medium">Expense Type</label>
             <input
+             placeholder="e.g., Rent, Utilities"
               type="text"
               name="expense_type"
               value={form.expense_type}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
               required
             />
           </div>
@@ -171,11 +172,12 @@ const ExpenseManager = () => {
           <div>
             <label className="block font-medium">Amount</label>
             <input
+             placeholder="0.00"
               type="number"
               name="amount"
               value={form.amount}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
               required
             />
           </div>
@@ -183,16 +185,17 @@ const ExpenseManager = () => {
           <div>
             <label className="block font-medium">Description</label>
             <textarea
+              placeholder="Optional description"
               name="description"
               value={form.description}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
             />
           </div>
 
           <button
             type="submit"
-            className="bg-green-600 text-white px-4 py-2 rounded"
+            className="bg-indigo-600 text-white px-4 py-2 rounded"
           >
             {editingId ? 'Update Expense' : 'Add Expense'}
           </button>
@@ -200,9 +203,9 @@ const ExpenseManager = () => {
       )}
 
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border rounded shadow">
+        <table className="min-w-full bg-white border rounded shadow dark:bg-gray-800 dark:text-white">
           <thead>
-            <tr className="bg-gray-100 text-left">
+            <tr className="bg-gray-100 text-left dark:bg-gray-800 dark:text-indigo-500">
               <th className="p-2">Date</th>
               <th className="p-2">Type</th>
               <th className="p-2">Amount</th>
@@ -219,7 +222,7 @@ const ExpenseManager = () => {
                 <td className="p-2">{expense.description}</td>
                 <td className="p-2 space-x-2">
                   <button
-                    className="text-blue-600"
+                    className="text-indigo-600"
                     onClick={() => handleEdit(expense)}
                   >
                     Edit

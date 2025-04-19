@@ -101,69 +101,71 @@ const DebtTracker = () => {
 
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h2 className="text-xl font-bold mb-4">Track Customer Debt</h2>
-
-      <form
-        onSubmit={handleSubmit}
-        className="grid md:grid-cols-3 gap-4 bg-gray-100 p-4 rounded-lg"
+    <div className="max-w-4xl mx-auto px-2 sm:px-4 py-4">
+    <h2 className="text-xl font-bold mb-4 dark:bg-gray-800 dark:text-white">Track Customer Debt</h2>
+  
+    <form
+      onSubmit={handleSubmit}
+      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-gray-100 p-4 rounded-lg dark:bg-gray-800 dark:text-white"
+    >
+      <select
+        name="customer_id"
+        value={formData.customer_id}
+        onChange={handleChange}
+        required
+        className="p-2 rounded border dark:bg-gray-800 dark:text-white"
       >
-        <select
-          name="customer_id"
-          value={formData.customer_id}
-          onChange={handleChange}
-          required
-          className="p-2 rounded border"
-        >
-          <option value="">Select Customer</option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.fullname}
-            </option>
-          ))}
-        </select>
-
-        <select
-          name="product_id"
-          value={formData.product_id}
-          onChange={handleChange}
-          className="p-2 rounded border"
-        >
-          <option value="">Select Product (optional)</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="number"
-          name="amount_owed"
-          value={formData.amount_owed}
-          onChange={handleChange}
-          placeholder="Amount Owed"
-          required
-          className="p-2 rounded border"
-        />
-
+        <option value="">Select Customer</option>
+        {customers.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.fullname}
+          </option>
+        ))}
+      </select>
+  
+      <select
+        name="product_id"
+        value={formData.product_id}
+        onChange={handleChange}
+        className="p-2 rounded border dark:bg-gray-800 dark:text-white"
+      >
+        <option value="">Select Product (optional)</option>
+        {products.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+  
+      <input
+        type="number"
+        name="amount_owed"
+        value={formData.amount_owed}
+        onChange={handleChange}
+        placeholder="Amount Owed"
+        required
+        className="p-2 rounded border dark:bg-gray-800 dark:text-white"
+      />
+  
+      <div className="sm:col-span-2 md:col-span-3">
         <button
           type="submit"
-          className="col-span-3 bg-indigo-600 text-white py-2 rounded hover:bg-blue-700"
+          className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-center"
         >
           Add Debt
         </button>
-      </form>
+      </div>
+    </form>
 
-      <div className="mt-6">
+      <div className="mt-6 dark:bg-gray-800 dark:text-white">
         <h3 className="text-lg font-semibold mb-2">Existing Debts</h3>
         <div className="overflow-x-auto">
-          <table className="w-full border text-sm">
+          <table className="w-full border text-sm ">
             <thead>
-              <tr className="bg-gray-200">
+              <tr className="bg-gray-200 dark:bg-gray-800 dark:text-indigo-500">
                 <th className="p-2 border">Customer</th>
                 <th className="p-2 border">Product</th>
-                <th className="p-2 border">Amount Owed</th>
+                <th className="p-2 border " >Amount Owed</th>
                 <th className="p-2 border">Deposited</th>
                 <th className="p-2 border">Remaining</th>
                 <th className="p-2 border">Date</th>
@@ -172,7 +174,7 @@ const DebtTracker = () => {
             <tbody>
               {debts.map((d) => (
                 <tr key={d.id}>
-                  <td className="p-2 border">{d.customer?.fullname || '—'}</td>
+                  <td className="p-2 border dark:bg-gray-800 dark:text-white" >{d.customer?.fullname || '—'}</td>
                   <td className="p-2 border">{d.product?.name || '—'}</td>
                   <td className="p-2 border">₦{Number(d.amount_owed).toLocaleString()}</td>
                   <td className="p-2 border">₦{Number(d.amount_deposited).toLocaleString()}</td>

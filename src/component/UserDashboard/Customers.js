@@ -101,7 +101,7 @@ export default function CustomerManagement() {
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-indigo-800 font-bold">Customers</h2>
+        <h2 className="text-2xl font-bold text-indigo-800 font-bold dark:bg-gray-800 dark:text-white">Customers</h2>
         <button
           onClick={openNewModal}
           className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
@@ -113,10 +113,10 @@ export default function CustomerManagement() {
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto dark:bg-gray-800 dark:text-white">
           <table className="w-full border">
             <thead>
-              <tr className="bg-gray-100">
+              <tr className="bg-gray-100 dark:bg-gray-800 dark:text-indigo-500">
                 <th className="p-2">Name</th>
                 <th className="p-2">Phone</th>
                 <th className="p-2">Email</th>

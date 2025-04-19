@@ -116,10 +116,10 @@ export default function RegisterAccount() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-8 mt-24">
+    <div className="min-h-screen flex items-center justify-center bg-indigo-300 p-8 mt-20">
       {/* Remove max-w-md to allow container to expand fully on desktop */}
-      <div className="w-full bg-indigo-600 bg-opacity-75 p-6 rounded shadow">
-        <h1 className="text-3xl font-bold mb-6 text-center text-white">Create Your Store</h1>
+      <div className="w-full bg-white bg-opacity-75 p-6 rounded shadow">
+        <h1 className="text-3xl font-bold mb-6 text-center text-indigo-800">Create Your Store</h1>
         {notification && (
           <div className="mb-4 p-2 bg-indigo-100 text-blue-800 text-center rounded">
             {notification}
@@ -127,7 +127,7 @@ export default function RegisterAccount() {
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-white font-medium mb-1">Business Name</label>
+            <label className="block text-indigo-800 font-medium mb-1">Business Name</label>
             <input
               type="text"
               value={shopName}
@@ -138,7 +138,7 @@ export default function RegisterAccount() {
             />
           </div>
           <div>
-            <label className="block text-white font-medium mb-1">Full Name</label>
+            <label className="block text-indigo-800 font-medium mb-1">Full Name</label>
             <input
               type="text"
               value={fullName}
@@ -149,7 +149,7 @@ export default function RegisterAccount() {
             />
           </div>
           <div>
-            <label className="block text-white font-medium mb-1">Email Address</label>
+            <label className="block text-indigo-800 font-medium mb-1">Email Address</label>
             <input
               type="email"
               value={emailAddress}
@@ -160,7 +160,7 @@ export default function RegisterAccount() {
             />
           </div>
           <div>
-            <label className="block text-white font-medium mb-1">Nature of Business</label>
+            <label className="block text-indigo-800 font-medium mb-1">Nature of Business</label>
             <select
               value={natureOfBusiness}
               onChange={(e) => setNatureOfBusiness(e.target.value)}
@@ -188,7 +188,7 @@ export default function RegisterAccount() {
             )}
           </div>
           <div>
-            <label className="block text-white font-medium mb-1">Password</label>
+            <label className="block text-indigo-800 font-medium mb-1">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -206,7 +206,7 @@ export default function RegisterAccount() {
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-            <p className="text-sm text-gray-200 mt-1">
+            <p className="text-sm text-indigo-500 mt-1">
               Password must be at least 6 characters.
             </p>
           </div>
@@ -214,7 +214,7 @@ export default function RegisterAccount() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-indigo-500 p-2 rounded hover:bg-indigo-300 transition-colors disabled:opacity-50"
+              className="w-full bg-indigo-800 text-white p-2 rounded hover:bg-indigo-600 transition-colors disabled:opacity-50"
             >
               {loading ? 'Registering...' : 'Register'}
             </button>

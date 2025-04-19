@@ -134,16 +134,16 @@ export default function InventoryManager() {
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Inventory Dashboard  {storeName}</h1>
+      <h1 className="text-2xl font-bold dark:bg-gray-800 dark:text-white">Inventory Dashboard  {storeName}</h1>
 
       {/* Add Inventory */}
-      <section className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <section className="bg-white shadow rounded-lg p-6 dark:bg-gray-800 dark:text-white">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 dark:bg-gray-800 dark:text-indigo-500 ">
           <PlusCircle size={20} /> Add New Stock
         </h2>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <select
-            className="flex-1 border rounded-lg p-2"
+            className="flex-1 border rounded-lg p-2 dark:bg-gray-800 dark:text-white"
             value={newProductId}
             onChange={e => setNewProductId(e.target.value)}
           >
@@ -153,14 +153,14 @@ export default function InventoryManager() {
           <input
             type="number"
             min="0"
-            className="w-full sm:w-24 border rounded-lg p-2"
+            className="w-full sm:w-24 border rounded-lg p-2 dark:bg-gray-800 dark:text-white"
             placeholder="Qty"
             value={newInventoryQty}
             onChange={e => setNewInventoryQty(e.target.value)}
           />
           <button
             onClick={handleAddInventory}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg dark:bg-gray-800 dark:text-indigo-500"
           >
             <PlusCircle size={16} /> Add Stock
           </button>
@@ -169,20 +169,20 @@ export default function InventoryManager() {
 
       {/* Inventory Table */}
       <section className="overflow-x-auto">
-        <table className="min-w-full border-collapse table-auto">
+        <table className="min-w-full border-collapse table-auto dark:bg-gray-800 dark:text-white">
           <thead>
             <tr className="bg-gray-100">
               {['ID', 'Product', 'Available', 'Sold', 'Remaining', 'Restock', 'Actions'].map((h, idx) => (
-                <th key={idx} className="px-4 py-3 text-left whitespace-nowrap text-sm font-medium text-gray-700">{h}</th>
+                <th key={idx} className="p-2 text-left dark:bg-gray-800 dark:text-indigo-500text-gray-700  dark:bg-gray-800 dark:text-indigo-500">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {inventory.map(item => (
-              <tr key={item.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{item.id}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">{item.product.name}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
+              <tr key={item.id} className="border-b hover:bg-gray-100 dark:bg-gray-800 dark:text-white">
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 dark:bg-gray-800 dark:text-white ">{item.id}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 dark:bg-gray-800 dark:text-white">{item.product.name}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 dark:bg-gray-800 dark:text-white">
                   {editingId === item.id ? (
                     <input
                       type="number"
@@ -193,33 +193,33 @@ export default function InventoryManager() {
                     />
                   ) : item.available_qty}
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-center">{item.quantity_sold}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800">
-                  <div className="flex items-center justify-center gap-1">
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-center dark:bg-gray-800 dark:text-white">{item.quantity_sold}</td>
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 dark:bg-gray-800 dark:text-white dark:bg-gray-800 dark:text-white">
+                  <div className="flex items-center justify-center gap-1 ">
                     {item.remaining_qty}
                     {item.remaining_qty <= REORDER_THRESHOLD && (
                       <RefreshCw size={14} className="text-red-500" />
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 flex items-center gap-1">
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 flex items-center gap-1 ">
                   <input
                     type="number"
                     min="0"
                     value={restockQty[item.id] || ''}
                     onChange={e => setRestockQty({...restockQty, [item.id]: e.target.value})}
-                    className="border p-1 rounded w-16"
+                    className="border p-1 rounded w-16 dark:bg-gray-800 dark:text-white"
                     placeholder="Qty"
                   />
-                  <button onClick={() => handleRestock(item.id)} className="p-1 rounded bg-indigo-500 hover:bg-blue-600 text-white">
+                  <button onClick={() => handleRestock(item.id)} className="p-1 rounded bg-indigo-500 hover:bg-indigo-600 text-white ">
                     <RefreshCw size={14} />
                   </button>
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-center">
-                  <div className="inline-flex items-center justify-center gap-2">
+                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-800 text-center  dark:bg-grey-300 ">
+                  <div className="inline-flex items-center justify-center gap-2 ">
                     {editingId === item.id ? (
                       <>
-                        <button onClick={() => saveEdit(item.id)} className="p-1 rounded bg-green-600 hover:bg-green-700 text-white">
+                        <button onClick={() => saveEdit(item.id)} className="p-1 rounded bg-green-600 hover:bg-green-700 text-white ">
                           <Save size={14} />
                         </button>
                         <button onClick={cancelEdit} className="p-1 rounded bg-gray-300 hover:bg-gray-400">
@@ -231,7 +231,7 @@ export default function InventoryManager() {
                         <button onClick={() => startEdit(item)} className="p-1 rounded bg-yellow-400 hover:bg-yellow-500 text-white">
                           <Edit2 size={14} />
                         </button>
-                        <button onClick={() => handleDelete(item.id)} className="p-1 rounded bg-red-500 hover:bg-red-600 text-white">
+                        <button onClick={() => handleDelete(item.id)} className="p-1 rounded bg-red-500 hover:bg-red-600 text-white ">
                           <Trash2 size={14} />
                         </button>
                       </>

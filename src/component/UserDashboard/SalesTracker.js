@@ -1,6 +1,7 @@
 // SalesTracker.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
+//import SalesMetrics from './SalesMetrics';
 import {
   FaPlus,
   FaEdit,
@@ -180,37 +181,46 @@ export default function SalesTracker() {
           placeholder="Search sales..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 p-2 border rounded"
+          className="flex-1 p-2 border rounded dark:bg-gray-800 dark:text-white dark:bg-gray-800 dark:text-white"
         />
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            <FaPlus /> Add Sale
-          </button>
-          <button onClick={exportCSV} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-            <FaFileCsv /> CSV
-          </button>
-          <button onClick={exportPDF} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            <FaFilePdf /> PDF
-          </button>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+  <button
+    onClick={() => setShowAdd(true)}
+    className="w-full sm:w-auto flex justify-center items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+  >
+    <FaPlus />Sale
+  </button>
+
+  <button
+    onClick={exportCSV}
+    className="w-full sm:w-auto flex justify-center items-center gap-1 px-2 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+  >
+    <FaFileCsv /> CSV
+  </button>
+
+  <button
+    onClick={exportPDF}
+    className="w-full sm:w-auto flex justify-center items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+  >
+    <FaFilePdf /> PDF
+  </button>
+</div>
+
       </div>
 
       {/* Add Sale Modal */}
       {showAdd && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <form onSubmit={createSale} className="bg-white p-6 rounded shadow w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Add Sale</h2>
-            <div className="mb-3">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ">
+          <form onSubmit={createSale} className="bg-white p-6 rounded shadow w-full max-w-md dark:bg-gray-800 dark:text-white">
+            <h2 className="text-xl font-bold mb-4 dark:bg-gray-800 dark:text-white">Add Sale</h2>
+            <div className="mb-3 dark:bg-gray-800 dark:text-white">
               <label className="block mb-1">Product</label>
               <select
                 name="product_id"
                 value={addForm.product_id}
                 onChange={handleAddChange}
                 required
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
               >
                 <option value="">Select a product</option>
                 {products.map(p => (
@@ -219,7 +229,7 @@ export default function SalesTracker() {
               </select>
             </div>
             <div className="mb-3">
-              <label className="block mb-1">Quantity</label>
+              <label className="block mb-1 dark:bg-gray-800 dark:text-white">Quantity</label>
               <input
                 type="number"
                 name="quantity"
@@ -227,7 +237,8 @@ export default function SalesTracker() {
                 value={addForm.quantity}
                 onChange={handleAddChange}
                 required
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
+                placeholder='Enter quantity'
               />
             </div>
             <div className="mb-3">
@@ -237,7 +248,8 @@ export default function SalesTracker() {
                 name="unit_price"
                 value={addForm.unit_price}
                 readOnly
-                className="w-full p-2 border rounded bg-gray-100"
+                className="w-full p-2 border rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                placeholder='Unit price will be auto-filled'
               />
             </div>
             <div className="mb-4">
@@ -247,7 +259,7 @@ export default function SalesTracker() {
                 value={addForm.payment_method}
                 onChange={handleAddChange}
                 required
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
               >
                 <option value="">Select method</option>
                 <option>Cash</option>
@@ -264,33 +276,39 @@ export default function SalesTracker() {
       )}
 
       {/* Sales Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded shadow">
-          <thead>
-            <tr className="bg-gray-200">
-              {['Product','Quantity','Unit Price','Amount','Payment','Sold At','Actions'].map(h => (
-                <th key={h} className="p-2 text-left">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} className="border-t hover:bg-gray-50">
-                <td className="p-2">{s.products.name}</td>
-                <td className="p-2">{s.quantity}</td>
-                <td className="p-2">{s.unit_price.toFixed(2)}</td>
-                <td className="p-2">{s.amount.toFixed(2)}</td>
-                <td className="p-2">{s.payment_method}</td>
-                <td className="p-2">{new Date(s.sold_at).toLocaleString()}</td>
-                <td className="p-2 flex items-center space-x-2">
-                  <button onClick={() => startEdit(s)} aria-label="Edit sale" className="p-1 hover:bg-gray-200 rounded"><FaEdit className="text-indigo-600" /></button>
-                  <button onClick={() => deleteSale(s)} aria-label="Delete sale" className="p-1 hover:bg-gray-200 rounded"><FaTrashAlt className="text-red-600" /></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <div className="w-full overflow-x-auto">
+  <table className="w-full min-w-[600px] bg-white rounded shadow">
+    <thead>
+      <tr className="bg-gray-200 dark:bg-gray-800 dark:text-white">
+        {['Product','Quantity','Unit Price','Amount','Payment','Sold At','Actions'].map(h => (
+          <th key={h} className="p-2 text-left dark:bg-gray-800 dark:text-indigo-500">{h}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {filtered.map(s => (
+        <tr key={s.id} className="border-t hover:bg-gray-50 dark:bg-gray-800 dark:text-white">
+          <td className="p-2">{s.products.name}</td>
+          <td className="p-2">{s.quantity}</td>
+          <td className="p-2">{s.unit_price.toFixed(2)}</td>
+          <td className="p-2">{s.amount.toFixed(2)}</td>
+          <td className="p-2">{s.payment_method}</td>
+          <td className="p-2">{new Date(s.sold_at).toLocaleString()}</td>
+          <td className="p-2 flex items-center space-x-2">
+            <button onClick={() => startEdit(s)} aria-label="Edit sale" className="p-1 hover:bg-gray-200 rounded">
+              <FaEdit className="text-indigo-600" />
+            </button>
+            <button onClick={() => deleteSale(s)} aria-label="Delete sale" className="p-1 hover:bg-gray-200 rounded">
+              <FaTrashAlt className="text-red-600" />
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+      
 
       {/* Edit Sale Modal */}
       {editing && (
@@ -323,8 +341,13 @@ export default function SalesTracker() {
               <button type="button" onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
               <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
             </div>
-          </form>
+          </form> <br/>
+          
+
+
         </div>
+
+        
       )}
     </div>
   );
