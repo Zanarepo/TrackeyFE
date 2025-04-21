@@ -18,10 +18,10 @@ import ShopOwner from './ShopOwner';
 import ServicesDashboard from './ServicesDashboard';
 import TrackingTools from './TrackingTools';
 import CostRevExp from '../Ops/Dashboard';
-import MainDashboard from './MainDashboard';
+import Simplex from './Simplex';
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('MainDashboard');
+  const [activeTab, setActiveTab] = useState('Simplex');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -43,10 +43,10 @@ const Dashboard = () => {
         );
       
 
-      case 'MainDashboard':
+      case 'Simplex':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <MainDashboard />
+            <Simplex />
           </div>
         );
       
@@ -68,7 +68,7 @@ const Dashboard = () => {
           </div>
         ); 
 
-        case 'ServicesDashboard':
+        case 'Variex':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
             <ServicesDashboard />
@@ -136,8 +136,8 @@ const Dashboard = () => {
   
 
               <li 
-                  onClick={() => handleNavClick('MainDashboard')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'MainDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('Simplex')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Simplex' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Simplex</span>
@@ -151,8 +151,8 @@ const Dashboard = () => {
 
 
                 <li 
-                  onClick={() => handleNavClick('ServicesDashboard')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Services' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('Variex')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Variex' ? 'bg-indigo-200 dark:bg-indigo-600 text-white' : ''}`}
                 >
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Variex</span>

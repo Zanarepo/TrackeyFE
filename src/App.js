@@ -30,7 +30,7 @@ import Admins from './component/AdminAuth/Admins'
 import AdminHome from './component/AdminDashboard/AdminHome'
 import SalesMetrics from "./component/UserDashboard/SalesMetrics";
 import PoductPurchaseCost from "./component/UserDashboard/ProductsPurchaseCost";
-import MainDashboard from './component/UserDashboard/MainDashboard'
+import MainDashboard from './component/UserDashboard/Simplex'
 
 //import Profile from './component/UserDashboard/Profile'
 //import ServicesDashboard from './component/UserDashboard/ServicesDashboard'
