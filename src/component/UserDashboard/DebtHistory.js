@@ -110,8 +110,8 @@ export default function DebtPaymentManager() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-3xl font-bold text-center text-indigo-700 dark:bg-gray-900 dark:text-white">Debt Payments</h1>
+    <div className="p-0 sm:p-4 bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
+      <h1 className="text-3xl font-bold text-center text-indigo-700 dark:bg-gray-900 dark:text-white">Debt Payments</h1> <br />
 
       {/* Search & New */}
       <div className="flex flex-col sm:flex-row gap-3 items-center">
@@ -123,17 +123,17 @@ export default function DebtPaymentManager() {
           className="flex-1 p-2 border border-gray-300 rounded focus:ring dark:bg-gray-900 dark:text-white"
         />
        
-      </div>
+      </div> <br/>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg shadow">
-        <table className="min-w-full bg-white ">
+      <div className="overflow-x-auto rounded-lg shadow ">
+        <table className="min-w-full bg-white  ">
           <thead>
-             <tr className="bg-gray-200 text-indigo-500 dark:bg-gray-900 dark:text-indigo-600">
-              {['Customer','Owed','Paid','Remaining','Last Payment','Actions'].map(col => (
+             <tr className="bg-gray-500 text-indigo-500 dark:bg-gray-900 dark:text-indigo-600">
+              {['Customer','Owed','Paid','Balance','Last Paymt','Actions'].map(col => (
                 <th
                   key={col}
-                  className="px-4 py-3 text-left text-sm font-bold text-white"
+                  className="px-4 py-3 text-left text-sm font-bold text-indigo-50"
                 >
                   {col}
                 </th>
@@ -145,9 +145,9 @@ export default function DebtPaymentManager() {
               <tr
                 key={d.id}
                 className={
-                  d.status === 'paid' ? 'bg-green-50' :
-                  d.status === 'partial' ? 'bg-yellow-50' :
-                  'bg-red-50'
+                  d.status === 'paid' ? 'bg-green-50 dark:bg-gray-900 dark:text-green-500' :
+                  d.status === 'partial' ? 'bg-yellow-50 dark:bg-gray-900 dark:text-yellow-600' :
+                  'bg-red-50 dark:bg-gray-900 dark:text-red-500'
                 }
               >
                 <td className="px-4 py-3 text-sm">{d.customer_name}</td>
@@ -178,7 +178,7 @@ export default function DebtPaymentManager() {
             ))}
           </tbody>
         </table>
-      </div>
+      </div> <br/>
 
       {/* Pagination */}
       <div className="flex justify-between items-center">

@@ -104,7 +104,7 @@ export default function CustomerManagement() {
   };
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
+    <div className="p-2 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-indigo-800 dark:text-white">Customers</h2>

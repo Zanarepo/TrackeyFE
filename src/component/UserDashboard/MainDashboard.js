@@ -50,7 +50,7 @@ const tools = [
   {
     key: 'debts',
     label: 'Debts',
-    icon: <FaMoneyCheckAlt className="text-5xl sm:text-6xl text-indigo-600" />,
+    icon: <FaMoneyCheckAlt className="text-5xl sm:text-6xl text-indigo-600 p-1" />,
     desc: 'Track customer debts.',
     component: <DebtTracker />,
   },
