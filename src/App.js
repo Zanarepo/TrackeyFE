@@ -30,10 +30,20 @@ import Admins from './component/AdminAuth/Admins'
 import AdminHome from './component/AdminDashboard/AdminHome'
 import SalesMetrics from "./component/UserDashboard/SalesMetrics";
 import PoductPurchaseCost from "./component/UserDashboard/ProductsPurchaseCost";
+import MainDashboard from './component/UserDashboard/MainDashboard'
 
+//import Profile from './component/UserDashboard/Profile'
+//import ServicesDashboard from './component/UserDashboard/ServicesDashboard'
+//import TrackingTools from './component/UserDashboard/TrackingTools'
 
+//import CostRevExp from './component/UserDashboard/CostRevExp'
 
-
+//import ExpenseTracker from './component/UserDashboard/ExpenseTracker'
+//import DebtTracker from './component/UserDashboard/DebtTracker'
+//import ProductList from './component/UserDashboard/ProductList'
+import SalesTracker from './component/UserDashboard/SalesTracker'
+//import Customers from './component/UserDashboard/Customers'
+//import Inventory from './component/UserDashboard/Inventory'
 
 
 
@@ -93,6 +103,9 @@ const App = () => {
           <Route path="/team-dashboard" element={< StoreUsersHome />} />
           <Route path="/sales-metrics" element={<SalesMetrics />} />
           <Route path="/product-cost" element={<PoductPurchaseCost />} />
+          <Route path="/main" element={<MainDashboard />} />
+          <Route path="/salestrack" element={<SalesTracker />} />
+        
             
                     </Routes>
 
@@ -121,6 +134,8 @@ const App = () => {
               <Route path="/sales-metrics" element={<SalesMetrics />} />
               <Route path="/team-dashboard" element={< StoreUsersHome />} />
               <Route path="/product-cost" element={<PoductPurchaseCost />} />
+              <Route path="/main" element={<MainDashboard />} />
+              <Route path="/salestrack" element={<SalesTracker />} />
             
             </Route>
           </Routes>

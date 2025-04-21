@@ -1,208 +1,246 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
-import { toast } from 'react-toastify';
-import './DebtPaymentTracker.css'; // for blurred rows styling
+import { FaPlus, FaCheckCircle } from 'react-icons/fa';
 
-const DebtPaymentTracker = () => {
-    const [debts, setDebts] = useState([]);
-    const [payments, setPayments] = useState([]);
-    const [form, setForm] = useState({ debt_tracker_id: '', amount_paid: '' });
-  
-    // Fetch debts and filter out fully paid ones
-    const fetchDebts = useCallback(async () => {
-      const store_id = localStorage.getItem('store_id'); // Retrieve store_id inside the callback
-      const { data, error } = await supabase
-        .from('debt_tracker')
-        .select(`
-          id,
-          customer_id, 
-          customer:customer_id (fullname),
-          amount_owed,
-          amount_deposited,
-          amount_remaining
-        `)
-        .eq('store_id', store_id);
-  
-      if (error) toast.error('Failed to load debts');
-      else {
-        // Filter out customers with no remaining balance
-        const filteredDebts = data.filter(debt => debt.amount_remaining > 0);
-        setDebts(filteredDebts);
-      }
-    }, []); // No need for store_id here, since it's now inside the callback
-  
-    const fetchPayments = useCallback(async () => {
-      const { data, error } = await supabase
-        .from('debt_payment_history')
-        .select(`
-          id,
-          amount_paid,
-          payment_date,
-          customer:customer_id (fullname)
-        `)
-        .order('payment_date', { ascending: false });
-  
-      if (error) toast.error('Failed to load payments');
-      else setPayments(data);
-    }, []); // No need for store_id here either
-  
-    useEffect(() => {
-      fetchDebts();
-      fetchPayments();
-    }, [fetchDebts, fetchPayments]);
-  
-    const handleChange = (e) => {
-      setForm((prev) => ({
-        ...prev,
-        [e.target.name]: e.target.value,
-      }));
-    };
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const { debt_tracker_id, amount_paid } = form;
-        localStorage.setItem('selected_debt_id', debt_tracker_id);
-      
-        const store_id = localStorage.getItem('store_id'); // Retrieve store_id inside handleSubmit
-      
-        const { data: debtData, error: debtError } = await supabase
-          .from('debt_tracker')
-          .select('id, customer_id, amount_deposited, amount_owed')
-          .eq('store_id', store_id)
-          .eq('id', debt_tracker_id)
-          .single();
-      
-        if (debtError || !debtData) {
-          return toast.error('Failed to retrieve debt info');
-        }
-      
-        const { customer_id, amount_deposited } = debtData;
-        const newDeposited = parseFloat(amount_deposited || 0) + parseFloat(amount_paid);
-      
-        // Update the deposited amount, let the "amount_remaining" be calculated automatically
-        const { error: insertError } = await supabase.from('debt_payment_history').insert([{
-          debt_tracker_id: parseInt(debt_tracker_id),
-          customer_id: customer_id,
-          amount_paid: parseFloat(amount_paid),
-        }]);
-      
-        if (insertError) return toast.error(insertError.message);
-      
-        const { error: updateError } = await supabase
-          .from('debt_tracker')
-          .update({
-            amount_deposited: newDeposited, // Only update the deposited amount
-          })
-          .eq('id', debt_tracker_id);
-      
-        if (updateError) return toast.error(updateError.message);
-      
-        toast.success('Payment recorded');
-        setForm({ debt_tracker_id: '', amount_paid: '' });
-        fetchDebts(); // Refresh the debt list
-        fetchPayments(); // Refresh the payments list
+export default function DebtPaymentManager() {
+  const storeId = localStorage.getItem('store_id');
+
+  // state
+  const [debts, setDebts]                 = useState([]);
+  const [payments, setPayments]           = useState([]);
+  const [filteredDebts, setFilteredDebts] = useState([]);
+  const [search, setSearch]               = useState('');
+  const [page, setPage]                   = useState(1);
+  const pageSize = 10;
+  const [totalCount, setTotalCount]       = useState(0);
+
+  // modal
+  const [showModal, setShowModal]         = useState(false);
+  const [selectedDebt, setSelectedDebt]   = useState(null);
+  const [payAmount, setPayAmount]         = useState('');
+
+  // fetch debts with customer.fullname
+  const fetchDebts = useCallback(async () => {
+    const from = (page - 1) * pageSize;
+    const to   = from + pageSize - 1;
+    const { data, count } = await supabase
+      .from('debt_tracker')
+      .select('id, customer_id, amount_owed, customer(fullname)', { count: 'exact' })
+      .eq('store_id', storeId)
+      .range(from, to);
+    setDebts(data || []);
+    setTotalCount(count || 0);
+  }, [page, storeId]);
+
+  // fetch payments history
+  const fetchPayments = useCallback(async () => {
+    const { data } = await supabase
+      .from('debt_payment_history')
+      .select('debt_tracker_id, amount_paid, payment_date')
+      .eq('store_id', storeId);
+    setPayments(data || []);
+  }, [storeId]);
+
+  useEffect(() => {
+    fetchDebts();
+    fetchPayments();
+  }, [fetchDebts, fetchPayments]);
+
+  // merge debts + payments, compute status, and sort owing first
+  useEffect(() => {
+    const merged = debts.map(d => {
+      const history  = payments.filter(p => p.debt_tracker_id === d.id);
+      const paidTotal = history.reduce((sum, h) => sum + parseFloat(h.amount_paid), 0);
+      const owed       = parseFloat(d.amount_owed);
+      const remaining  = owed - paidTotal;
+      const lastDate   = history
+        .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date))[0]
+        ?.payment_date;
+      let status = 'none';
+      if (remaining <= 0) status = 'paid';
+      else if (paidTotal > 0) status = 'partial';
+      return {
+        ...d,
+        customer_name: d.customer.fullname,
+        owed,
+        paid: paidTotal,
+        remaining,
+        lastDate,
+        status
       };
-      
+    });
+
+    const q = search.toLowerCase();
+    const filtered = merged
+      .filter(d => d.customer_name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        // Owing first (partial or none), then paid
+        if ((a.remaining > 0) && (b.remaining <= 0)) return -1;
+        if ((a.remaining <= 0) && (b.remaining > 0)) return  1;
+        return 0;
+      });
+
+    setFilteredDebts(filtered);
+  }, [debts, payments, search]);
+
+  // open modal
+  const openModal = debt => {
+    setSelectedDebt(debt);
+    setPayAmount('');
+    setShowModal(true);
+  };
+
+  // record payment
+  const submitPayment = async e => {
+    e.preventDefault();
+    await supabase
+      .from('debt_payment_history')
+      .insert([{
+        debt_tracker_id: selectedDebt.id,
+        customer_id:     selectedDebt.customer_id,
+        amount_paid:     payAmount,
+        store_id : storeId,
+        payment_date:    new Date().toISOString()
+      }]);
+    setShowModal(false);
+    fetchPayments();
+    fetchDebts();
+  };
+
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="p-4 max-w-full">
-      <h2 className="text-xl font-bold mb-4">Debt Repayment</h2>
+    <div className="p-4 space-y-6">
+      <h1 className="text-3xl font-bold text-center text-indigo-700 dark:bg-gray-900 dark:text-white">Debt Payments</h1>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mb-6 flex flex-col sm:flex-row gap-2 items-start sm:items-center"
-      >
-        <select
-          name="debt_tracker_id"
-          value={form.debt_tracker_id}
-          onChange={handleChange}
-          className="border p-2 w-full sm:w-auto rounded dark:bg-gray-800 dark:text-white"
-          required
-        >
-          <option value="">Select Debt</option>
-          {debts.map((debt) => (
-            <option key={debt.id} value={debt.id}>
-              {debt.customer?.fullname} — ₦{debt.amount_remaining} remaining
-            </option>
-          ))}
-        </select>
-
+      {/* Search & New */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center">
         <input
-          type="number"
-          step="0.01"
-          name="amount_paid"
-          placeholder="Amount Paid"
-          value={form.amount_paid}
-          onChange={handleChange}
-          className="border p-2 w-full sm:w-auto rounded dark:bg-gray-800 dark:text-white"
-          required
+          type="text"
+          placeholder="Search by customer..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="flex-1 p-2 border border-gray-300 rounded focus:ring dark:bg-gray-900 dark:text-white"
         />
+       
+      </div>
 
-      <div className="w-full sm:w-auto max-w-full">
-  <button
-    type="submit"
-    className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-center text-sm sm:text-base"
-  >
-    Record Payment
-  </button>
-</div>
-
-      </form>
-
-      <h3 className="text-lg font-semibold mb-2 ">Debts Overview</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm table-auto border border-collapse ">
+      {/* Table */}
+      <div className="overflow-x-auto rounded-lg shadow">
+        <table className="min-w-full bg-white ">
           <thead>
-            <tr className="bg-gray-200 dark:bg-gray-800 dark:text-indigo-500">
-              <th className="p-2 text-left">Customer</th>
-              <th className="p-2 text-left">Owed</th>
-              <th className="p-2 text-left">Deposited</th>
-              <th className="p-2 text-left">Remaining</th>
+             <tr className="bg-gray-200 text-indigo-500 dark:bg-gray-900 dark:text-indigo-600">
+              {['Customer','Owed','Paid','Remaining','Last Payment','Actions'].map(col => (
+                <th
+                  key={col}
+                  className="px-4 py-3 text-left text-sm font-bold text-white"
+                >
+                  {col}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {debts.map((debt) => (
+            {filteredDebts.map(d => (
               <tr
-                key={debt.id}
-                className={`border-t ${debt.amount_remaining <= 0 ? 'blurred' : ''}`}
+                key={d.id}
+                className={
+                  d.status === 'paid' ? 'bg-green-50' :
+                  d.status === 'partial' ? 'bg-yellow-50' :
+                  'bg-red-50'
+                }
               >
-                <td className="p-2">{debt.customer?.fullname}</td>
-                <td className="p-2">₦{debt.amount_owed}</td>
-                <td className="p-2">₦{debt.amount_deposited}</td>
-                <td className="p-2">₦{debt.amount_remaining}</td>
+                <td className="px-4 py-3 text-sm">{d.customer_name}</td>
+                <td className="px-4 py-3 text-sm">{d.owed.toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm">{d.paid.toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm">{d.remaining.toFixed(2)}</td>
+                <td className="px-4 py-3 text-sm">
+                  {d.lastDate
+                    ? new Date(d.lastDate).toLocaleDateString()
+                    : '—'
+                  }
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {d.status === 'paid' ? (
+                    <span className="inline-flex items-center gap-1 text-green-700">
+                      <FaCheckCircle /> Paid
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => openModal(d)}
+                      className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+                    >
+                      <FaPlus /> Pay
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <h3 className="text-lg font-semibold mt-6 mb-2 ">Payment History</h3>
-<div className="overflow-x-auto">
-  <table className="min-w-full text-sm table-auto border border-collapse">
-    <thead>
-      <tr className="bg-gray-100 dark:bg-gray-800 dark:text-indigo-500">
-        <th className="p-2 text-left">Customer</th>
-        <th className="p-2 text-left">Amount Paid</th>
-        <th className="p-2 text-left">Payment Date</th>
-      </tr>
-    </thead>
-    <tbody>
-      {payments.map((payment) => (
-        <tr key={payment.id} className="border-t">
-          <td className="p-2">{payment.customer?.fullname || 'Unknown'}</td>
-          <td className="p-2">₦{payment.amount_paid}</td>
-          <td className="p-2">
-            {payment.payment_date
-              ? new Date(payment.payment_date).toLocaleString()
-              : '—'}
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+      {/* Pagination */}
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span className="text-sm">Page {page} of {totalPages}</span>
+        <button
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
 
+      {/* Payment Modal */}
+      {showModal && selectedDebt && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4">
+          <form
+            onSubmit={submitPayment}
+            className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md"
+          >
+            <h2 className="text-xl font-semibold mb-4">
+              Pay {selectedDebt.customer_name}
+            </h2>
+            <p className="mb-2">
+              <span className="font-medium">Remaining:</span>{' '}
+              {selectedDebt.remaining.toFixed(2)}
+            </p>
+            <label className="block mb-1">Amount to Pay</label>
+            <input
+              type="number"
+              step="0.01"
+              max={selectedDebt.remaining}
+              value={payAmount}
+              onChange={e => setPayAmount(e.target.value)}
+              required
+              className="w-full p-2 mb-4 border border-gray-300 rounded focus:ring"
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+              >
+                Record Payment
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
-};
-
-export default DebtPaymentTracker;
+}

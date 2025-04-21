@@ -1,4 +1,4 @@
-// DynamicDashboard.jsx
+// Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import {
@@ -11,12 +11,12 @@ import {
   FaArrowLeft,
 } from 'react-icons/fa';
 
-import DynamicInventory from '../DynamicSales/DynamicInventory';
-import DynamicProducts  from '../DynamicSales/DynamicProducts';
-import DynamicSales     from '../DynamicSales/DynamicSales';
-import ExpenseTracker   from './ExpenseTracker';
-import DebtTracker      from './DebtTracker';
-import Customers        from './Customers';
+import ExpenseTracker from './ExpenseTracker';
+import DebtTracker from './DebtTracker';
+import ProductList from './ProductList';
+import SalesTracker from './SalesTracker';
+import Customers from './Customers';
+import Inventory from './Inventory';
 
 const tools = [
   {
@@ -24,21 +24,21 @@ const tools = [
     label: 'Sales',
     icon: <FaChartLine className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Analyze your sales performance.',
-    component: <DynamicSales />,
+    component: <SalesTracker />,
   },
   {
     key: 'products',
     label: 'Products',
     icon: <FaBoxes className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Manage your product catalog.',
-    component: <DynamicProducts />,
+    component: <ProductList />,
   },
   {
     key: 'inventory',
     label: 'Inventory',
     icon: <FaTasks className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track stock levels.',
-    component: <DynamicInventory />,
+    component: <Inventory />,
   },
   {
     key: 'expenses',
@@ -63,7 +63,7 @@ const tools = [
   },
 ];
 
-export default function DynamicDashboard() {
+export default function Dashboard() {
   const [shopName, setShopName] = useState('Store Owner');
   const [activeTool, setActiveTool] = useState(null);
 
@@ -75,17 +75,15 @@ export default function DynamicDashboard() {
       .select('shop_name')
       .eq('id', storeId)
       .single()
-      .then(({ data, error }) => {
-        if (!error && data?.shop_name) {
-          setShopName(data.shop_name);
-        }
+      .then(({ data }) => {
+        if (data?.shop_name) setShopName(data.shop_name);
       });
   }, []);
 
   const tool = tools.find(t => t.key === activeTool);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-1">
       {/* Header */}
       <header className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white">
@@ -93,7 +91,7 @@ export default function DynamicDashboard() {
         </h1>
         {!activeTool && (
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Choose a tool to continue.
+            Select a tool below.
           </p>
         )}
       </header>
@@ -114,22 +112,23 @@ export default function DynamicDashboard() {
         </div>
       )}
 
-      {/* Grid or Content */}
+      {/* Content */}
       {activeTool ? (
-        <div className="w-full">
-          {tool.component}
-        </div>
+        <div>{tool.component}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {tools.map(t => (
             <button
               key={t.key}
               onClick={() => setActiveTool(t.key)}
-              className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-6 rounded-xl shadow hover:shadow-lg transition h-48"
+              className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow hover:shadow-lg transition h-48"
             >
               {t.icon}
               <span className="mt-3 text-sm sm:text-base font-medium text-indigo-800 dark:text-white">
                 {t.label}
+              </span>
+              <span className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center px-2">
+                {t.desc}
               </span>
             </button>
           ))}

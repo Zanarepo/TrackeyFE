@@ -11,6 +11,8 @@ import {
 
 export default function Products() {
   const storeId = localStorage.getItem('store_id');
+
+  // Data & UI state
   const [products, setProducts] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState('');
@@ -24,7 +26,11 @@ export default function Products() {
     markup_percent: '',
   });
 
-  // Memoized fetch to satisfy useEffect deps
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
+
+  // Fetch products
   const fetchProducts = useCallback(async () => {
     if (!storeId) return;
     const { data, error } = await supabase
@@ -35,30 +41,28 @@ export default function Products() {
     if (!error) {
       setProducts(data);
       setFiltered(data);
+      setPage(0);
     }
   }, [storeId]);
 
-  // Initial load
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Search filtering
+  // Search filter resets to first page
   useEffect(() => {
-    if (!search) setFiltered(products);
-    else {
-      const q = search.toLowerCase();
-      setFiltered(
-        products.filter(p => p.name.toLowerCase().includes(q))
-      );
-    }
+    const q = search.toLowerCase();
+    const results = !search
+      ? products
+      : products.filter(p => p.name.toLowerCase().includes(q));
+    setFiltered(results);
+    setPage(0);
   }, [search, products]);
 
   // Handlers
   const handleFormChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-
   const handleAddChange = e => {
     setAddForm({ ...addForm, [e.target.name]: e.target.value });
   };
@@ -114,10 +118,9 @@ export default function Products() {
       ].join(',');
       csv += row + "\n";
     });
-    const encodedUri = encodeURI(csv);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'products.csv');
+    link.href = encodeURI(csv);
+    link.download = 'products.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -139,38 +142,43 @@ export default function Products() {
     });
   };
 
+  // Pagination slice
+  const start = page * pageSize;
+  const pageData = filtered.slice(start, start + pageSize);
+  const totalPages = Math.ceil(filtered.length / pageSize);
+
   return (
     <div className="p-4">
-      {/* Header */} 
-      <div className=" flex flex-col sm:flex-row items-center dark:bg-gray-800 dark:text-white justify-between mb-4 gap-2 ">
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="flex-1 p-2 border rounded dark:bg-gray-800 dark:text-white"
-        />
-  <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-start gap-2">
-  <button
-    onClick={() => setShowAdd(true)}
-    className="flex items-center justify-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 w-full sm:w-auto"
-  >
-   
-   
-    <FaPlus /> Add Product
-  </button>
-          <button onClick={exportCSV} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-            <FaFileCsv /> CSV
-          </button>
-          <button onClick={exportPDF} className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            <FaFilePdf /> PDF
-          </button>
-        </div>
-      </div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        
+<h1 className="w-full text-2xl font-bold text-center dark:bg-gray-900 dark:text-white">
+  Products & Pricing Dashboard 
+</h1> <br/>
+      {/* Search box spans full width on small, first two columns on medium+ */}
+
+
+      <input
+        type="text"
+        placeholder="Search by product name..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        className="col-span-1 sm:col-span-2 w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
+      />
+ 
+       <button
+           onClick={() => setShowAdd(true)}
+           className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+         >
+           <FaPlus className="w-4 h-4" />
+           <span className="text-base"> Prod.</span>
+         </button>
+        </div> <br/>
+      
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <form onSubmit={createProduct} className="bg-white p-6 rounded shadow w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Add Product</h2>
             {['name','description','purchase_price','markup_percent'].map(field => (
@@ -188,41 +196,96 @@ export default function Products() {
               </div>
             ))}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+              <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                Cancel
+              </button>
+              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                Save
+              </button>
             </div>
           </form>
         </div>
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded shadow dark:bg-gray-800 dark:text-white">
-          <thead>
-            <tr className="bg-gray-200 dark:bg-gray-800 dark:text-white">
-              {['Name','Description','Purchase','Markup %','Selling','Created','Actions'].map(h => (
-                <th key={h} className="p-2 text-left dark:bg-gray-800 dark:text-indigo-500">{h}</th>
+      <div className="w-full overflow-x-auto">
+      <table className="w-full min-w-[600px] bg-white rounded shadow dark:bg-gray-800 dark:text-white">  <thead>
+            <tr className="bg-gray-200 text-indigo-500 dark:bg-gray-800 dark:text-indigo-600">
+              {['Name','Desc.','Purchase','Markup %','Price','Date','Actions'].map(h => (
+                <th key={h} className="p-2 text-left ">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map(p => (
-              <tr key={p.id} className="border-t hover:bg-gray-50 dark:bg-gray=-800 dark:hover:bg-gray-800">
-                <td className="p-2 ">{p.name}</td>
+            {pageData.map(p => (
+              <tr key={p.id} className="border-t hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td className="p-2">{p.name}</td>
                 <td className="p-2">{p.description}</td>
                 <td className="p-2">{p.purchase_price.toFixed(2)}</td>
                 <td className="p-2">{p.markup_percent.toFixed(2)}</td>
                 <td className="p-2">{p.selling_price.toFixed(2)}</td>
                 <td className="p-2">{new Date(p.created_at).toLocaleDateString()}</td>
                 <td className="p-2 flex items-center space-x-2">
-                  <button onClick={() => startEdit(p)} aria-label="Edit product" className="p-1 hover:bg-gray-200 rounded"><FaEdit className="text-indigo-600" /></button>
-                  <button onClick={() => deleteProduct(p)} aria-label="Delete product" className="p-1 hover:bg-gray-200 rounded"><FaTrashAlt className="text-red-600" /></button>
+                  <button
+                    onClick={() => startEdit(p)}
+                    className="text-indigo-600 hover:text-indigo-800 p-1 rounded"
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
+                    onClick={() => deleteProduct(p)}
+                    className="text-red-600 hover:text-red-800 p-1 rounded"
+                  >
+                    <FaTrashAlt />
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-4">
+        <button
+          onClick={() => setPage(prev => Math.max(prev - 1, 0))}
+          disabled={page === 0}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-800 dark:text-white"
+        >
+          Prev
+        </button>
+        <span  className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-900 dark:text-white">
+          Page {page + 1} of {totalPages}
+        </span>
+        <button
+          onClick={() => setPage(prev => Math.min(prev + 1, totalPages - 1))}
+          disabled={page + 1 >= totalPages}
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-800 dark:text-white"
+        >
+          Next
+        </button>
+        
+      </div> <br/>
+      {/* Export Buttons */}
+
+
+      <div className="flex flex-row gap-4 flex-wrap">
+  <button
+    onClick={exportCSV}
+    className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+  >
+    <FaFileCsv className="w-4 h-4" />
+    <span className="text-base">CSV</span>
+  </button>
+
+  <button
+    onClick={exportPDF}
+    className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+  >
+    <FaFilePdf className="w-4 h-4" />
+    <span className="text-base">PDF</span>
+  </button>
+</div>
 
       {/* Edit Modal */}
       {editing && (
@@ -236,7 +299,7 @@ export default function Products() {
                   type={field.includes('price')||field.includes('percent') ? 'number' : 'text'}
                   step="0.01"
                   name={field}
-                  value={form[field]}
+                  value={form[field] || ''}
                   onChange={handleFormChange}
                   required={field==='name' || field==='purchase_price'}
                   className="w-full p-2 border rounded"
@@ -244,8 +307,12 @@ export default function Products() {
               </div>
             ))}
             <div className="flex justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
-              <button onClick={saveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                Cancel
+              </button>
+              <button onClick={saveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                Save
+              </button>
             </div>
           </div>
         </div>

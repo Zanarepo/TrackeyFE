@@ -1,25 +1,32 @@
-import React, { useEffect, useState, useCallback} from 'react';
+// DebtTracker.jsx
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
 import { toast } from 'react-toastify';
 import DebtHistory from './DebtHistory';
 
-const DebtTracker = () => {
+
+export default function DebtTracker() {
+  const store_id = Number(localStorage.getItem('store_id'));
+
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [debts, setDebts] = useState([]);
-  const [formData, setFormData] = useState({
+  const [newDebt, setNewDebt] = useState({
     customer_id: '',
     product_id: '',
-    amount_owed: '',
+    amount_owed: ''
   });
 
-  const store_id = localStorage.getItem('store_id');
-  const user_id = localStorage.getItem('user_id');
+  const [, setDebts] = useState([]);
+  const [,] = useState({});
+  const [,] = useState('');
+  const [,] = useState(1);
+
   const fetchCustomers = useCallback(async () => {
     const { data, error } = await supabase
       .from('customer')
-      .select('id, fullname')
-      .eq('store_id', store_id);
+      .select('id,fullname')
+      .eq('store_id', store_id)
+      .order('fullname');
     if (error) toast.error('Failed to load customers');
     else setCustomers(data);
   }, [store_id]);
@@ -27,8 +34,9 @@ const DebtTracker = () => {
   const fetchProducts = useCallback(async () => {
     const { data, error } = await supabase
       .from('products')
-      .select('id, name')
-      .eq('store_id', store_id);
+      .select('id,name')
+      .eq('store_id', store_id)
+      .order('name');
     if (error) toast.error('Failed to load products');
     else setProducts(data);
   }, [store_id]);
@@ -38,164 +46,109 @@ const DebtTracker = () => {
       .from('debt_tracker')
       .select(`
         id,
+        customer_id,
+        product_id,
         amount_owed,
         amount_deposited,
-        amount_remaining,
         debt_date,
-        customer:customer_id (fullname),
-        product:product_id (name)
+        store_id,
+        customer:customer_id(fullname),
+        product:product_id(name)
       `)
-      .eq('store_id', store_id);
+      .eq('store_id', store_id)
+      .order('amount_remaining', { ascending: false });
     if (error) toast.error('Failed to load debts');
-    else setDebts(data);
+    else setDebts(data || []);
   }, [store_id]);
 
-  // ✅ Now safe to add as dependencies
   useEffect(() => {
-    const fetchAll = async () => {
-      await fetchCustomers();
-      await fetchProducts();
-      await fetchDebts();
-    };
-    fetchAll();
+    fetchCustomers();
+    fetchProducts();
+    fetchDebts();
   }, [fetchCustomers, fetchProducts, fetchDebts]);
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+  const handleNewChange = e => {
+    setNewDebt(d => ({ ...d, [e.target.name]: e.target.value }));
   };
-
-  const handleSubmit = async (e) => {
+  const handleAddDebt = async e => {
     e.preventDefault();
-
-    let created_by_owner = null;
-    let created_by_user = null;
-
-    if (store_id) {
-      created_by_owner = parseInt(store_id);
-    } else if (user_id) {
-      created_by_user = parseInt(user_id);
-    }
-
-    const insertData = {
-      store_id: parseInt(store_id),
-      customer_id: formData.customer_id ? parseInt(formData.customer_id) : null,
-      product_id: formData.product_id ? parseInt(formData.product_id) : null,
-      amount_owed: parseFloat(formData.amount_owed),
+    const payload = {
+      store_id,
+      customer_id: Number(newDebt.customer_id),
+      product_id: newDebt.product_id ? Number(newDebt.product_id) : null,
+      amount_owed: parseFloat(newDebt.amount_owed),
       amount_deposited: 0,
-      created_by_owner,
-      created_by_user,
+      debt_date: new Date().toISOString(),
+      created_by_owner: store_id,
+      created_by_user: null
     };
-
-    const { error } = await supabase.from('debt_tracker').insert([insertData]);
-
-    if (error) toast.error(error.message || 'Failed to insert debt');
+    const { error } = await supabase.from('debt_tracker').insert([payload]);
+    if (error) toast.error(error.message);
     else {
       toast.success('Debt added');
-      setFormData({ customer_id: '', product_id: '', amount_owed: '' });
+      setNewDebt({ customer_id:'', product_id:'', amount_owed:'' });
       fetchDebts();
     }
   };
 
 
+
+
   return (
-    <div className="max-w-4xl mx-auto px-2 sm:px-4 py-4">
-    <h2 className="text-xl font-bold mb-4 dark:bg-gray-800 dark:text-white">Track Customer Debt</h2>
-  
-    <form
-      onSubmit={handleSubmit}
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-gray-100 p-4 rounded-lg dark:bg-gray-800 dark:text-white"
-    >
-      <select
-        name="customer_id"
-        value={formData.customer_id}
-        onChange={handleChange}
-        required
-        className="p-2 rounded border dark:bg-gray-800 dark:text-white"
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-bold dark:bg-gray-900 dark:text-white">Add New Debt</h2>
+      <form
+        onSubmit={handleAddDebt}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-gray-100 p-4 rounded dark:bg-gray-900 dark:text-white"
       >
-        <option value="">Select Customer</option>
-        {customers.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.fullname}
-          </option>
-        ))}
-      </select>
-  
-      <select
-        name="product_id"
-        value={formData.product_id}
-        onChange={handleChange}
-        className="p-2 rounded border dark:bg-gray-800 dark:text-white"
-      >
-        <option value="">Select Product (optional)</option>
-        {products.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-  
-      <input
-        type="number"
-        name="amount_owed"
-        value={formData.amount_owed}
-        onChange={handleChange}
-        placeholder="Amount Owed"
-        required
-        className="p-2 rounded border dark:bg-gray-800 dark:text-white"
-      />
-  
-      <div className="sm:col-span-2 md:col-span-3">
+        <select
+          name="customer_id"
+          value={newDebt.customer_id}
+          onChange={handleNewChange}
+          required
+          className="p-2 border rounded dark:bg-gray-900 dark:text-white"
+        >
+          <option value="">Select Customer</option>
+          {customers.map(c => (
+            <option key={c.id} value={c.id}>{c.fullname}</option>
+          ))}
+        </select>
+
+        <select
+          name="product_id"
+          value={newDebt.product_id}
+          onChange={handleNewChange}
+          className="p-2 border rounded dark:bg-gray-900 dark:text-white"
+        >
+          <option value="">Select Product </option>
+          {products.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+
+        <input
+          type="number"
+          name="amount_owed"
+          placeholder="Amount Owed"
+          step="0.01"
+          value={newDebt.amount_owed}
+          onChange={handleNewChange}
+          required
+          className="p-2 border rounded dark:bg-gray-900 dark:text-white"
+        />
+
         <button
           type="submit"
-          className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-center"
+          className="col-span-full sm:col-span-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
         >
           Add Debt
         </button>
-      </div>
-    </form>
+      </form>
 
-      <div className="mt-6 dark:bg-gray-800 dark:text-white">
-        <h3 className="text-lg font-semibold mb-2">Existing Debts</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border text-sm ">
-            <thead>
-              <tr className="bg-gray-200 dark:bg-gray-800 dark:text-indigo-500">
-                <th className="p-2 border">Customer</th>
-                <th className="p-2 border">Product</th>
-                <th className="p-2 border " >Amount Owed</th>
-                <th className="p-2 border">Deposited</th>
-                <th className="p-2 border">Remaining</th>
-                <th className="p-2 border">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {debts.map((d) => (
-                <tr key={d.id}>
-                  <td className="p-2 border dark:bg-gray-800 dark:text-white" >{d.customer?.fullname || '—'}</td>
-                  <td className="p-2 border">{d.product?.name || '—'}</td>
-                  <td className="p-2 border">₦{Number(d.amount_owed).toLocaleString()}</td>
-                  <td className="p-2 border">₦{Number(d.amount_deposited).toLocaleString()}</td>
-                  <td className="p-2 border font-semibold text-red-600">
-                    ₦{Number(d.amount_remaining).toLocaleString()}
-                  </td>
-                  <td className="p-2 border">
-                    {new Date(d.debt_date).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {debts.length === 0 && <p className="text-center py-4">No debts found.</p>} <br/> 
-        </div>
-        <DebtHistory />
-      </div>
-      
-      
+         
+
+   
+      <DebtHistory key={Date.now()} />
     </div>
   );
-};
-
-export default DebtTracker;
+}

@@ -18,9 +18,10 @@ import ShopOwner from './ShopOwner';
 import ServicesDashboard from './ServicesDashboard';
 import TrackingTools from './TrackingTools';
 import CostRevExp from '../Ops/Dashboard';
+import MainDashboard from './MainDashboard';
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Profile');
+  const [activeTab, setActiveTab] = useState('MainDashboard');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -38,6 +39,14 @@ const Dashboard = () => {
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
             <CostRevExp />
+          </div>
+        );
+      
+
+      case 'MainDashboard':
+        return (
+          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <MainDashboard />
           </div>
         );
       
@@ -108,22 +117,37 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-200 dark:bg-gray-700 mt-20">
+    <div className="flex h-screen bg-gray-200 dark:bg-gray-900 mt-20">
       {/* Sidebar */}
       <aside 
-        className={`transition-all duration-300 bg-gray-100 dark:bg-gray-800 ${sidebarOpen ? "w-64" : "w-0"} md:w-64 flex-shrink-0`}
+        className={`transition-all duration-300 bg-gray-100 dark:bg-gray-900 ${sidebarOpen ? "w-64" : "w-0"} md:w-64 flex-shrink-0`}
       >
         <div className={`${sidebarOpen ? "block" : "hidden"} md:block`}>
           <div className="p-6">
             {/* Mobile Header inside sidebar */}
             <div className="flex md:hidden items-center justify-between">
-              <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200">Menu</h2>
+              <h2 className="text-xl font-bold text-indigo-800 dark:text-white">Menu</h2>
               <button onClick={() => setSidebarOpen(false)} className="text-indigo-800 dark:text-indigo-200">
                 <FaTimes size={24} />
               </button>
             </div>
             <nav className="mt-4">
               <ul className="space-y-2">
+
+
+
+
+              <li 
+                  onClick={() => handleNavClick('MainDashboard')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'MainDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Dashboard</span>
+                </li>
+
+
+
+              
                 
               <li 
                   onClick={() => handleNavClick('ShopOwner')}

@@ -17,7 +17,7 @@ const Dashboard = () => {
           <>
             <h2 className="text-2xl font-semibold text-indigo-700 dark:text-indigo-200 mb-2">Products</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Manage your product catalog...
+              Manage your product catalog...track your inventory and sales.
             </p>
             <ProductList />
           </>
@@ -27,7 +27,7 @@ const Dashboard = () => {
           <>
             <h2 className="text-2xl font-semibold text-indigo-700 dark:text-indigo-200 mb-2">Sales</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Analyze your sales performance...
+              Analyze your sales performance...grow your business with data-driven insights.
             </p>
             <SalesTracker />
           </>
@@ -37,7 +37,7 @@ const Dashboard = () => {
           <>
             <h2 className="text-2xl font-semibold text-indigo-700 dark:text-indigo-200 mb-2">Inventory</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Manage your inventory...
+              Manage your inventory...track stock levels and product availability.
             </p>
             <Inventory />
           </>
@@ -47,7 +47,7 @@ const Dashboard = () => {
           <>
             <h2 className="text-2xl font-semibold text-indigo-700 dark:text-indigo-200 mb-2">Expenses</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Track and manage all your store expenses...
+              Track and manage all your store expenses...make informed financial decisions.
             </p>
             <ExpenseTracker />
           </>
@@ -57,7 +57,7 @@ const Dashboard = () => {
           <>
             <h2 className="text-2xl font-semibold text-indigo-700 dark:text-indigo-200 mb-2">Debts</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Monitor customer debts...
+              Monitor customer debts...track payments and outstanding balances.
             </p>
             <DebtTracker />
           </>
@@ -67,7 +67,7 @@ const Dashboard = () => {
           <>
             <h2 className="text-2xl font-semibold text-indigo-700 dark:text-indigo-200 mb-2">Customers</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Manage your customer base...
+              Manage your customer base...grow relationships and improve service.
             </p>
             <Customers />
           </>
