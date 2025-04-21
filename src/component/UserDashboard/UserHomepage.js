@@ -117,7 +117,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-200 dark:bg-gray-900 mt-20">
+    <div className="flex h-screen bg-white dark:bg-gray-900 mt-20">
       {/* Sidebar */}
       <aside 
         className={`transition-all duration-300 bg-gray-100 dark:bg-gray-900 ${sidebarOpen ? "w-64" : "w-0"} md:w-64 flex-shrink-0`}
@@ -133,30 +133,21 @@ const Dashboard = () => {
             </div>
             <nav className="mt-4">
               <ul className="space-y-2">
-
-
-
+  
 
               <li 
                   onClick={() => handleNavClick('MainDashboard')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'MainDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Dashboard</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Simplex</span>
                 </li>
 
 
 
               
                 
-              <li 
-                  onClick={() => handleNavClick('ShopOwner')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'ShopOwner' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Business Dashboard</span>
-                </li>
-
+           
 
 
                 <li 
@@ -164,7 +155,7 @@ const Dashboard = () => {
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Services' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Services Dashboard</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Variex</span>
                 </li>
 
 

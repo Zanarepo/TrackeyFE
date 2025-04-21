@@ -17,6 +17,7 @@ import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
 import DebtTracker      from './DebtTracker';
 import Customers        from './Customers';
+import VariexFeature  from '../DynamicSales/VariexFeature';
 
 const tools = [
   {
@@ -85,12 +86,18 @@ export default function DynamicDashboard() {
   const tool = tools.find(t => t.key === activeTool);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
-      {/* Header */}
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-4">
+  
       <header className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white">
-          Welcome back, {shopName}!
+          Welcome, {shopName}!
         </h1>
+
+            
+<div className="mb-6">
+      <VariexFeature />
+      </div>
+      
         {!activeTool && (
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Choose a tool to continue.

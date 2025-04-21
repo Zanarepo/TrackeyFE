@@ -148,33 +148,29 @@ export default function Products() {
   const totalPages = Math.ceil(filtered.length / pageSize);
 
   return (
-    <div className="p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        
-<h1 className="w-full text-2xl font-bold text-center dark:bg-gray-900 dark:text-white">
-  Products & Pricing Dashboard 
-</h1> <br/>
-      {/* Search box spans full width on small, first two columns on medium+ */}
+   <div className="p-0">
+        {/* Header */}
+       
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-4 w-full">
+    <input
+      type="text"
+      placeholder="Search products..."
+      value={search}
+      onChange={e => setSearch(e.target.value)}
+      className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
+    />
+  
+    <div className="mt-2 sm:mt-0 sm:w-auto w-full">
+      <button
+        onClick={() => setShowAdd(true)}
+        className="w-full sm:w-auto flex items-center justify-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+      >
+        <FaPlus /> Add
+      </button>
+    </div>
+  </div>
 
 
-      <input
-        type="text"
-        placeholder="Search by product name..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="col-span-1 sm:col-span-2 w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
-      />
- 
-       <button
-           onClick={() => setShowAdd(true)}
-           className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-         >
-           <FaPlus className="w-4 h-4" />
-           <span className="text-base"> Prod.</span>
-         </button>
-        </div> <br/>
-      
 
       {/* Add Modal */}
       {showAdd && (
@@ -268,23 +264,24 @@ export default function Products() {
       </div> <br/>
       {/* Export Buttons */}
 
+<div className="w-full flex justify-center mt-4">
+  <div className="flex flex-row flex-wrap justify-center gap-4">
+    <button
+      onClick={exportCSV}
+      className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+    >
+      <FaFileCsv className="w-4 h-4" />
+      <span className="text-base">CSV</span>
+    </button>
 
-      <div className="flex flex-row gap-4 flex-wrap">
-  <button
-    onClick={exportCSV}
-    className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-  >
-    <FaFileCsv className="w-4 h-4" />
-    <span className="text-base">CSV</span>
-  </button>
-
-  <button
-    onClick={exportPDF}
-    className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-  >
-    <FaFilePdf className="w-4 h-4" />
-    <span className="text-base">PDF</span>
-  </button>
+    <button
+      onClick={exportPDF}
+      className="flex justify-center items-center gap-1 w-24 sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+    >
+      <FaFilePdf className="w-4 h-4" />
+      <span className="text-base">PDF</span>
+    </button>
+  </div>
 </div>
 
       {/* Edit Modal */}

@@ -176,35 +176,25 @@ const totalPages = Math.ceil(filtered.length / itemsPerPage);
   return (
     <div className="p-4 ">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2 ">
-        <input
-          type="text"
-          placeholder="Search sales..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="flex-1 p-2 border rounded w-full sm:w-auto dark:bg-gray-900 dark:text-white"
-        />
-        <div className="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-0">
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            <FaPlus /> Sale
-          </button>
-          <button
-            onClick={exportCSV}
-            className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            <FaFileCsv /> CSV
-          </button>
-          <button
-            onClick={exportPDF}
-            className="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            <FaFilePdf /> PDF
-          </button>
-        </div>
-      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 w-full">
+  <input
+    type="text"
+    placeholder="Search sales..."
+    value={search}
+    onChange={e => setSearch(e.target.value)}
+    className="w-full sm:max-w-xs p-2 border rounded dark:bg-gray-900 dark:text-white"
+  />
+  
+  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+    <button
+      onClick={() => setShowAdd(true)}
+      className="w-full sm:w-auto flex items-center justify-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+    >
+      <FaPlus /> Sale
+    </button>
+  </div>
+</div>
+
 
       {/* Add‑Sale Modal */}
       {showAdd && (
@@ -283,9 +273,9 @@ const totalPages = Math.ceil(filtered.length / itemsPerPage);
               >
                 <option value="">Select method…</option>
                 <option>Cash</option>
-                <option>Transfer</option>
+                <option>Bank Transfer</option>
                 <option>Card</option>
-                <option>Mobile Money</option>
+                <option>Wallet</option>
               </select>
             </div>
 
@@ -343,33 +333,69 @@ const totalPages = Math.ceil(filtered.length / itemsPerPage);
           </tbody>
      
         </table>
-        <div className="flex justify-center items-center gap-2 mt-4 flex-wrap">
+
+  <div className="flex justify-center items-center gap-2 mt-4 flex-wrap">
+  
+
+</div> 
+
+
+
+      </div>
+
+      
+      <div className="w-full flex justify-center items-center flex-wrap gap-2 mt-4">
   <button
     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
     disabled={currentPage === 1}
-    className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+    className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 transition"
   >
     Prev
   </button>
+
   {[...Array(totalPages)].map((_, i) => (
     <button
       key={i}
       onClick={() => setCurrentPage(i + 1)}
-      className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+      className={`px-3 py-1 rounded transition ${
+        currentPage === i + 1
+          ? 'bg-indigo-600 text-white'
+          : 'bg-gray-200 hover:bg-gray-300'
+      }`}
     >
       {i + 1}
     </button>
   ))}
+
   <button
     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
     disabled={currentPage === totalPages}
-    className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+    className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 transition"
   >
     Next
   </button>
 </div>
 
+<div className="w-full flex flex-wrap justify-center items-center gap-3 mt-4">
+  <button
+    onClick={exportCSV}
+    className="flex justify-center items-center gap-1 w-full sm:w-32 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+  >
+    <FaFileCsv className="w-4 h-4" />
+    <span className="text-base">CSV</span>
+  </button>
+
+  <button
+    onClick={exportPDF}
+    className="flex justify-center items-center gap-1 w-full sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+  >
+    <FaFilePdf className="w-4 h-4" />
+    <span className="text-base">PDF</span>
+  </button>
+</div>
+  
+  
       </div>
-    </div>
+
   );
 }

@@ -104,17 +104,20 @@ export default function CustomerManagement() {
   };
 
   return (
-    <div className="p-2 max-w-3xl mx-auto">
+    <div className="p-0 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-indigo-800 dark:text-white">Customers</h2>
-        <button
-          onClick={openNewModal}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-        >
-          New Customer
-        </button>
-      </div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+  <h2 className="text-xl sm:text-2xl font-bold text-indigo-800 dark:text-white">
+    Customers
+  </h2>
+  <button
+    onClick={openNewModal}
+    className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+  >
+    New Customer
+  </button>
+</div>
+
 
       {/* Search */}
       <div className="mb-4">
@@ -126,7 +129,7 @@ export default function CustomerManagement() {
             setSearchTerm(e.target.value);
             setPage(0);
           }}
-          className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white"
+          className="w-full  p-2 border rounded dark:bg-gray-800 dark:text-white"
         />
       </div>
 

@@ -286,8 +286,10 @@ export default function InventoryManager() {
           </tbody>
         </table>
 
-        {/* Pagination */}
-        {filteredInventory.length > itemsPerPage && (
+       
+      </section>
+       {/* Pagination */}
+       {filteredInventory.length > itemsPerPage && (
           <div className="mt-4 flex justify-center gap-2">
             {Array.from({ length: Math.ceil(filteredInventory.length / itemsPerPage) }).map((_, i) => (
               <button
@@ -300,7 +302,6 @@ export default function InventoryManager() {
             ))}
           </div>
         )}
-      </section>
     </div>
   );
 }

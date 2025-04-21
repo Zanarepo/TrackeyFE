@@ -114,16 +114,16 @@ export default function DebtPaymentManager() {
       <h1 className="text-3xl font-bold text-center text-indigo-700 dark:bg-gray-900 dark:text-white">Debt Payments</h1> <br />
 
       {/* Search & New */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center">
-        <input
-          type="text"
-          placeholder="Search by customer..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="flex-1 p-2 border border-gray-300 rounded focus:ring dark:bg-gray-900 dark:text-white"
-        />
-       
-      </div> <br/>
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full mb-4">
+  <input
+    type="text"
+    placeholder="Search by customer..."
+    value={search}
+    onChange={e => setSearch(e.target.value)}
+    className="w-full sm:flex-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
+  />
+</div>
+ <br/>
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg shadow ">
@@ -201,10 +201,10 @@ export default function DebtPaymentManager() {
 
       {/* Payment Modal */}
       {showModal && selectedDebt && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4 dark:bg-gray-900 dark:text-gray-500">
           <form
             onSubmit={submitPayment}
-            className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md"
+            className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md dark:bg-gray-800 dark:text-white"
           >
             <h2 className="text-xl font-semibold mb-4">
               Pay {selectedDebt.customer_name}
@@ -221,13 +221,13 @@ export default function DebtPaymentManager() {
               value={payAmount}
               onChange={e => setPayAmount(e.target.value)}
               required
-              className="w-full p-2 mb-4 border border-gray-300 rounded focus:ring"
+              className="w-full p-2 mb-4 border border-gray-300 rounded focus:ring dark:bg-gray-900 dark:text-gray-100"
             />
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition dark:bg-gray-900 dark:text-red-500"
               >
                 Cancel
               </button>

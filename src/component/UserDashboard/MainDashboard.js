@@ -17,6 +17,14 @@ import ProductList from './ProductList';
 import SalesTracker from './SalesTracker';
 import Customers from './Customers';
 import Inventory from './Inventory';
+import SimplexFeature from './SimplexFeature';
+// In MainDashboard.js
+
+
+
+
+//import SimplexFeature from './SimplexFeature';
+
 
 const tools = [
   {
@@ -84,11 +92,17 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 p-1">
+      {/* Simplex Feature */}
+    
       {/* Header */}
       <header className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white">
-          Welcome back, {shopName}!
+          Welcome {shopName}!
         </h1>
+
+        <div className="mb-6">
+        <SimplexFeature />
+      </div>
         {!activeTool && (
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Select a tool below.
