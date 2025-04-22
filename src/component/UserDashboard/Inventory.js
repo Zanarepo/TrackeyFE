@@ -1,7 +1,7 @@
 // InventoryManager.jsx
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Edit2, Trash2, Save, X, RefreshCw, PlusCircle } from 'lucide-react';
+import { Edit2, Trash2, Save, X, RefreshCw } from 'lucide-react';
 
 export default function InventoryManager() {
   const [storeId, setStoreId] = useState(null);
@@ -15,16 +15,14 @@ export default function InventoryManager() {
   const [page, setPage] = useState(0);
   const pageSize = 5;
 
-  // Add/restock/edit state
-  const [newProductId, setNewProductId] = useState('');
-  const [newInventoryQty, setNewInventoryQty] = useState(0);
+  // Restock/edit state
   const [restockQty, setRestockQty] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [editQty, setEditQty] = useState(0);
 
   const REORDER_THRESHOLD = 5;
 
-  // Initial load
+  // --- INITIAL LOAD ---
   useEffect(() => {
     const sid = parseInt(localStorage.getItem('store_id'), 10);
     if (!sid) return;
@@ -35,16 +33,51 @@ export default function InventoryManager() {
       .select('shop_name')
       .eq('id', sid)
       .single()
-      .then(({ data }) => data && setStoreName(data.name));
+      .then(({ data }) => data && setStoreName(data.shop_name));
 
     fetchProducts(sid);
-    fetchInventory(sid);
   }, []);
 
+  // --- SYNC PRODUCTS -> INVENTORY ON PRODUCTS LOAD ---
+  useEffect(() => {
+    if (!storeId || products.length === 0) return;
+    const payload = products.map(({ id, purchase_qty }) => ({
+      product_id: id,
+      store_id: storeId,
+      available_qty: purchase_qty
+    }));
+    supabase
+      .from('inventory')
+      .upsert(payload, { onConflict: ['product_id', 'store_id'] })
+      .then(() => fetchInventory(storeId));
+  }, [products, storeId]);
+
+  // --- REALTIME SYNC FOR PRODUCTS UPDATES ---
+  useEffect(() => {
+    if (!storeId) return;
+    const channel = supabase
+      .channel(`inventory-sync-${storeId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'products', filter: `store_id=eq.${storeId}` },
+        async ({ new: updatedProd }) => {
+          await supabase
+            .from('inventory')
+            .update({ available_qty: updatedProd.purchase_qty, updated_at: new Date() })
+            .eq('product_id', updatedProd.id)
+            .eq('store_id', storeId);
+          fetchInventory(storeId);
+        }
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [storeId]);
+
+  // --- FETCHERS ---
   async function fetchProducts(sid) {
     const { data, error } = await supabase
       .from('products')
-      .select('id, name')
+      .select('id, name, purchase_qty')
       .eq('store_id', sid)
       .order('name');
     if (!error) setProducts(data);
@@ -59,9 +92,11 @@ export default function InventoryManager() {
         available_qty,
         product:products(name)
       `)
-      .eq('store_id', sid)
-      .order('id', { ascending: true });
+      .eq('store_id', sid);
     if (invErr || !invData) return;
+
+    // Sort client-side by product name
+    invData.sort((a, b) => a.product.name.localeCompare(b.product.name));
 
     const { data: salesData, error: salesErr } = await supabase
       .from('sales')
@@ -87,30 +122,17 @@ export default function InventoryManager() {
     setInventory(combined);
   }
 
-  // filter on searchTerm
+  // --- SEARCH & PAGINATION ---
   useEffect(() => {
     const q = searchTerm.toLowerCase();
     const results = !searchTerm
       ? inventory
-      : inventory.filter(i =>
-          i.product.name.toLowerCase().includes(q)
-        );
+      : inventory.filter(i => i.product.name.toLowerCase().includes(q));
     setFilteredInv(results);
     setPage(0);
   }, [inventory, searchTerm]);
 
-  async function handleAddInventory() {
-    const pid = parseInt(newProductId, 10);
-    const qty = parseInt(newInventoryQty, 10);
-    if (!pid || qty < 0) return;
-    await supabase
-      .from('inventory')
-      .insert([{ product_id: pid, store_id: storeId, available_qty: qty }]);
-    setNewProductId('');
-    setNewInventoryQty(0);
-    fetchInventory(storeId);
-  }
-
+  // --- HANDLERS ---
   async function handleRestock(id) {
     const qty = parseInt(restockQty[id] || 0, 10);
     if (qty <= 0) return;
@@ -146,52 +168,18 @@ export default function InventoryManager() {
     fetchInventory(storeId);
   }
 
+  // --- RENDER ---
   if (!storeId) return <div className="p-4">Loading...</div>;
 
-  // pagination slice
   const start = page * pageSize;
   const pageData = filteredInv.slice(start, start + pageSize);
   const totalPages = Math.ceil(filteredInv.length / pageSize);
 
   return (
-    <div className="p-0 space-y-6">
-     <h1 className="w-full text-2xl font-bold text-center dark:bg-gray-900 dark:text-white">
-  Inventory Dashboard {storeName}
-</h1>
-
-
-      {/* Add Inventory */}
-      <section className="bg-white shadow rounded-lg p-6 dark:bg-gray-800 dark:text-white">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <PlusCircle size={20} /> Add New Stock
-        </h2>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <select
-            className="flex-1 border rounded-lg p-2 dark:bg-gray-800 dark:text-white"
-            value={newProductId}
-            onChange={e => setNewProductId(e.target.value)}
-          >
-            <option value="">Choose product…</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min="0"
-            className="w-full sm:w-24 border rounded-lg p-2 dark:bg-gray-800 dark:text-white"
-            placeholder="Qty"
-            value={newInventoryQty}
-            onChange={e => setNewInventoryQty(e.target.value)}
-          />
-          <button
-            onClick={handleAddInventory}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
-          >
-            <PlusCircle size={16} /> Add Stock
-          </button>
-        </div>
-      </section>
+    <div className="p-4 space-y-6">
+      <h1 className="text-2xl font-bold text-center dark:text-white">
+        Inventory Dashboard - {storeName}
+      </h1>
 
       {/* Search */}
       <div className="mb-4">
@@ -305,8 +293,9 @@ export default function InventoryManager() {
         >
           Prev
         </button>
-        <span  className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-900 dark:text-white">
-        Page {page + 1} of {totalPages}</span>
+        <span className="px-3 py-1 bg-gray-200 rounded dark:bg-gray-900 dark:text-white">
+          Page {page + 1} of {totalPages}
+        </span>
         <button
           onClick={() => setPage(p => Math.min(p + 1, totalPages - 1))}
           disabled={page + 1 >= totalPages}
@@ -315,7 +304,6 @@ export default function InventoryManager() {
           Next
         </button>
       </div>
-      
     </div>
   );
 }

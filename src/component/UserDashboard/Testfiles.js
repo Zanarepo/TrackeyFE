@@ -172,7 +172,7 @@ export default function DynamicProducts() {
   };
 
   return (
-    <div className="p-0">
+    <div className="p-4">
       {/* Search & Add */}
       <div className="flex flex-col sm:flex-row items-center gap-2 mb-4 ">
         <input

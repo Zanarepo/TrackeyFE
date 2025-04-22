@@ -174,7 +174,7 @@ const totalPages = Math.ceil(filtered.length / itemsPerPage);
   };
 
   return (
-    <div className="p-4 ">
+    <div className="p-0">
       {/* Header & Actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 w-full">
   <input
@@ -182,7 +182,7 @@ const totalPages = Math.ceil(filtered.length / itemsPerPage);
     placeholder="Search sales..."
     value={search}
     onChange={e => setSearch(e.target.value)}
-    className="w-full sm:max-w-xs p-2 border rounded dark:bg-gray-900 dark:text-white"
+    className="w-full p-2 border rounded border rounded dark:bg-gray-900 dark:text-white"
   />
   
   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">

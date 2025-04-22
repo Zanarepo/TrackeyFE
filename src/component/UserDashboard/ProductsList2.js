@@ -164,7 +164,7 @@ export default function Products() {
   return (
     <div className="p-4">
       {/* Search & Add */}
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2b ">
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
         <input
           type="text"
           placeholder="Search products..."
@@ -182,9 +182,9 @@ export default function Products() {
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 ">
-          <form onSubmit={createProduct} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white  p-6 rounded-lg shadow-lg w-full max-w-md dark:bg-gray-900 dark:text-white">
-            <h2 className="text-xl font-bold mb-4 ">Add Product</h2>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <form onSubmit={createProduct} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add Product</h2>
             {[
               { name:'name', label:'Name', type:'text' },
               { name:'description', label:'Description', type:'text' },
@@ -193,7 +193,7 @@ export default function Products() {
               { name:'markup_percent', label:'Markup %', type:'number' },
             ].map(field => (
               <div className="mb-3" key={field.name}>
-                <label className="block mb-1 ">{field.label}</label>
+                <label className="block mb-1">{field.label}</label>
                 <input
                   type={field.type}
                   step="0.01"
@@ -201,7 +201,7 @@ export default function Products() {
                   value={addForm[field.name]}
                   onChange={handleAddChange}
                   required={['name','purchase_price','purchase_qty'].includes(field.name)}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:bg-gray-900 dark:text-white"
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
                 />
               </div>
             ))}
@@ -218,12 +218,12 @@ export default function Products() {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow dark:bg-gray-900 dark:text-white">
+      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-200 dark:bg-gray-700">
             <tr>
               {['Name','Desc.','Purchase','Qty','Markup %','Price','Date','Actions'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-500">{h}</th>
+                <th key={h} className="px-4 py-2 text-left text-sm font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
@@ -256,19 +256,19 @@ export default function Products() {
         <button
           onClick={() => setPage(prev => Math.max(prev - 1, 0))}
           disabled={page === 0}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:bg-white dark:text-indigo-500"
+          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
         >Prev</button>
         <span className="text-sm">{`Page ${page+1} of ${totalPages}`}</span>
         <button
           onClick={() => setPage(prev => Math.min(prev + 1, totalPages - 1))}
           disabled={page+1 >= totalPages}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:bg-white dark:text-indigo-500"
+          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
         >Next</button>
       </div>
 
       {/* Exports */}
-      <div className="flex justify-center gap-4 mt-6 ">
-        <button onClick={exportCSV} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2 ">
+      <div className="flex justify-center gap-4 mt-6">
+        <button onClick={exportCSV} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2">
           <FaFileCsv /> CSV
         </button>
         <button onClick={exportPDF} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center gap-2">

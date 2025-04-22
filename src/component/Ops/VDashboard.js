@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../supabaseClient";
 import jsPDF from "jspdf";
 import { format, startOfWeek, startOfMonth } from "date-fns";
-import  SimplexSummary from "../Ops/SimplexSummary";
+import SalesSummary from "./SalesSummary";
 import {
   BarChart,
   Bar,
@@ -34,14 +34,14 @@ export default function SalesDashboard() {
     const storeId = localStorage.getItem("store_id");
     async function load() {
       const { data, error } = await supabase
-        .from("sales")
-        .select(`product_id, quantity, unit_price, sold_at, products(name)`)
+        .from("dynamic_sales")
+        .select(`dynamic_product_id, quantity, unit_price, sold_at, dynamic_product(name)`)
         .eq("store_id", storeId)
         .order("sold_at", { ascending: false });
       if (!error) {
         setSalesData(
           data.map((s) => ({
-            productName: s.products.name,
+            productName: s.dynamic_product.name,
             quantity: s.quantity,
             unitPrice: parseFloat(s.unit_price),
             totalSales: s.quantity * parseFloat(s.unit_price),
@@ -159,7 +159,7 @@ export default function SalesDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto p-0">
-      <SimplexSummary />
+       <SalesSummary/>
       {/* Heading */}
       <h1 className="text-2xl font-bold text-center mb-4 dark:bg-gray-900 dark:text-white">
         Sales Dashboard
@@ -350,7 +350,9 @@ export default function SalesDashboard() {
                 <Bar dataKey="totalSales" fill="#6366F1" />
               </BarChart>
             </ResponsiveContainer>
+           
           </div>
+         
         </div>
       )}
     </div>

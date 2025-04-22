@@ -121,7 +121,7 @@ export default function ProductCostsDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2 gap-4">
         <div>
-          <h2 className="text-2xl text-indigo-800 font-bold dark:bg-gray-900 dark:text-white">Product Purchase Costs</h2>
+        {/* Header  <h2 className="text-2xl text-indigo-800 font-bold dark:bg-gray-900 dark:text-white">Product Purchase Costs</h2>*/} 
           <p className="text-sm text-gray-500 ">Overview of product purchase expenses.</p>
         </div>
         <div className="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg font-semibold shadow-sm dark:bg-gray-800 dark:text-indigo-300">
@@ -173,6 +173,7 @@ export default function ProductCostsDashboard() {
               <th className="px-6 py-3 text-left text-xs uppercase ">Product</th>
               <th className="px-6 py-3 text-right text-xs uppercase">Price</th>
               <th className="px-6 py-3 text-right text-xs uppercase">Date</th>
+              
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100 dark:bg-gray-800 dark:text-white">
@@ -216,7 +217,7 @@ export default function ProductCostsDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 mt-16">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Purchase Costs by Product</h3>
+             {/* Chart Modal */} <h3 className="text-xl font-semibold">Purchase Costs by Product</h3>
               <button onClick={() => setShowChart(false)} className="text-gray-500 hover:text-gray-700">Close</button>
             </div>
             <div className="w-full h-64 md:h-96">

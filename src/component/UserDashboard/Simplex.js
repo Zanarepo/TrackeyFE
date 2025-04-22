@@ -18,6 +18,7 @@ import SalesTracker from './SalesTracker';
 import Customers from './Customers';
 import Inventory from './Inventory';
 import SimplexFeature from './SimplexFeature';
+import  SimplexDashboard  from '../Ops/SDashboard'; 
 // In MainDashboard.js
 
 
@@ -29,42 +30,59 @@ import SimplexFeature from './SimplexFeature';
 const tools = [
   {
     key: 'sales',
-    label: 'Sales',
+    label: 'Sales Tracker',
     icon: <FaChartLine className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Analyze your sales performance.',
     component: <SalesTracker />,
   },
   {
     key: 'products',
-    label: 'Products',
+    label: 'Produts & Pricing',
     icon: <FaBoxes className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Manage your product catalog.',
     component: <ProductList />,
   },
+ 
+ 
+
+  {
+    key: ' dashboard',
+    label: 'Cost & Revenue',
+    icon: <FaBoxes className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Manage your product catalog.',
+    component: < SimplexDashboard />,
+  },
+  
+
+
+
+
+
+
   {
     key: 'inventory',
-    label: 'Inventory',
+    label: 'Inventory Manager',
     icon: <FaTasks className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track stock levels.',
     component: <Inventory />,
   },
   {
-    key: 'expenses',
-    label: 'Expenses',
+    key: 'expense',
+    label: 'Expense Tracker',
     icon: <FaRegMoneyBillAlt className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Monitor store expenses.',
     component: <ExpenseTracker />,
   },
   {
     key: 'debts',
-    label: 'Debts',
+    label: 'Debts Manager',
     icon: <FaMoneyCheckAlt className="text-5xl sm:text-6xl text-indigo-600 p-1" />,
     desc: 'Track customer debts.',
     component: <DebtTracker />,
   },
   {
     key: 'customers',
-    label: 'Customers',
+    label: 'Customers Manager',
     icon: <FaUsers className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Manage your customers.',
     component: <Customers />,

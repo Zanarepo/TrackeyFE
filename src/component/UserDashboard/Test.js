@@ -1,7 +1,7 @@
 // InventoryManager.jsx
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Edit2, Trash2, Save, X, RefreshCw } from 'lucide-react';
+import { Edit2, Trash2, Save, X, RefreshCw, PlusCircle } from 'lucide-react';
 
 export default function InventoryManager() {
   const [storeId, setStoreId] = useState(null);
@@ -9,17 +9,22 @@ export default function InventoryManager() {
   const [products, setProducts] = useState([]);
   const [inventory, setInventory] = useState([]);
 
+  // Search & pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredInv, setFilteredInv] = useState([]);
   const [page, setPage] = useState(0);
   const pageSize = 5;
 
+  // Add/restock/edit state
+  const [newProductId, setNewProductId] = useState('');
+  const [newInventoryQty, setNewInventoryQty] = useState(0);
   const [restockQty, setRestockQty] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [editQty, setEditQty] = useState(0);
 
   const REORDER_THRESHOLD = 5;
 
+  // Initial load
   useEffect(() => {
     const sid = parseInt(localStorage.getItem('store_id'), 10);
     if (!sid) return;
@@ -33,50 +38,13 @@ export default function InventoryManager() {
       .then(({ data }) => data && setStoreName(data.shop_name));
 
     fetchProducts(sid);
+    fetchInventory(sid);
   }, []);
-
-  useEffect(() => {
-    if (!storeId || products.length === 0) return;
-    const payload = products.map(({ id, purchase_qty }) => ({
-      dynamic_product_id: id,
-      store_id: storeId,
-      available_qty: purchase_qty
-    }));
-    supabase
-      .from('dynamic_inventory')
-      .upsert(payload, { onConflict: ['dynamic_product_id', 'store_id'] })
-      .then(() => fetchInventory(storeId));
-  }, [products, storeId]);
-
-  useEffect(() => {
-    if (!storeId) return;
-    const channel = supabase
-      .channel(`inventory-sync-${storeId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'dynamic_product',
-          filter: `store_id=eq.${storeId}`
-        },
-        async ({ new: updatedProd }) => {
-          await supabase
-            .from('dynamic_inventory')
-            .update({ available_qty: updatedProd.purchase_qty, updated_at: new Date() })
-            .eq('dynamic_product_id', updatedProd.id)
-            .eq('store_id', storeId);
-          fetchInventory(storeId);
-        }
-      )
-      .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, [storeId]);
 
   async function fetchProducts(sid) {
     const { data, error } = await supabase
-      .from('dynamic_product')
-      .select('id, name, purchase_qty')
+      .from('products')
+      .select('id, name')
       .eq('store_id', sid)
       .order('name');
     if (!error) setProducts(data);
@@ -84,36 +52,36 @@ export default function InventoryManager() {
 
   async function fetchInventory(sid) {
     const { data: invData, error: invErr } = await supabase
-      .from('dynamic_inventory')
+      .from('inventory')
       .select(`
         id,
-        dynamic_product_id,
+        product_id,
         available_qty,
-        product:dynamic_product(name)
+        purchase_qty,
+        product:products(name)
       `)
-      .eq('store_id', sid);
+      .eq('store_id', sid)
+      .order('id', { ascending: true });
     if (invErr || !invData) return;
 
-    invData.sort((a, b) => a.product.name.localeCompare(b.product.name));
-
     const { data: salesData, error: salesErr } = await supabase
-      .from('dynamic_sales')
-      .select('dynamic_product_id, quantity')
+      .from('sales')
+      .select('product_id, quantity')
       .eq('store_id', sid);
     if (salesErr) return;
 
-    const soldMap = salesData.reduce((acc, { dynamic_product_id, quantity }) => {
-      acc[dynamic_product_id] = (acc[dynamic_product_id] || 0) + quantity;
+    const soldMap = salesData.reduce((acc, { product_id, quantity }) => {
+      acc[product_id] = (acc[product_id] || 0) + quantity;
       return acc;
     }, {});
 
     const combined = invData.map(item => {
-      const sold = soldMap[item.dynamic_product_id] || 0;
+      const sold = soldMap[item.product_id] || 0;
       const remaining = item.available_qty - sold;
       return {
         ...item,
         quantity_sold: sold,
-        remaining_qty: remaining < 0 ? 0 : remaining
+        remaining_qty: Math.max(remaining, 0)
       };
     });
 
@@ -129,22 +97,35 @@ export default function InventoryManager() {
     setPage(0);
   }, [inventory, searchTerm]);
 
+  async function handleAddInventory() {
+    const pid = parseInt(newProductId, 10);
+    const qty = parseInt(newInventoryQty, 10);
+    if (!pid || qty < 0) return;
+    await supabase
+      .from('inventory')
+      .insert([{ product_id: pid, store_id: storeId, available_qty: qty, purchase_qty: qty }]);
+    setNewProductId('');
+    setNewInventoryQty(0);
+    fetchInventory(storeId);
+  }
+
   async function handleRestock(id) {
     const qty = parseInt(restockQty[id] || 0, 10);
     if (qty <= 0) return;
     const item = inventory.find(i => i.id === id);
     if (!item) return;
     const newAvailable = item.available_qty + qty;
+    const newPurchased = (item.purchase_qty || 0) + qty;
     await supabase
-      .from('dynamic_inventory')
-      .update({ available_qty: newAvailable, updated_at: new Date() })
+      .from('inventory')
+      .update({ available_qty: newAvailable, purchase_qty: newPurchased, updated_at: new Date() })
       .eq('id', id);
     setRestockQty({ ...restockQty, [id]: '' });
     fetchInventory(storeId);
   }
 
   async function handleDelete(id) {
-    await supabase.from('dynamic_inventory').delete().eq('id', id);
+    await supabase.from('inventory').delete().eq('id', id);
     fetchInventory(storeId);
   }
 
@@ -157,7 +138,7 @@ export default function InventoryManager() {
   }
   async function saveEdit(id) {
     await supabase
-      .from('dynamic_inventory')
+      .from('inventory')
       .update({ available_qty: editQty, updated_at: new Date() })
       .eq('id', id);
     setEditingId(null);
@@ -166,58 +147,94 @@ export default function InventoryManager() {
 
   if (!storeId) return <div className="p-4">Loading...</div>;
 
+  // Pagination logic
   const start = page * pageSize;
   const pageData = filteredInv.slice(start, start + pageSize);
   const totalPages = Math.ceil(filteredInv.length / pageSize);
 
   return (
     <div className="p-0 space-y-6">
-      <h1 className="text-2xl font-bold text-center dark:text-white">
-        Inventory Dashboard - {storeName}
+      <h1 className="text-2xl font-bold text-center text-indigo-800">
+        Inventory Dashboard {storeName}
       </h1>
 
+      {/* Add Inventory */}
+      <section className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-indigo-800">
+          <PlusCircle size={20} /> Add New Stock
+        </h2>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            className="flex-1 border rounded-lg p-2"
+            value={newProductId}
+            onChange={e => setNewProductId(e.target.value)}
+          >
+            <option value="">Choose product…</option>
+            {products.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min="0"
+            className="w-full sm:w-24 border rounded-lg p-2"
+            placeholder="Qty"
+            value={newInventoryQty}
+            onChange={e => setNewInventoryQty(e.target.value)}
+          />
+          <button
+            onClick={handleAddInventory}
+            className="flex items-center gap-2 bg-indigo-800 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+          >
+            <PlusCircle size={16} /> Add Stock
+          </button>
+        </div>
+      </section>
+
+      {/* Search */}
       <div className="mb-4">
         <input
           type="text"
           placeholder="Search by product…"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white"
+          className="w-full sm:w-1/2 p-2 border rounded"
         />
       </div>
 
-      <section className="overflow-x-auto dark:bg-gray-800 dark:text-white">
+      {/* Inventory Table */}
+      <section className="overflow-x-auto">
         <table className="min-w-full table-auto border-collapse">
           <thead>
-            <tr className="bg-gray-200 text-indigo-500 dark:bg-gray-800 dark:text-indigo-600">
-              {['ID', 'Item', 'Avail.', 'Sold', 'Remains', 'Restock', 'Actions'].map((h, idx) => (
-                <th key={idx} className="p-2 text-left">{h}</th>
+            <tr className="bg-gray-200 text-indigo-800">
+              {['ID','Item','Purchased','Avail.','Sold','Remains','Restock','Actions'].map((h, i) => (
+                <th key={i} className="p-2 text-left">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {pageData.map(item => (
-              <tr key={item.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700">
+              <tr key={item.id} className="border-b hover:bg-gray-100">
                 <td className="px-4 py-2">{item.id}</td>
-                <td className="px-4 py-2">{item.product?.name}</td>
+                <td className="px-4 py-2 text-indigo-800">{item.product.name}</td>
+                <td className="px-4 py-2">{item.purchase_qty}</td>
                 <td className="px-4 py-2">
-                  {editingId === item.id ? (
-                    <input
-                      type="number"
-                      min="0"
-                      value={editQty}
-                      onChange={e => setEditQty(parseInt(e.target.value, 10))}
-                      className="border p-1 rounded w-20"
-                    />
-                  ) : item.available_qty}
+                  {editingId === item.id
+                    ? <input
+                        type="number"
+                        min="0"
+                        value={editQty}
+                        onChange={e => setEditQty(+e.target.value)}
+                        className="border p-1 rounded w-20"
+                      />
+                    : item.available_qty}
                 </td>
                 <td className="px-4 py-2 text-center">{item.quantity_sold}</td>
                 <td className="px-4 py-2 text-center">
                   <div className="flex items-center justify-center gap-1">
                     {item.remaining_qty}
-                    {item.remaining_qty <= REORDER_THRESHOLD && (
-                      <RefreshCw size={14} className="text-red-500" />
-                    )}
+                    {item.remaining_qty <= REORDER_THRESHOLD &&
+                      <RefreshCw size={14} className="text-red-500" />}
                   </div>
                 </td>
                 <td className="px-4 py-2 flex items-center gap-1">
@@ -226,20 +243,19 @@ export default function InventoryManager() {
                     min="0"
                     value={restockQty[item.id] || ''}
                     onChange={e => setRestockQty({ ...restockQty, [item.id]: e.target.value })}
-                    className="border p-1 rounded w-16 dark:bg-gray-800 dark:text-white"
+                    className="border p-1 rounded w-16"
                     placeholder="Qty"
                   />
                   <button
                     onClick={() => handleRestock(item.id)}
-                    className="p-1 rounded bg-indigo-500 hover:bg-indigo-600 text-white"
+                    className="p-1 rounded bg-indigo-800 hover:bg-indigo-700 text-white"
                   >
                     <RefreshCw size={14} />
                   </button>
                 </td>
                 <td className="px-4 py-2 text-center">
-                  <div className="inline-flex gap-2">
-                    {editingId === item.id ? (
-                      <>
+                  {editingId === item.id
+                    ? <>
                         <button
                           onClick={() => saveEdit(item.id)}
                           className="p-1 rounded bg-green-600 text-white"
@@ -253,8 +269,7 @@ export default function InventoryManager() {
                           <X size={14} />
                         </button>
                       </>
-                    ) : (
-                      <>
+                    : <>
                         <button
                           onClick={() => startEdit(item)}
                           className="p-1 rounded bg-yellow-400 text-white"
@@ -267,9 +282,7 @@ export default function InventoryManager() {
                         >
                           <Trash2 size={14} />
                         </button>
-                      </>
-                    )}
-                  </div>
+                      </>}
                 </td>
               </tr>
             ))}
@@ -277,6 +290,7 @@ export default function InventoryManager() {
         </table>
       </section>
 
+      {/* Pagination */}
       <div className="flex justify-between items-center mt-4">
         <button
           onClick={() => setPage(p => Math.max(p - 1, 0))}
@@ -285,7 +299,7 @@ export default function InventoryManager() {
         >
           Prev
         </button>
-        <span className="px-3 py-1 bg-gray-200 rounded dark:bg-gray-900 dark:text-white">
+        <span className="px-3 py-1 bg-gray-200 rounded">
           Page {page + 1} of {totalPages}
         </span>
         <button

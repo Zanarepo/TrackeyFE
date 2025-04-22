@@ -18,7 +18,7 @@ import SalesTracker from './SalesTracker';
 
 import StoreUserProfile  from './StoreUsersProfile';
 import Colleagues from './Colleagues';
-import TackingTools from './TrackingTools';
+import TackingTools from '../Ops/VDashboard';
 import ServicesTools from './ServicesTools';
 
 const Dashboard = () => {

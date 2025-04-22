@@ -16,9 +16,10 @@ import Employees from './Employees';
 import Profile from './Profile';
 import ShopOwner from './ShopOwner';
 import ServicesDashboard from './ServicesDashboard';
-import TrackingTools from './TrackingTools';
-import CostRevExp from '../Ops/Dashboard';
+import VDashboard from '../Ops/VDashboard';
+import SDashboard from '../Ops/SDashboard';
 import Simplex from './Simplex';
+import Test from './Test';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Simplex');
@@ -35,10 +36,10 @@ const Dashboard = () => {
     switch (activeTab) {
      
 
-      case 'CostRevExp':
+      case 'SDashboard':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <CostRevExp />
+            <SDashboard />
           </div>
         );
       
@@ -50,17 +51,30 @@ const Dashboard = () => {
           </div>
         );
       
-        case 'TrackingTools':
+        case 'VDashboard':
           return (
             <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-              <TrackingTools />
+              <VDashboard/>
             </div>
   
   
           );
-
+          
+          case 'Test':
+            return (
+              <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+                <Test />
+              </div>
+    
+    
+            );
 
   
+
+
+
+
+
       case 'ShopOwner':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
@@ -160,11 +174,11 @@ const Dashboard = () => {
 
 
                 <li 
-                  onClick={() => handleNavClick('CostRevExp')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'CostRevExp' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('SDashboard')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'SDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Operations Dashboard</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Simplex Dashboard</span>
                 </li>
 
 
@@ -174,12 +188,24 @@ const Dashboard = () => {
            
 
                 <li 
-                  onClick={() => handleNavClick('TrackingTools')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'TrackingTools' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('VDashboard')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'VDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Tracking Tools</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Variex Dashboard</span>
+
+              
                 </li>
+
+                
+                <li 
+                  onClick={() => handleNavClick('Test')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Test' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">TESTING</span>
+                </li>
+
 
 
                 
