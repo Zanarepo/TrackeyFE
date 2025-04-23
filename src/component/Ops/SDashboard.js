@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import ProductsPurchaseCost from '../UserDashboard/ProductsPurchaseCost';
 import SalesMetrics from '../UserDashboard/SalesMetrics';
 import { FaDollarSign, FaChartBar, FaArrowLeft } from 'react-icons/fa';
+import WhatsAppChatPopup from '../UserDashboard/WhatsAppChatPopup';
+import ExpenseSummary from '../UserDashboard/ExpenseSummary'
+
 
 export default function Dashboard() {
   const [view, setView] = useState(null); // null | 'productCost' | 'salesMetrics'
@@ -23,13 +26,27 @@ export default function Dashboard() {
       component: <SalesMetrics />,
       
     },
+
+
+    {
+      key: 'expenseMetrics',
+      label: 'Expense Metrics',
+      icon: <FaChartBar className="text-4xl text-indigo-600" />,
+      component: <ExpenseSummary />,
+      
+    },
   ];
 
+
+
+
+
+  
   // If a view is selected, show its content + back button
   if (view) {
     const card = cards.find(c => c.key === view);
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 ">
+      <div className="min-h-screen bg-white dark:bg-gray-900 ">
         <button
           onClick={() => setView(null)}
           className="flex items-center mb-4 text-indigo-600 hover:text-indigo-800"
@@ -54,7 +71,10 @@ export default function Dashboard() {
 
   // Otherwise show the icon grid
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-4">
+      <WhatsAppChatPopup /> {/* WhatsApp chat popup */}
+     
+      {/* Header */}
       <h1 className="text-center text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white mb-6">
         Dashboard
       </h1>

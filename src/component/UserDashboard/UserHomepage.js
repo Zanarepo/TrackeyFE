@@ -14,12 +14,13 @@ import {
 
 import Employees from './Employees';
 import Profile from './Profile';
-import ShopOwner from './ShopOwner';
-import ServicesDashboard from './ServicesDashboard';
+//import ShopOwner from './ShopOwner';
+import Variex from './Variex';
 import VDashboard from '../Ops/VDashboard';
 import SDashboard from '../Ops/SDashboard';
 import Simplex from './Simplex';
 import Test from './Test';
+import WhatsAppChatPopup from './WhatsAppChatPopup';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Simplex');
@@ -75,17 +76,12 @@ const Dashboard = () => {
 
 
 
-      case 'ShopOwner':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <ShopOwner />
-          </div>
-        ); 
+   
 
         case 'Variex':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
-            <ServicesDashboard />
+            <Variex />
           </div>
         ); 
        
@@ -132,6 +128,7 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900 mt-20">
+      <WhatsAppChatPopup/>
       {/* Sidebar */}
       <aside 
         className={`transition-all duration-300 bg-gray-100 dark:bg-gray-900 ${sidebarOpen ? "w-64" : "w-0"} md:w-64 flex-shrink-0`}

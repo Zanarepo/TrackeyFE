@@ -6,7 +6,7 @@ import {
   FaMoneyCheckAlt,
   FaBoxes,
   FaChartLine,
-  FaUsers,
+ // FaUsers,
   FaTasks,
   FaArrowLeft,
 } from 'react-icons/fa';
@@ -15,7 +15,7 @@ import ExpenseTracker from './ExpenseTracker';
 import DebtTracker from './DebtTracker';
 import ProductList from './ProductList';
 import SalesTracker from './SalesTracker';
-import Customers from './Customers';
+//import Customers from './Customers';
 import Inventory from './Inventory';
 import SimplexFeature from './SimplexFeature';
 //import  SimplexDashboard  from '../Ops/SDashboard'; 
@@ -50,6 +50,7 @@ const tools = [
 
 
 
+
   {
     key: 'inventory',
     label: 'Inventory Manager',
@@ -71,13 +72,11 @@ const tools = [
     desc: 'Track customer debts.',
     component: <DebtTracker />,
   },
-  {
-    key: 'customers',
-    label: 'Customers Manager',
-    icon: <FaUsers className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Manage your customers.',
-    component: <Customers />,
-  },
+
+
+
+
+
 ];
 
 export default function Dashboard() {

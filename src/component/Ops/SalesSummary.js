@@ -163,7 +163,7 @@ export default function SalesDashboard() {
       <div className="flex justify-center p-4">
         <button
           onClick={() => setVisible(true)}
-          className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          className="px-6 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 "
         >
           Show Sales Summary
         </button>
@@ -173,22 +173,22 @@ export default function SalesDashboard() {
 
   // --- Full dashboard UI ---
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-6">
+    <div className="max-w-5xl mx-auto p-4 space-y-6 dark:bg-gray-800 dark:text-white ">
       {/* Close control */}
       <div className="flex justify-end">
         <button
           onClick={() => setVisible(false)}
-          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-900 dark:text-white"
         >
           Close
         </button>
       </div>
 
-      <h1 className="text-2xl font-bold text-center mb-4">Sales Summary</h1>
+      <h1 className="text-2xl font-bold text-center mb-4 dark:bg-gray-800 dark:text-white">Sales Summary</h1>
 
       {/* Presets & Date Range */}
-      <div className="space-y-4 mb-4">
-        <div className="flex space-x-2 overflow-x-auto pb-2">
+      <div className="space-y-4 mb-4 ">
+        <div className="flex space-x-2 overflow-x-auto pb-2 ">
           {[
             ["Today", "today"],
             ["Last 7 Days", "7days"],
@@ -198,31 +198,31 @@ export default function SalesDashboard() {
             <button
               key={key}
               onClick={() => applyPreset(key)}
-              className="px-3 py-1 bg-indigo-600 text-white rounded text-sm whitespace-nowrap"
+              className="px-3 py-1 bg-indigo-600 text-white rounded text-sm whitespace-nowrap "
             >
               {label}
             </button>
           ))}
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 ">
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
           />
           <button
             onClick={() => {
               setStartDate("");
               setEndDate("");
             }}
-            className="px-4 py-2 bg-gray-200 rounded"
+            className="px-4 py-2 bg-gray-200 rounded dark:bg-gray-900 dark:text-white"
           >
             Clear
           </button>
@@ -230,7 +230,7 @@ export default function SalesDashboard() {
       </div>
 
       {/* Range Total */}
-      <div className="text-right font-semibold mb-4">
+      <div className="text-right font-semibold mb-4 ">
         Total Revenue: {formatCurrency(rangeTotal)}
       </div>
 
@@ -241,12 +241,12 @@ export default function SalesDashboard() {
           placeholder="Search product..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:flex-1 p-2 border rounded"
+          className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-900 dark:text-white"
         />
         <select
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
-          className="p-2 border rounded"
+          className="p-2 border rounded dark:bg-gray-900 dark:text-white"
         >
           {CURRENCY_SYMBOLS.map((s) => (
             <option key={s} value={s}>
@@ -257,9 +257,9 @@ export default function SalesDashboard() {
       </div>
 
       {/* Summary Table */}
-      <div className="overflow-x-auto bg-white shadow rounded-lg mb-6">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-200">
+      <div className="overflow-x-auto bg-white shadow rounded-lg mb-6 dark:bg-gray-900 dark:text-white">
+        <table className="min-w-full divide-y divide-gray-200 ">
+          <thead className="bg-gray-200 dark:bg-gray-900 dark:text-indigo-800">
             <tr>
               {["Product", "Qty Sold", "Total Revenue"].map((h) => (
                 <th

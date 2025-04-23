@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../supabaseClient";
 import jsPDF from "jspdf";
 import { format, startOfWeek, startOfMonth } from "date-fns";
-import  SimplexSummary from "../Ops/SimplexSummary";
+import SalesSummary from "./SalesSummary";
 import {
   BarChart,
   Bar,
@@ -34,14 +34,14 @@ export default function SalesDashboard() {
     const storeId = localStorage.getItem("store_id");
     async function load() {
       const { data, error } = await supabase
-        .from("sales")
-        .select(`product_id, quantity, unit_price, sold_at, products(name)`)
+        .from("dynamic_sales")
+        .select(`dynamic_product_id, quantity, unit_price, sold_at, dynamic_product(name)`)
         .eq("store_id", storeId)
         .order("sold_at", { ascending: false });
       if (!error) {
         setSalesData(
           data.map((s) => ({
-            productName: s.products.name,
+            productName: s.dynamic_product.name,
             quantity: s.quantity,
             unitPrice: parseFloat(s.unit_price),
             totalSales: s.quantity * parseFloat(s.unit_price),
@@ -159,14 +159,14 @@ export default function SalesDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto p-0 dark:bg-gray-900 dark:text-white">
-      <SimplexSummary />
+       <SalesSummary/>
       {/* Heading */}
       <h1 className="text-2xl font-bold text-center mb-4 dark:bg-gray-900 dark:text-white">
         Sales Dashboard
       </h1>
 
       {/* Presets & Range Picker */}
-      <div className="space-y-4 mb-4 ">
+      <div className="space-y-4 mb-4">
   {/* Presets: horizontal scroll on mobile, wrap on desktop */}
   <div className="flex space-x-2 overflow-x-auto pb-2 ">
     {[
@@ -191,20 +191,20 @@ export default function SalesDashboard() {
       type="date"
       value={startDate}
       onChange={(e) => setStartDate(e.target.value)}
-      className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-900 dark:text-white"
+      className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-800 dark:text-white"
     />
     <input
       type="date"
       value={endDate}
       onChange={(e) => setEndDate(e.target.value)}
-      className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-900 dark:text-white"
+      className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-800 dark:text-white"
     />
     <button
       onClick={() => {
         setStartDate("");
         setEndDate("");
       }}
-      className="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-300 transition"
+      className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
     >
       Clear
     </button>
@@ -224,12 +224,12 @@ export default function SalesDashboard() {
           placeholder="Search product..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-900 dark:text-white"
+          className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-800 dark:text-white"
         />
         <select
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
-          className="w-full sm:w-auto p-2 border rounded dark:bg-gray-900 dark:text-white"
+          className="w-full sm:w-auto p-2 border rounded dark:bg-gray-800 dark:text-white"
         >
           {CURRENCY_SYMBOLS.map((sym) => (
             <option key={sym} value={sym}>
@@ -242,7 +242,7 @@ export default function SalesDashboard() {
       {/* Table */}
       <div className="overflow-x-auto bg-white shadow rounded-lg">
         <table className="min-w-full divide-y divide-gray-200 ">
-          <thead className="bg-gray-200 dark:bg-gray-900 dark:text-indigo-500">
+          <thead className="bg-gray-200 dark:bg-gray-800 dark:text-indigo-500">
             <tr>
               {["Date", "Product", "Unit Price", "Qty", "Total"].map((h) => (
                 <th
@@ -256,7 +256,7 @@ export default function SalesDashboard() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {pageData.map((s, i) => (
-              <tr key={i} className="hover:bg-gray-50 dark:bg-gray-900 dark:text-white">
+              <tr key={i} className="hover:bg-gray-50 dark:bg-gray-800 dark:text-white">
                 <td className="px-4 py-2 text-sm">
                   {format(s.soldAt, "yyyy-MM-dd")}
                 </td>
@@ -350,7 +350,9 @@ export default function SalesDashboard() {
                 <Bar dataKey="totalSales" fill="#6366F1" />
               </BarChart>
             </ResponsiveContainer>
+           
           </div>
+         
         </div>
       )}
     </div>

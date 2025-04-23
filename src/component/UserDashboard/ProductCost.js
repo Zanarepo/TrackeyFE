@@ -45,7 +45,7 @@ export default function ProductCostsDashboard() {
 
     (async () => {
       const { data, error } = await supabase
-        .from("products")
+        .from("dynamic_product")
         .select("name, purchase_price, created_at")
         .eq("store_id", storeId)
         .order("created_at", { ascending: false });
@@ -184,7 +184,7 @@ export default function ProductCostsDashboard() {
 
       {/* Sales Summary Title */}
       <h1 className="text-2xl font-bold mb-4 dark:text-white">
-        Sales Summary
+        Products Purchase Cost Summary
       </h1>
 
       {/* Presets & Manual Range */}

@@ -1,4 +1,4 @@
-// Dashboard.jsx
+// DynamicDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import {
@@ -6,26 +6,18 @@ import {
   FaMoneyCheckAlt,
   FaBoxes,
   FaChartLine,
-  FaUsers,
+ // FaUsers,
   FaTasks,
   FaArrowLeft,
 } from 'react-icons/fa';
 
-import ExpenseTracker from './ExpenseTracker';
-import DebtTracker from './DebtTracker';
-import ProductList from './ProductList';
-import SalesTracker from './SalesTracker';
-import Customers from './Customers';
-import Inventory from './Inventory';
-import SimplexFeature from './SimplexFeature';
-//import  SimplexDashboard  from '../Ops/SDashboard'; 
-// In MainDashboard.js
-
-
-
-
-//import SimplexFeature from './SimplexFeature';
-
+import DynamicInventory from '../DynamicSales/DynamicInventory';
+import DynamicProducts  from '../DynamicSales/DynamicProducts';
+import DynamicSales     from '../DynamicSales/DynamicSales';
+import ExpenseTracker   from './ExpenseTracker';
+import DebtTracker      from './DebtTracker';
+//import Customers        from './Customers';
+import VariexFeature  from '../DynamicSales/VariexFeature';
 
 const tools = [
   {
@@ -33,54 +25,41 @@ const tools = [
     label: 'Sales Tracker',
     icon: <FaChartLine className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Analyze your sales performance.',
-    component: <SalesTracker />,
+    component: <DynamicSales />,
   },
   {
     key: 'products',
-    label: 'Produts & Pricing',
+    label: 'Products & Pricing',
     icon: <FaBoxes className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Manage your product catalog.',
-    component: <ProductList />,
+    component: <DynamicProducts />,
   },
- 
- 
-
-
-
-
-
-
   {
     key: 'inventory',
     label: 'Inventory Manager',
     icon: <FaTasks className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track stock levels.',
-    component: <Inventory />,
+    component: <DynamicInventory />,
   },
   {
-    key: 'expense',
-    label: 'Expense Tracker',
+    key: 'expenses',
+    label: 'Expense Manager',
     icon: <FaRegMoneyBillAlt className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Monitor store expenses.',
     component: <ExpenseTracker />,
   },
   {
     key: 'debts',
-    label: 'Debts Manager',
-    icon: <FaMoneyCheckAlt className="text-5xl sm:text-6xl text-indigo-600 p-1" />,
+    label: 'Debt Manager',
+    icon: <FaMoneyCheckAlt className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track customer debts.',
     component: <DebtTracker />,
   },
-  {
-    key: 'customers',
-    label: 'Customers Manager',
-    icon: <FaUsers className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Manage your customers.',
-    component: <Customers />,
-  },
+
+
 ];
 
-export default function Dashboard() {
+export default function DynamicDashboard() {
   const [shopName, setShopName] = useState('Store Owner');
   const [activeTool, setActiveTool] = useState(null);
 
@@ -92,29 +71,31 @@ export default function Dashboard() {
       .select('shop_name')
       .eq('id', storeId)
       .single()
-      .then(({ data }) => {
-        if (data?.shop_name) setShopName(data.shop_name);
+      .then(({ data, error }) => {
+        if (!error && data?.shop_name) {
+          setShopName(data.shop_name);
+        }
       });
   }, []);
 
   const tool = tools.find(t => t.key === activeTool);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 p-1">
-      {/* Simplex Feature */}
-    
-      {/* Header */}
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-4">
+  
       <header className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white">
-          Welcome {shopName}!
+          Welcome, {shopName}!
         </h1>
 
-        <div className="mb-6">
-        <SimplexFeature />
+            
+<div className="mb-6">
+      <VariexFeature />
       </div>
+      
         {!activeTool && (
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Select a tool below.
+            Choose a tool to continue.
           </p>
         )}
       </header>
@@ -135,23 +116,22 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Content */}
+      {/* Grid or Content */}
       {activeTool ? (
-        <div>{tool.component}</div>
+        <div className="w-full">
+          {tool.component}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {tools.map(t => (
             <button
               key={t.key}
               onClick={() => setActiveTool(t.key)}
-              className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow hover:shadow-lg transition h-48"
+              className="flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-6 rounded-xl shadow hover:shadow-lg transition h-48"
             >
               {t.icon}
               <span className="mt-3 text-sm sm:text-base font-medium text-indigo-800 dark:text-white">
                 {t.label}
-              </span>
-              <span className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center px-2">
-                {t.desc}
               </span>
             </button>
           ))}

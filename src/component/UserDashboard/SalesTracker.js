@@ -1,6 +1,8 @@
 // SalesTracker.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
+import SimplexStockAlert from './SimplexStockAlert';
+
 import {
   FaPlus,
   FaEdit,
@@ -183,6 +185,7 @@ export default function SalesTracker() {
 
   return (
     <div className="p-0">
+      <SimplexStockAlert /> {/* Stock Alert Component */}
 
 <h1 className="w-full text-2xl font-bold text-center dark:bg-gray-900 dark:text-white">
   Sales Dashboard 

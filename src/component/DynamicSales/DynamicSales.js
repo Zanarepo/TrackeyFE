@@ -7,6 +7,7 @@ import {
   FaEdit,
 } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
+import DynamiclowStockAlert from './DynamiclowStockAlert';
 //import DynamicInventory from '../DynamicSales/DynamicInventory';
 
 export default function SalesTracker() {
@@ -174,9 +175,10 @@ const totalPages = Math.ceil(filtered.length / itemsPerPage);
   };
 
   return (
-    <div className="p-0">
+    <div className="p-0 ">
+      <DynamiclowStockAlert />
       {/* Header & Actions */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 w-full">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 w-full ">
   <input
     type="text"
     placeholder="Search sales..."
