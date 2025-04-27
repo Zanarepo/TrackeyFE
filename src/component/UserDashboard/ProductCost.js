@@ -170,11 +170,11 @@ export default function ProductCostsDashboard() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-6xl mx-auto p-4 mt-8 bg-gray-100 dark:bg-gray-900 rounded-lg shadow ">
+    <div className="max-w-6xl mx-auto p-4 mt-8 bg-white dark:bg-gray-900 rounded-lg shadow ">
       {/* Header & Total */}
       <div className="flex flex-col md:flex-row md:justify-between mb-4">
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          Overview of product purchase expenses.
+      
         </p>
         <div className="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg font-semibold dark:bg-gray-800 dark:text-white">
           Total: {currencySymbol}
@@ -188,8 +188,8 @@ export default function ProductCostsDashboard() {
       </h1>
 
       {/* Presets & Manual Range */}
-      <div className="mb-4 space-y-2">
-        <div className="flex gap-2 overflow-x-auto">
+      <div className="space-y-4 mb-4">
+        <div className="flex space-x-2 overflow-x-auto pb-2">
           {[
             ["Today", "today"],
             ["Last 7 Days", "7days"],
@@ -199,7 +199,7 @@ export default function ProductCostsDashboard() {
             <button
               key={k}
               onClick={() => applyPreset(k)}
-              className="px-3 py-1 bg-indigo-600 text-white rounded text-sm"
+              className="flex-shrink-0 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm whitespace-nowrap"
             >
               {lbl}
             </button>
@@ -231,7 +231,7 @@ export default function ProductCostsDashboard() {
       </div>
 
       {/* Controls (Timeframe, Search, Currency) */}
-      <div className="flex flex-wrap gap-2 mb-4 dark:bg-bla-800 dark:text-gray-900">
+      <div className="flex flex-wrap gap-2 mb-4 dark:bg-gray-800 dark:text-gray-900">
         {Object.keys(TIMEFRAMES).map((tf) => (
           <button
             key={tf}
@@ -302,7 +302,12 @@ export default function ProductCostsDashboard() {
               </tr>
             ))}
           </tbody>
-          <tfoot className="bg-gray-100 dark:bg-gray-700">
+         
+        </table>
+      </div>
+
+
+      <tfoot className="bg-white dark:bg-gray-700">
             <tr>
               <td
                 colSpan={2}
@@ -330,8 +335,6 @@ export default function ProductCostsDashboard() {
               </td>
             </tr>
           </tfoot>
-        </table>
-      </div>
 
       {/* Actions */}
       <div className="flex flex-wrap gap-4 mt-6">

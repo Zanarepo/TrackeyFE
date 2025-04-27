@@ -25,7 +25,13 @@ export default function DynamicProducts() {
     purchase_price: '',
     purchase_qty: '',
     markup_percent: '',
+    suppliers_name: '',
+    device_id: '',
+
   });
+
+  
+
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,12 +56,14 @@ export default function DynamicProducts() {
     return parseFloat((unitCost * (1 + m / 100)).toFixed(2));
   };
 
+ 
+  
   // Fetch products
   const fetchProducts = useCallback(async () => {
     if (!storeId) return;
     const { data, error } = await supabase
       .from('dynamic_product')
-      .select('id, name, description, purchase_price, purchase_qty, markup_percent, selling_price, created_at')
+      .select('id, name, description, purchase_price, purchase_qty, markup_percent, selling_price,  suppliers_name, device_id, created_at')
       .eq('store_id', storeId)
       .order('id', { ascending: true });
     if (!error) {
@@ -87,10 +95,10 @@ export default function DynamicProducts() {
     const selling_price = calcSelling(addForm);
     await supabase.from('dynamic_product').insert([{ store_id: storeId, ...addForm, selling_price }]);
     setShowAdd(false);
-    setAddForm({ name:'', description:'', purchase_price:'', purchase_qty:'', markup_percent:'' });
+    setAddForm({ name:'', description:'', purchase_price:'', purchase_qty:'', markup_percent:'', device_id:'', suppliers_name:'' });
     fetchProducts();
   };
-
+  
   const startEdit = p => {
     setEditing(p);
     setForm({
@@ -100,6 +108,8 @@ export default function DynamicProducts() {
       purchase_qty: p.purchase_qty,
       markup_percent: p.markup_percent,
       selling_price: p.selling_price,
+      suppliers_name: p.suppliers_name,
+      device_id: p.device_id,
     });
     setPriceEditable(false);
   };
@@ -119,7 +129,7 @@ export default function DynamicProducts() {
       selling_price = calcSelling({ purchase_price, purchase_qty, markup_percent });
     }
     await supabase.from('dynamic_product')
-      .update({ name: form.name, description: form.description, purchase_price, purchase_qty, markup_percent, selling_price })
+      .update({ name: form.name, description: form.description, suppliers_name: form.suppliers_name,  device_id: form.device_id, purchase_price, purchase_qty, markup_percent, selling_price })
       .eq('id', editing.id);
     setEditing(null);
     fetchProducts();
@@ -192,108 +202,167 @@ export default function DynamicProducts() {
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <form onSubmit={createProduct} className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-md dark:text-white">
-            <h2 className="text-xl font-bold mb-4">Add Product</h2>
-            {[
-              { name:'name', label:'Name' },
-              { name:'description', label:'Description' },
-              { name:'purchase_price', label:'Total Purchase Price' },
-              { name:'purchase_qty', label:'Quantity Purchased' },
-              { name:'markup_percent', label:'Markup %' },
-            ].map(field => (
-              <div className="mb-3" key={field.name}>
-                <label className="block mb-1">{field.label}</label>
-                <input
-                  type={field.name.includes('price')||field.name.includes('percent')||field.name.includes('qty')?'number':'text'}
-                  step="0.01"
-                  name={field.name}
-                  value={addForm[field.name]}
-                  onChange={handleAddChange}
-                  required={['name','purchase_price','purchase_qty'].includes(field.name)}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white dark:bg-gray-900 dark:text-white"
-                  
-                />
-              </div>
-            ))}
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
-            </div>
-          </form>
-        </div>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto pt-24">
+  <div className="w-full max-w-3xl mx-auto">
+    <form 
+      onSubmit={createProduct} 
+      className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full dark:text-white"
+    >
+      <h2 className="text-2xl font-bold mb-6">Add Product</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[
+          { name:'name', label:'Name' },
+          { name:'description', label:'Description' },
+          { name:'purchase_price', label:'Total Purchase Price' },
+          { name:'purchase_qty', label:'Quantity Purchased' },
+          { name:'markup_percent', label:'Markup %' },
+          { name:'suppliers_name', label:'Supplier Name' },
+          { name:'device_id', label:'Device ID' },
+        ].map(field => (
+          <div key={field.name}>
+            <label className="block mb-1">{field.label}</label>
+            <input
+              type={
+                field.name.includes('price') || 
+                field.name.includes('percent') || 
+                field.name.includes('qty') 
+                ? 'number' 
+                : 'text'
+              }
+              step="0.01"
+              name={field.name}
+              value={addForm[field.name]}
+              onChange={handleAddChange}
+              required={['name','purchase_price','purchase_qty'].includes(field.name)}
+              className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="w-full flex justify-center gap-2 mt-6">
+        <button 
+          type="button" 
+          onClick={() => setShowAdd(false)} 
+          className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+      
+
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow dark:bg-gray-900 dark:text-white">
+      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow dark:bg-gray-900 dark:text-white ">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-200 dark:bg-gray-700">
             <tr className="dark:bg-gray-900 dark:text-indigo-500">
-              {['Name','Description','Purchase','Qty','Markup %','Selling','Created','Actions'].map(h => (
+              {['Name','Description','Purchase','Qty','Markup %','Selling', 'Supplier', 'Device ID', 'Date','Actions'].map(h => (
                 <th key={h} className="px-4 py-2 text-left text-sm font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {paginatedProducts.map(p => (
-              <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-4 py-2 text-sm">{p.name}</td>
-                <td className="px-4 py-2 text-sm">{p.description}</td>
-                <td className="px-4 py-2 text-sm">{p.purchase_price.toFixed(2)}</td>
-                <td className="px-4 py-2 text-sm">{p.purchase_qty}</td>
-                <td className="px-4 py-2 text-sm">{p.markup_percent.toFixed(2)}</td>
-                <td className="px-4 py-2 text-sm">{p.selling_price.toFixed(2)}</td>
-                <td className="px-4 py-2 text-sm">{new Date(p.created_at).toLocaleDateString()}</td>
-                <td className="px-4 py-2 flex gap-2">
-                  <button onClick={() => startEdit(p)} className="text-indigo-600 hover:text-indigo-800"><FaEdit/></button>
-                  <button onClick={() => deleteProduct(p)} className="text-red-600 hover:text-red-800"><FaTrashAlt/></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+  {paginatedProducts.map(p => (
+    <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+      <td className="px-4 py-2 text-sm">{p.name}</td>
+      <td className="px-4 py-2 text-sm">{p.description}</td>
+      <td className="px-4 py-2 text-sm">{p.purchase_price.toFixed(2)}</td>
+      <td className="px-4 py-2 text-sm">{p.purchase_qty}</td>
+      <td className="px-4 py-2 text-sm">{p.markup_percent.toFixed(2)}</td>   {/* Move this up */}
+      <td className="px-4 py-2 text-sm">{p.selling_price.toFixed(2)}</td>
+      <td className="px-4 py-2 text-sm">{p.suppliers_name}</td>              {/* Correct position now */}
+      <td className="px-4 py-2 text-sm">{p.device_id}</td>                   {/* Correct position now */}
+      <td className="px-4 py-2 text-sm">{new Date(p.created_at).toLocaleDateString()}</td>
+      <td className="px-4 py-2 flex gap-2">
+        <button onClick={() => startEdit(p)} className="text-indigo-600 hover:text-indigo-800"><FaEdit/></button>
+        <button onClick={() => deleteProduct(p)} className="text-red-600 hover:text-red-800"><FaTrashAlt/></button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
         </table>
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-center items-center gap-2 mt-4">
-        <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50">Prev</button>
-        {[...Array(totalPages)].map((_,i)=> (
-          <button key={i} onClick={()=>setCurrentPage(i+1)} className={`px-3 py-1 rounded ${currentPage===i+1?'bg-indigo-600 text-white':'bg-gray-200 hover:bg-gray-300'}`}>{i+1}</button>
-        ))}
-        <button onClick={() => setCurrentPage(prev => Math.min(prev+1, totalPages))} disabled={currentPage=== totalPages} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50">Next</button>
-      </div>
+      <div className="flex flex-wrap justify-center sm:justify-center items-center gap-2 mt-4">
+  <button 
+    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+    disabled={currentPage === 1} 
+    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+  >
+    Prev
+  </button>
+
+  {[...Array(totalPages)].map((_, i) => (
+    <button 
+      key={i} 
+      onClick={() => setCurrentPage(i + 1)} 
+      className={`px-3 py-1 rounded ${currentPage === i + 1 
+        ? 'bg-indigo-600 text-white' 
+        : 'bg-gray-200 hover:bg-gray-300'}`}
+    >
+      {i + 1}
+    </button>
+  ))}
+
+  <button 
+    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+    disabled={currentPage === totalPages} 
+    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+  >
+    Next
+  </button>
+</div>
 
       {/* Exports */}
-      <div className="flex justify-center gap-4 mt-6">
+      <div className="flex justify-center gap-4 mt-4">
         <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"><FaFileCsv/>CSV</button>
         <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"><FaFilePdf/>PDF</button>
       </div>
 
       {/* Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Edit {editing.name}</h2>
-            {[
-              { name:'name', label:'Name' },
-              { name:'description', label:'Description' },
-              { name:'purchase_price', label:'Total Purchase Price'},
-              { name:'purchase_qty', label:'Quantity Purchased' },
-              { name:'markup_percent', label:'Markup %' },
-            ].map(field => (
-              <div className="mb-3" key={field.name}>
-                <label className="block mb-1">{field.label}</label>
-                <input
-                  type={field.name.includes('price')||field.name.includes('percent')||field.name.includes('qty')?'number':'text'}
-                  step="0.01"
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={handleFormChange}
-                  required={['name','purchase_price','purchase_qty'].includes(field.name)}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            ))}
+         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
+         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md overflow-y-auto max-h-[90vh] mt-32">
+           <h2 className="text-xl font-bold mb-4">Edit {editing.name}</h2>
+           
+           {/* Input Fields */}
+           {[ 
+             { name: 'name', label: 'Name' },
+             { name: 'description', label: 'Description' },
+             { name: 'purchase_price', label: 'Total Purchase Price' },
+             { name: 'purchase_qty', label: 'Quantity Purchased' },
+             { name: 'markup_percent', label: 'Markup %' },
+             { name: 'suppliers_name', label: 'Supplier Name' },
+             { name: 'device_id', label: 'Device ID' },
+           ].map(field => (
+             <div className="mb-3" key={field.name}>
+               <label className="block mb-1">{field.label}</label>
+               <input
+                 type={field.name.includes('price') || field.name.includes('percent') || field.name.includes('qty') ? 'number' : 'text'}
+                 step="0.01"
+                 name={field.name}
+                 value={form[field.name]}
+                 onChange={handleFormChange}
+                 required={['name', 'purchase_price', 'purchase_qty'].includes(field.name)}
+                 className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+               />
+             </div>
+           ))}
+
+           
             {/* Selling Price editable */}
             <div className="mb-4 flex items-center gap-2">
               <input

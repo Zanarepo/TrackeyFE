@@ -1,7 +1,8 @@
 // InventoryManager.jsx
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Edit2, Trash2, Save, X, RefreshCw } from 'lucide-react';
+import { Edit2, Trash2, Save, X, RefreshCw,  AlertCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 export default function InventoryManager() {
   const [storeId, setStoreId] = useState(null);
@@ -20,8 +21,6 @@ export default function InventoryManager() {
   const [editingId, setEditingId] = useState(null);
   const [editQty, setEditQty] = useState(0);
 
-  const REORDER_THRESHOLD = 5;
-
   // --- INITIAL LOAD ---
   useEffect(() => {
     const sid = parseInt(localStorage.getItem('store_id'), 10);
@@ -33,44 +32,78 @@ export default function InventoryManager() {
       .select('shop_name')
       .eq('id', sid)
       .single()
-      .then(({ data }) => data && setStoreName(data.shop_name));
+      .then(({ data, error }) => {
+        if (error) toast.error(error.message);
+        else setStoreName(data.shop_name);
+      });
 
     fetchProducts(sid);
   }, []);
 
-  // --- SYNC PRODUCTS -> INVENTORY ON PRODUCTS LOAD ---
+  // --- FETCH INVENTORY WHEN STORE ID SET ---
+  useEffect(() => {
+    if (storeId) fetchInventory(storeId);
+  }, [storeId]);
+
+  // --- SEED NEW PRODUCTS INTO INVENTORY ---
   useEffect(() => {
     if (!storeId || products.length === 0) return;
-    const payload = products.map(({ id, purchase_qty }) => ({
-      product_id: id,
+    const payload = products.map(p => ({
+      product_id: p.id,
       store_id: storeId,
-      available_qty: purchase_qty
+      available_qty: p.purchase_qty,
+      quantity_sold: 0
     }));
-    supabase
-      .from('inventory')
-      .upsert(payload, { onConflict: ['product_id', 'store_id'] })
-      .then(() => fetchInventory(storeId));
+
+    (async () => {
+      const { error } = await supabase
+        .from('inventory')
+        .insert(payload, {
+          onConflict: ['product_id','store_id'],
+          ignoreDuplicates: true
+        });
+      if (error) toast.error(`Seed error: ${error.message}`);
+      fetchInventory(storeId);
+    })();
   }, [products, storeId]);
 
-  // --- REALTIME SYNC FOR PRODUCTS UPDATES ---
+  // --- REAL-TIME SYNC: PRODUCT INSERT/UPDATE ---
   useEffect(() => {
     if (!storeId) return;
-    const channel = supabase
-      .channel(`inventory-sync-${storeId}`)
+    const chan = supabase
+      .channel(`inv-sync-${storeId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'products', filter: `store_id=eq.${storeId}` },
+        async ({ new: p }) => {
+          await supabase
+            .from('inventory')
+            .insert({
+              product_id: p.id,
+              store_id: storeId,
+              available_qty: p.purchase_qty,
+              quantity_sold: 0
+            })
+            .then(({ error }) => error && toast.error(error.message));
+          fetchInventory(storeId);
+        }
+      )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'products', filter: `store_id=eq.${storeId}` },
-        async ({ new: updatedProd }) => {
+        async ({ new: p }) => {
           await supabase
             .from('inventory')
-            .update({ available_qty: updatedProd.purchase_qty, updated_at: new Date() })
-            .eq('product_id', updatedProd.id)
-            .eq('store_id', storeId);
+            .update({ available_qty: p.purchase_qty, updated_at: new Date() })
+            .eq('product_id', p.id)
+            .eq('store_id', storeId)
+            .then(({ error }) => error && toast.error(error.message));
           fetchInventory(storeId);
         }
       )
       .subscribe();
-    return () => supabase.removeChannel(channel);
+
+    return () => supabase.removeChannel(chan);
   }, [storeId]);
 
   // --- FETCHERS ---
@@ -80,52 +113,38 @@ export default function InventoryManager() {
       .select('id, name, purchase_qty')
       .eq('store_id', sid)
       .order('name');
-    if (!error) setProducts(data);
+    if (error) toast.error(error.message);
+    else setProducts(data);
   }
 
   async function fetchInventory(sid) {
-    const { data: invData, error: invErr } = await supabase
+    const { data, error } = await supabase
       .from('inventory')
       .select(`
         id,
         product_id,
         available_qty,
+        quantity_sold,
         product:products(name)
       `)
-      .eq('store_id', sid);
-    if (invErr || !invData) return;
-
-    // Sort client-side by product name
-    invData.sort((a, b) => a.product.name.localeCompare(b.product.name));
-
-    const { data: salesData, error: salesErr } = await supabase
-      .from('sales')
-      .select('product_id, quantity')
-      .eq('store_id', sid);
-    if (salesErr) return;
-
-    const soldMap = salesData.reduce((acc, { product_id, quantity }) => {
-      acc[product_id] = (acc[product_id] || 0) + quantity;
-      return acc;
-    }, {});
-
-    const combined = invData.map(item => {
-      const sold = soldMap[item.product_id] || 0;
-      const remaining = item.available_qty - sold;
-      return {
-        ...item,
-        quantity_sold: sold,
-        remaining_qty: remaining < 0 ? 0 : remaining
-      };
-    });
-
-    setInventory(combined);
+      .eq('store_id', sid)
+      .order('name', {
+        ascending: true,
+        foreignTable: 'products'
+      });
+  
+    if (error) {
+      toast.error(`Failed to load inventory: ${error.message}`);
+      return;
+    }
+    setInventory(data);
   }
+  
 
   // --- SEARCH & PAGINATION ---
   useEffect(() => {
     const q = searchTerm.toLowerCase();
-    const results = !searchTerm
+    const results = !q
       ? inventory
       : inventory.filter(i => i.product.name.toLowerCase().includes(q));
     setFilteredInv(results);
@@ -134,22 +153,21 @@ export default function InventoryManager() {
 
   // --- HANDLERS ---
   async function handleRestock(id) {
-    const qty = parseInt(restockQty[id] || 0, 10);
+    const qty = parseInt(restockQty[id] || '0', 10);
     if (qty <= 0) return;
     const item = inventory.find(i => i.id === id);
-    if (!item) return;
-    const newAvailable = item.available_qty + qty;
-    await supabase
-      .from('inventory')
-      .update({ available_qty: newAvailable, updated_at: new Date() })
-      .eq('id', id);
-    setRestockQty({ ...restockQty, [id]: '' });
-    fetchInventory(storeId);
-  }
+    const newAvail = item.available_qty + qty;
 
-  async function handleDelete(id) {
-    await supabase.from('inventory').delete().eq('id', id);
-    fetchInventory(storeId);
+    const { error } = await supabase
+      .from('inventory')
+      .update({ available_qty: newAvail, updated_at: new Date() })
+      .eq('id', id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Restocked');
+      setRestockQty({ ...restockQty, [id]: '' });
+      fetchInventory(storeId);
+    }
   }
 
   function startEdit(item) {
@@ -160,150 +178,146 @@ export default function InventoryManager() {
     setEditingId(null);
   }
   async function saveEdit(id) {
-    await supabase
+    const { error } = await supabase
       .from('inventory')
       .update({ available_qty: editQty, updated_at: new Date() })
       .eq('id', id);
-    setEditingId(null);
-    fetchInventory(storeId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Saved');
+      setEditingId(null);
+      fetchInventory(storeId);
+    }
   }
 
-  // --- RENDER ---
-  if (!storeId) return <div className="p-4">Loading...</div>;
+  async function handleDelete(id) {
+    const { error } = await supabase.from('inventory').delete().eq('id', id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Deleted');
+      fetchInventory(storeId);
+    }
+  }
+
+  if (!storeId) return <div className="p-4">Loading…</div>;
 
   const start = page * pageSize;
   const pageData = filteredInv.slice(start, start + pageSize);
-  const totalPages = Math.ceil(filteredInv.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredInv.length / pageSize));
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold text-center dark:text-white">
-        Inventory Dashboard - {storeName}
-      </h1>
+      <h1 className="text-2xl font-bold text-center">{storeName} Inventory</h1>
 
       {/* Search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Search by product…"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white"
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Search by product…"
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+        className="w-full sm:w-1/2 p-2 border rounded mb-4"
+      />
 
       {/* Table */}
-      <section className="overflow-x-auto dark:bg-gray-800 dark:text-white">
-        <table className="min-w-full table-auto border-collapse">
-          <thead>
-            <tr className="bg-gray-200 text-indigo-500 dark:bg-gray-800 dark:text-indigo-600">
-              {['ID', 'Item', 'Avail.', 'Sold', 'Remains', 'Restock', 'Actions'].map((h, idx) => (
-                <th key={idx} className="p-2 text-left">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.map(item => (
-              <tr key={item.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700">
-                <td className="px-4 py-2">{item.id}</td>
-                <td className="px-4 py-2">{item.product?.name}</td>
-                <td className="px-4 py-2">
-                  {editingId === item.id ? (
-                    <input
-                      type="number"
-                      min="0"
-                      value={editQty}
-                      onChange={e => setEditQty(parseInt(e.target.value, 10))}
-                      className="border p-1 rounded w-20"
-                    />
-                  ) : item.available_qty}
-                </td>
-                <td className="px-4 py-2 text-center">{item.quantity_sold}</td>
-                <td className="px-4 py-2 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    {item.remaining_qty}
-                    {item.remaining_qty <= REORDER_THRESHOLD && (
-                      <RefreshCw size={14} className="text-red-500" />
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-2 flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    value={restockQty[item.id] || ''}
-                    onChange={e => setRestockQty({ ...restockQty, [item.id]: e.target.value })}
-                    className="border p-1 rounded w-16 dark:bg-gray-800 dark:text-white"
-                    placeholder="Qty"
-                  />
-                  <button
-                    onClick={() => handleRestock(item.id)}
-                    className="p-1 rounded bg-indigo-500 hover:bg-indigo-600 text-white"
-                  >
-                    <RefreshCw size={14} />
+      <div className="w-full overflow-x-auto dark:bg-gray-800 dark:text-white">
+  <table className="min-w-full table-auto table-fixed border-collapse">
+    <thead className="bg-gray-200 text-indigo-500 dark:bg-gray-800 dark:text-indigo-600">
+      <tr>
+        {['ID', 'Item', 'Avail.', 'Sold', 'Restock', 'Actions'].map((h, i) => (
+          <th
+            key={i}
+            className="p-2 text-left whitespace-nowrap"
+          >
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+
+    <tbody>
+      {pageData.map(item => (
+        <tr key={item.id} className="border-b hover:bg-gray-100">
+          <td className="p-2 whitespace-nowrap">{item.id}</td>
+          <td className="p-2 whitespace-nowrap">{item.product.name}</td>
+          <td className="p-2 whitespace-nowrap">
+            {editingId === item.id ? (
+              <input
+                type="number"
+                min="0"
+                value={editQty}
+                onChange={e => setEditQty(+e.target.value)}
+                className="border p-1 rounded w-20"
+              />
+            ) : (
+              <div className="flex items-center gap-1">
+                {item.available_qty}
+                {item.available_qty < 5 && (
+                  <AlertCircle size={16} className="text-red-500" />
+                )}
+              </div>
+            )}
+          </td>
+          <td className="p-2 whitespace-nowrap">{item.quantity_sold}</td>
+          <td className="p-2 whitespace-nowrap">
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="0"
+                value={restockQty[item.id] || ''}
+                onChange={e => setRestockQty({ ...restockQty, [item.id]: e.target.value })}
+                className="border p-1 rounded w-16"
+                placeholder="Qty"
+              />
+              <button onClick={() => handleRestock(item.id)} className="p-1 bg-indigo-500 text-white rounded">
+                <RefreshCw size={14} />
+              </button>
+            </div>
+          </td>
+          <td className="p-2 whitespace-nowrap">
+            <div className="flex gap-2">
+              {editingId === item.id ? (
+                <>
+                  <button onClick={() => saveEdit(item.id)} className="p-1 bg-green-600 text-white rounded">
+                    <Save size={14} />
                   </button>
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <div className="inline-flex gap-2">
-                    {editingId === item.id ? (
-                      <>
-                        <button
-                          onClick={() => saveEdit(item.id)}
-                          className="p-1 rounded bg-green-600 text-white"
-                        >
-                          <Save size={14} />
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="p-1 rounded bg-gray-300"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => startEdit(item)}
-                          className="p-1 rounded bg-yellow-400 text-white"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1 rounded bg-red-500 text-white"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+                  <button onClick={cancelEdit} className="p-1 bg-gray-300 rounded">
+                    <X size={14} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => startEdit(item)} className="p-1 bg-yellow-400 text-white rounded">
+                    <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => handleDelete(item.id)} className="p-1 bg-red-500 text-white rounded">
+                    <Trash2 size={14} />
+                  </button>
+                </>
+              )}
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+    
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
-        <button
-          onClick={() => setPage(p => Math.max(p - 1, 0))}
-          disabled={page === 0}
-          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-        >
-          Prev
-        </button>
-        <span className="px-3 py-1 bg-gray-200 rounded dark:bg-gray-900 dark:text-white">
-          Page {page + 1} of {totalPages}
-        </span>
-        <button
-          onClick={() => setPage(p => Math.min(p + 1, totalPages - 1))}
-          disabled={page + 1 >= totalPages}
-          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
+      {filteredInv.length>0 && (
+        <div className="flex justify-between items-center">
+          <button onClick={()=>setPage(p=>Math.max(p-1,0))} disabled={page===0} className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">
+            Prev
+          </button>
+          <span className="px-3 py-1 bg-gray-200 rounded">
+            Page {page+1} of {totalPages}
+          </span>
+          <button onClick={()=>setPage(p=>Math.min(p+1,totalPages-1))} disabled={page+1>=totalPages} className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

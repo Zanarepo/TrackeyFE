@@ -73,7 +73,7 @@ const TeamManagement = () => {
   };
 
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded shadow max-w-4xl mx-auto">
+    <div className="p-4 bg-white dark:bg-gray-900 rounded shadow max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold text-indigo-800 dark:text-white mb-4">
         Team Management
       </h2>
@@ -85,7 +85,7 @@ const TeamManagement = () => {
       <div className="overflow-x-auto">
         <table className="w-full min-w-full border">
           <thead>
-            <tr className="bg-indigo-200 text-left dark:bg-gray-800 dark:text-white">
+            <tr className="bg-indigo-200 text-left dark:bg-gray-900 dark:text-white">
               <th className="p-2">Full Name</th>
               <th className="p-2">Email</th>
               <th className="p-2">Phone</th>
@@ -95,7 +95,7 @@ const TeamManagement = () => {
           </thead>
           <tbody>
             {teamMembers.map((member) => (
-              <tr key={member.id} className="border-t dark:bg-gray-800 dark:text-white">
+              <tr key={member.id} className="border-t dark:bg-gray-900 dark:text-white">
                 <td className="p-2">{member.full_name}</td>
                 <td className="p-2">{member.email_address}</td>
                 <td className="p-2">{member.phone_number}</td>
@@ -124,7 +124,7 @@ const TeamManagement = () => {
                   )}
                   <button
                     onClick={() => setEditingPasswordId(member.id)}
-                    className="text-indigo-600 hover:underline dark:bg-gray-800 dark:text-gray-400"
+                    className="text-indigo-600 hover:underline dark:bg-gray-900 dark:text-gray-400"
                   >
                     Change Password
                   </button>
@@ -136,7 +136,7 @@ const TeamManagement = () => {
       </div>
 
       {editingPasswordId && (
-        <div className="mt-4 p-4 border rounded bg-gray-100 dark:bg-gray-700">
+        <div className="mt-4 p-4 border rounded bg-gray-100 dark:bg-gray-800">
           <label className="block mb-2 text-indigo-800 dark:text-white">
             New Password:
           </label>

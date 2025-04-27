@@ -104,7 +104,7 @@ export default function CustomerManagement() {
   };
 
   return (
-    <div className="p-0 max-w-3xl mx-auto">
+    <div className="max-w-5xl mx-auto p-0 dark:bg-gray-900 dark:text-white">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
   <h2 className="text-xl sm:text-2xl font-bold text-indigo-800 dark:text-white">

@@ -170,11 +170,11 @@ export default function ProductCostsDashboard() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-6xl mx-auto p-4 mt-8 bg-gray-100 dark:bg-gray-900 rounded-lg shadow ">
+    <div className="max-w-6xl mx-auto p-4 mt-8 bg-white dark:bg-gray-900 rounded-lg  ">
       {/* Header & Total */}
       <div className="flex flex-col md:flex-row md:justify-between mb-4">
         <p className="text-sm text-gray-600 dark:text-gray-300">
-          Overview of product purchase expenses.
+        
         </p>
         <div className="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg font-semibold dark:bg-gray-800 dark:text-white">
           Total: {currencySymbol}
@@ -184,51 +184,57 @@ export default function ProductCostsDashboard() {
 
       {/* Sales Summary Title */}
       <h1 className="text-2xl font-bold mb-4 dark:text-white">
-        Sales Summary
+        Purchase Summary
       </h1>
 
       {/* Presets & Manual Range */}
-      <div className="mb-4 space-y-2">
-        <div className="flex gap-2 overflow-x-auto">
-          {[
-            ["Today", "today"],
-            ["Last 7 Days", "7days"],
-            ["This Week", "week"],
-            ["This Month", "month"],
-          ].map(([lbl, k]) => (
-            <button
-              key={k}
-              onClick={() => applyPreset(k)}
-              className="px-3 py-1 bg-indigo-600 text-white rounded text-sm"
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 ">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border rounded p-2 dark:bg-gray-800 dark:text-white"
-          />
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="border rounded p-2 dark:bg-gray-800 dark:text-white "
-          />
-          <button
-            onClick={() => {
-              setStartDate("");
-              setEndDate("");
-            }}
-            className="px-4 py-2 bg-gray-200 rounded dark:bg-gray-700 dark:text-white dark:bg-gray-800 dark:text-white"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
+     
+
+<div className="space-y-4 mb-4">
+  {/* Presets: horizontal scroll on mobile, wrap nicely on desktop */}
+  <div className="flex space-x-2 overflow-x-auto pb-2">
+    {[
+      ["Today", "today"],
+      ["Last 7 Days", "7days"],
+      ["This Week", "week"],
+      ["This Month", "month"],
+    ].map(([label, key]) => (
+      <button
+        key={key}
+        onClick={() => applyPreset(key)}
+        className="flex-shrink-0 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm whitespace-nowrap"
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+
+  {/* Date Range + Clear button: stack on mobile, inline on desktop */}
+  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+    <input
+      type="date"
+      value={startDate}
+      onChange={(e) => setStartDate(e.target.value)}
+      className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-900 dark:text-white"
+    />
+    <input
+      type="date"
+      value={endDate}
+      onChange={(e) => setEndDate(e.target.value)}
+      className="w-full sm:flex-1 p-2 border rounded dark:bg-gray-900 dark:text-white"
+    />
+    <button
+      onClick={() => {
+        setStartDate("");
+        setEndDate("");
+      }}
+      className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-gray-700 transition"
+    >
+      Clear
+    </button>
+  </div>
+</div>
+
 
       {/* Controls (Timeframe, Search, Currency) */}
       <div className="flex flex-wrap gap-2 mb-4 dark:bg-bla-800 dark:text-gray-900">
@@ -273,87 +279,102 @@ export default function ProductCostsDashboard() {
       </div>
 
       {/* Data Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadowdark:bg-gray-800 dark:text-white">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-200 dark:bg-gray-700 dark:bg-gray-800 dark:text-indigo-500">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold uppercase">
-                Product
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold uppercase">
-                Price
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold uppercase">
-                Date
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-            {paginated.map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800 ">
-                <td className="px-6 py-4 dark:text-white">{row.name}</td>
-                <td className="px-6 py-4 text-right dark:text-gray-300">
-                  {currencySymbol}
-                  {row.price.toFixed(2)}
-                </td>
-                <td className="px-6 py-4 text-right dark:text-gray-300">
-                  {format(new Date(row.date), "yyyy-MM-dd")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot className="bg-gray-100 dark:bg-gray-700">
-            <tr>
-              <td
-                colSpan={2}
-                className="px-6 py-3 text-right font-medium dark:text-white"
-              >
-                Page {currentPage} of {pageCount}
-              </td>
-              <td className="px-6 py-3 text-right space-x-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:text-gray-300"
-                >
-                  Prev
-                </button>
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(pageCount, p + 1))
-                  }
-                  disabled={currentPage === pageCount}
-                  className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:text-gray-300"
-                >
-                  Next
-                </button>
-              </td>
-            </tr>
-          </tfoot>
+      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg dark:text-white">
+  <table className="min-w-full divide-y divide-gray-200 dark:divide-white">
+    <thead className="bg-gray-200 dark:bg-gray-700 dark:text-indigo-500">
+      <tr>
+        <th className="px-6 py-3 text-left text-xs font-bold uppercase">
+          Product
+        </th>
+        <th className="px-6 py-3 text-right text-xs font-bold uppercase">
+          Price
+        </th>
+        <th className="px-6 py-3 text-right text-xs font-bold uppercase">
+          Date
+        </th>
+      </tr>
+    </thead>
+    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-100">
+      {paginated.map((row, idx) => (
+        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+          <td className="px-6 py-4 dark:text-white">{row.name}</td>
+          <td className="px-6 py-4 text-right dark:text-gray-300">
+            {currencySymbol}
+            {row.price.toFixed(2)}
+          </td>
+          <td className="px-6 py-4 text-right dark:text-gray-300">
+            {format(new Date(row.date), "yyyy-MM-dd")}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+          
+
+
         </table>
+
+
+        
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-4 mt-6">
+      <tfoot className="bg-white dark:bg-gray-900">
+  <tr>
+    <td colSpan={3} className="px-6 py-4 font-medium dark:text-white dark:bg-gray-900 dark:text-white">
+      <div className="flex flex-row items-center justify-center space-x-4">
+        
+        {/* Prev Button */}
         <button
-          onClick={downloadCSV}
-          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+          className="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded disabled:opacity-50 dark:text-white text-gray-800 text-sm"
         >
-          Export CSV
+          Prev
         </button>
+
+        {/* Page Info */}
+        <span className="text-sm font-semibold dark:text-white text-gray-800">
+          Page {currentPage} of {pageCount}
+        </span>
+
+        {/* Next Button */}
         <button
-          onClick={downloadPDF}
-          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+          onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+          disabled={currentPage === pageCount}
+          className="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded disabled:opacity-50 dark:text-white text-gray-800 text-sm"
         >
-          Export PDF
+          Next
         </button>
-        <button
-          onClick={() => setShowChart(true)}
-          className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600"
-        >
-          View Chart
-        </button>
+        
       </div>
+    </td>
+  </tr>
+</tfoot>
+
+
+      
+
+    {/* Actions */}
+<div className="flex flex-wrap gap-4 mt-6 sm:flex-col md:flex-row">
+  <button
+    onClick={downloadCSV}
+    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm md:text-base"
+  >
+    Export CSV
+  </button>
+  <button
+    onClick={downloadPDF}
+    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm md:text-base"
+  >
+    Export PDF
+  </button>
+  <button
+    onClick={() => setShowChart(true)}
+    className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 text-sm md:text-base"
+  >
+    View Chart
+  </button>
+</div>
+
 
       {/* Chart Modal */}
       {showChart && (

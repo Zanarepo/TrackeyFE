@@ -7,20 +7,14 @@ import {
   FaBars,
   FaTimes,
   FaStore,
-  FaConciergeBell,
+  
   FaIdBadge
   
 } from 'react-icons/fa';
 
-import Employees from './Employees';
-import Profile from './Profile';
-//import ShopOwner from './ShopOwner';
-import Variex from './Variex';
-import VDashboard from '../Ops/VDashboard';
-import SDashboard from '../Ops/SDashboard';
-import Simplex from './Simplex';
-import Test from './Test';
-import WhatsAppChatPopup from './WhatsAppChatPopup';
+
+import Test from '../UserDashboard/Test';
+import WhatsAppChatPopup from '../UserDashboard/WhatsAppChatPopup';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Simplex');
@@ -40,7 +34,7 @@ const Dashboard = () => {
       case 'SDashboard':
         return (
           <div className="w-full bg-white dark:bg-gray-800  p-4">
-            <SDashboard />
+           
           </div>
         );
       
@@ -48,14 +42,14 @@ const Dashboard = () => {
       case 'Simplex':
         return (
           <div className="w-full bg-white dark:bg-gray-700 p-4">
-            <Simplex />
+           
           </div>
         );
       
         case 'VDashboard':
           return (
             <div className="w-full bg-white dark:bg-gray-800  p-4">
-              <VDashboard/>
+             
             </div>
   
   
@@ -81,7 +75,7 @@ const Dashboard = () => {
         case 'Variex':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
-            <Variex />
+          
           </div>
         ); 
        
@@ -92,7 +86,7 @@ const Dashboard = () => {
       case 'Employees':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
-            <Employees />
+           
           </div>
 
 
@@ -100,7 +94,7 @@ const Dashboard = () => {
       case 'Profile':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
-            <Profile/>
+           
           </div>
 
 
@@ -146,39 +140,13 @@ const Dashboard = () => {
               <ul className="space-y-2">
   
 
-              <li 
-                  onClick={() => handleNavClick('Simplex')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Simplex' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Simplex</span>
-                </li>
-
-
 
               
                 
            
 
 
-                <li 
-                  onClick={() => handleNavClick('Variex')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Variex' ? 'bg-indigo-200 dark:bg-indigo-600 text-white' : ''}`}
-                >
-                  <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Variex</span>
-                </li>
-
-
-                <li 
-                  onClick={() => handleNavClick('SDashboard')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'SDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Simplex Dashboard</span>
-                </li>
-
-
+                
 
 
 

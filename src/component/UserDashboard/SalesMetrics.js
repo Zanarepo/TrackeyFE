@@ -204,7 +204,7 @@ export default function SalesDashboard() {
         setStartDate("");
         setEndDate("");
       }}
-      className="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-300 transition"
+      className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded hover:bg-gray-300 transition"
     >
       Clear
     </button>

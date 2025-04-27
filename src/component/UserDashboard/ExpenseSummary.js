@@ -149,7 +149,7 @@ export default function ExpenseTrackerDashboard() {
   };
 
   return (
-    <div className="p-4 bg-white rounded shadow max-w-5xl mx-auto dark:bg-gray-900 ">
+    <div className=" bg-white rounded shadow max-w-5xl mx-auto dark:bg-gray-900 ">
       {/* Header */}
       <div className="flex justify-between mb-4 dark:bg-gray-900 dark: text-white ">
         <h2 className="text-xl font-semibold">Expense Tracker</h2>
@@ -157,47 +157,50 @@ export default function ExpenseTrackerDashboard() {
       </div>
 
       {/* Presets & manual range */}
-      <div className="mb-4 ">
-        <div className="flex gap-2 mb-2 ">
-          {[
-            ["Today", "today"],
-            ["Last 7 Days", "7days"],
-            ["This Week", "week"],
-            ["This Month", "month"],
-          ].map(([lbl, k]) => (
-            <button
-              key={k}
-              onClick={() => applyPreset(k)}
-              className="px-3 py-1 bg-indigo-600 text-white rounded "
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border p-1 rounded dark:bg-gray-900 dark:text-white "
-          />
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="border p-1 rounded  dark:bg-gray-900 dark:text-white"
-          />
-          <button
-            onClick={() => {
-              setStartDate("");
-              setEndDate("");
-            }}
-            className="px-2 bg-gray-300 rounded  dark:bg-gray-800 dark:text-white"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
+      <div className="mb-4 space-y-4">
+  {/* Preset buttons: wrap on small devices */}
+  <div className="flex flex-wrap gap-2 mb-2">
+    {[
+      ["Today", "today"],
+      ["Last 7 Days", "7days"],
+      ["This Week", "week"],
+      ["This Month", "month"],
+    ].map(([lbl, k]) => (
+      <button
+        key={k}
+        onClick={() => applyPreset(k)}
+        className="px-3 py-1 bg-indigo-600 text-white rounded flex-1 sm:flex-none text-center"
+      >
+        {lbl}
+      </button>
+    ))}
+  </div>
+
+  {/* Date inputs + Clear: column on xs, row on sm+ */}
+  <div className="flex flex-col sm:flex-row gap-2 items-stretch">
+    <input
+      type="date"
+      value={startDate}
+      onChange={(e) => setStartDate(e.target.value)}
+      className="border p-2 rounded dark:bg-gray-900 dark:text-white flex-1"
+    />
+    <input
+      type="date"
+      value={endDate}
+      onChange={(e) => setEndDate(e.target.value)}
+      className="border p-2 rounded dark:bg-gray-900 dark:text-white flex-1"
+    />
+    <button
+      onClick={() => {
+        setStartDate("");
+        setEndDate("");
+      }}
+      className="px-4 py-2 bg-gray-300 rounded dark:bg-gray-800 dark:text-white whitespace-nowrap"
+    >
+      Clear
+    </button>
+  </div>
+</div>
 
       {/* Controls */}
       <div className="flex flex-wrap gap-2 mb-4 items-center ">

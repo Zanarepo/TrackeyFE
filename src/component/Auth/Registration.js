@@ -11,6 +11,7 @@ export default function RegisterAccount() {
   const [natureOfBusiness, setNatureOfBusiness] = useState('');
   const [otherBusiness, setOtherBusiness] = useState('');
   const [password, setPassword] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
 
   // Toggle for password visibility
   const [showPassword, setShowPassword] = useState(false);
@@ -89,6 +90,7 @@ export default function RegisterAccount() {
           email_address: emailAddress,
           nature_of_business: finalNatureOfBusiness,
           password: hashedPassword,
+          business_address: businessAddress,
         },
       ]);
 
@@ -107,6 +109,7 @@ export default function RegisterAccount() {
         setNatureOfBusiness('');
         setOtherBusiness('');
         setPassword('');
+        setBusinessAddress('');
       }
     } catch (err) {
       setNotification(`Unexpected error: ${err.message}`);
@@ -133,6 +136,17 @@ export default function RegisterAccount() {
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
               placeholder="Your Business Name"
+              className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-indigo-800 font-medium mb-1">Business Address</label>
+            <input
+              type="text"
+              value={businessAddress}
+              onChange={(e) => setBusinessAddress(e.target.value)}
+              placeholder="Your Business Address"
               className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
               required
             />

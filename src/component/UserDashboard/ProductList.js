@@ -174,7 +174,7 @@ export default function Products() {
         />
         <button
           onClick={() => setShowAdd(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          className="w-full sm:w-auto flex items-center justify-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 mt-6"
         >
           <FaPlus /> Add Product
         </button>
@@ -182,7 +182,7 @@ export default function Products() {
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 ">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4  mt-24">
           <form onSubmit={createProduct} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white  p-6 rounded-lg shadow-lg w-full max-w-md dark:bg-gray-900 dark:text-white">
             <h2 className="text-xl font-bold mb-4 ">Add Product</h2>
             {[
@@ -205,14 +205,25 @@ export default function Products() {
                 />
               </div>
             ))}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAdd(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-              >Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
-            </div>
+
+            <div className="flex justify-center sm:justify-end gap-2">
+            <div className="w-full flex justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAdd(false)}
+            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Save
+          </button>
+        </div>
+        </div>
+
           </form>
         </div>
       )}
@@ -252,19 +263,26 @@ export default function Products() {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
-        <button
-          onClick={() => setPage(prev => Math.max(prev - 1, 0))}
-          disabled={page === 0}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:bg-white dark:text-indigo-500"
-        >Prev</button>
-        <span className="text-sm">{`Page ${page+1} of ${totalPages}`}</span>
-        <button
-          onClick={() => setPage(prev => Math.min(prev + 1, totalPages - 1))}
-          disabled={page+1 >= totalPages}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:bg-white dark:text-indigo-500"
-        >Next</button>
-      </div>
+      <div className="flex flex-wrap justify-center sm:justify-between items-center gap-2 mt-4">
+  <button
+    onClick={() => setPage(prev => Math.max(prev - 1, 0))}
+    disabled={page === 0}
+    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:bg-white dark:text-indigo-500"
+  >
+    Prev
+  </button>
+
+  <span className="text-sm">{`Page ${page + 1} of ${totalPages}`}</span>
+
+  <button
+    onClick={() => setPage(prev => Math.min(prev + 1, totalPages - 1))}
+    disabled={page + 1 >= totalPages}
+    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50 dark:bg-white dark:text-indigo-500"
+  >
+    Next
+  </button>
+</div>
+
 
       {/* Exports */}
       <div className="flex justify-center gap-4 mt-6 ">

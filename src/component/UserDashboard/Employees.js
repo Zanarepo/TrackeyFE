@@ -19,7 +19,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-4">
       <h1 className="text-3xl font-bold text-center text-indigo-800 dark:text-white mb-6">
         Dashboard
       </h1>
@@ -29,7 +29,7 @@ const Dashboard = () => {
         <div className="flex flex-wrap gap-4 justify-center">
           <button
             onClick={() => setActiveTab('teamMembers')}
-            className={`flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-700 transition duration-300 
+            className={`flex flex-col items-center p-4 bg-white dark:bg-gray-900 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-700 transition duration-300 
               ${activeTab === 'teamMembers' ? 'border-2 border-indigo-500' : ''}`}
           >
             <FaUserFriends className="text-4xl text-indigo-600 mb-2" />
@@ -37,7 +37,7 @@ const Dashboard = () => {
           </button>
           <button
             onClick={() => setActiveTab('inviteLink')}
-            className={`flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-700 transition duration-300 
+            className={`flex flex-col items-center p-4 bg-white dark:bg-gray-900  hover:bg-gray-200 dark:hover:bg-gray-700 transition duration-300 
               ${activeTab === 'inviteLink' ? 'border-2 border-indigo-500' : ''}`}
           >
             <FaLink className="text-4xl text-indigo-600 mb-2" />
@@ -47,7 +47,7 @@ const Dashboard = () => {
       </div>
 
       {/* Content Area */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <div className="bg-white dark:bg-gray-900 ">
         {renderContent()}
       </div>
     </div>

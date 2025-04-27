@@ -52,7 +52,7 @@ const tools = [
 
   {
     key: 'inventory',
-    label: 'Inventory Manager',
+    label: 'Manage Inventory (Stocks)',
     icon: <FaTasks className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track stock levels.',
     component: <Inventory />,
@@ -100,7 +100,7 @@ export default function Dashboard() {
   const tool = tools.find(t => t.key === activeTool);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 p-1">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-0">
       {/* Simplex Feature */}
     
       {/* Header */}

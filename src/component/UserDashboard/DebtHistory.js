@@ -110,7 +110,7 @@ export default function DebtPaymentManager() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="p-0 sm:p-4 bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
+    <div className="p-0 sm:p-0 bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
       <h1 className="text-3xl font-bold text-center text-indigo-700 dark:bg-gray-900 dark:text-white">Debt Payments</h1> <br />
 
       {/* Search & New */}
@@ -180,6 +180,7 @@ export default function DebtPaymentManager() {
         </table>
       </div> <br/>
 
+
       {/* Pagination */}
       <div className="flex justify-between items-center">
         <button
@@ -198,6 +199,7 @@ export default function DebtPaymentManager() {
           Next
         </button>
       </div>
+
 
       {/* Payment Modal */}
       {showModal && selectedDebt && (
