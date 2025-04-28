@@ -6,7 +6,7 @@ import {
   FaUser,
   FaBars,
   FaTimes,
-  FaStore,
+  //FaStore,
   
   FaIdBadge
   
@@ -164,7 +164,7 @@ const Dashboard = () => {
 
               
                 </li>
-
+                {/* 
                 
                 <li 
                   onClick={() => handleNavClick('Test')}
@@ -173,7 +173,7 @@ const Dashboard = () => {
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">TESTING</span>
                 </li>
-
+*/}
 
 
                 

@@ -45,6 +45,7 @@ import SalesTracker from './component/UserDashboard/SalesTracker'
 //import Customers from './component/UserDashboard/Customers'
 //import Inventory from './component/UserDashboard/Inventory'
 import StoresAdmin from './component/Ops/StoresAdmin'
+import Profile from './component/UserDashboard/Profile'
 
 
 
@@ -107,6 +108,10 @@ const App = () => {
           <Route path="/main" element={<MainDashboard />} />
           <Route path="/salestrack" element={<SalesTracker />} />
           <Route path="/owner-dashboard" element={<StoresAdmin />} />
+          <Route path="/profile" element={<Profile />} />
+          
+          
+          
             
                     </Routes>
 
@@ -138,7 +143,7 @@ const App = () => {
               <Route path="/main" element={<MainDashboard />} />
               <Route path="/salestrack" element={<SalesTracker />} />
               <Route path="/owner-dashboard" element={<StoresAdmin />} />
-            
+              <Route path="/profile" element={<Profile />} />
             </Route>
           </Routes>
 
