@@ -106,7 +106,7 @@ const App = () => {
           <Route path="/product-cost" element={<PoductPurchaseCost />} />
           <Route path="/main" element={<MainDashboard />} />
           <Route path="/salestrack" element={<SalesTracker />} />
-          <Route path="/stores-admin" element={<StoresAdmin />} />
+          <Route path="/owner-dashboard" element={<StoresAdmin />} />
             
                     </Routes>
 
@@ -137,7 +137,7 @@ const App = () => {
               <Route path="/product-cost" element={<PoductPurchaseCost />} />
               <Route path="/main" element={<MainDashboard />} />
               <Route path="/salestrack" element={<SalesTracker />} />
-              <Route path="/stores-admin" element={<StoresAdmin />} />
+              <Route path="/owner-dashboard" element={<StoresAdmin />} />
             
             </Route>
           </Routes>

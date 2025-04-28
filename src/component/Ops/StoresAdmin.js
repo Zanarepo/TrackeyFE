@@ -15,9 +15,12 @@ import {
 
 import Test from '../UserDashboard/Test';
 import WhatsAppChatPopup from '../UserDashboard/WhatsAppChatPopup';
+import MyStores from '../Ops/MyStores'
+import Profile from '../UserDashboard/Profile'
+import Employees from '../UserDashboard/Employees'
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Simplex');
+  const [activeTab, setActiveTab] = useState('MyStores');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -31,10 +34,10 @@ const Dashboard = () => {
     switch (activeTab) {
      
 
-      case 'SDashboard':
+      case 'MyStores':
         return (
           <div className="w-full bg-white dark:bg-gray-800  p-4">
-           
+           <MyStores/>
           </div>
         );
       
@@ -86,7 +89,7 @@ const Dashboard = () => {
       case 'Employees':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
-           
+           <Employees/>
           </div>
 
 
@@ -94,7 +97,7 @@ const Dashboard = () => {
       case 'Profile':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
-           
+           <Profile/>
           </div>
 
 
@@ -153,11 +156,11 @@ const Dashboard = () => {
            
 
                 <li 
-                  onClick={() => handleNavClick('VDashboard')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'VDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('MyStores')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'MyStores' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Variex Dashboard</span>
+                  <span className="text-indigo-800 dark:text-indigo-200"> Stores Dashboard</span>
 
               
                 </li>
