@@ -15,6 +15,7 @@ import {
 import AdminProfile from './AdminProfile';
 import Stores from './Stores';
 import StoreUsers  from './StoreUsers';
+import Owners from './Owners'
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('AdminProfile');
@@ -52,6 +53,14 @@ const Dashboard = () => {
             <StoreUsers />
           </div>
         ); 
+
+        case 'Owners':
+          return (
+            <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+              <Owners />
+            </div>
+          ); 
+  
 
         case 'AdminProfile':
         return (
@@ -113,30 +122,37 @@ const Dashboard = () => {
                 
               <li 
                   onClick={() => handleNavClick('AdminProfile')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'AdminProfile' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Admin Profile</span>
                 </li>
 
 
+                <li 
+                  onClick={() => handleNavClick('Owners')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Owners' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Store Owners</span>
+                </li>
 
                 <li 
                   onClick={() => handleNavClick('StoreUsers')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'StoreUsers' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Store Users</span>
                 </li>
 
-
+                
 
 
            
 
                 <li 
                   onClick={() => handleNavClick('Stores')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'DebtTracker' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Stores' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Stores</span>
