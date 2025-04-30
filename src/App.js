@@ -46,6 +46,7 @@ import SalesTracker from './component/UserDashboard/SalesTracker'
 //import Inventory from './component/UserDashboard/Inventory'
 import StoresAdmin from './component/Ops/StoresAdmin'
 import Profile from './component/UserDashboard/Profile'
+import SellyticsPayment from './component/Payments/SellyticsPayment'
 
 
 
@@ -109,6 +110,11 @@ const App = () => {
           <Route path="/salestrack" element={<SalesTracker />} />
           <Route path="/owner-dashboard" element={<StoresAdmin />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/payment" element={<SellyticsPayment />} />
+
+
+
+          
           
           
           
@@ -144,6 +150,8 @@ const App = () => {
               <Route path="/salestrack" element={<SalesTracker />} />
               <Route path="/owner-dashboard" element={<StoresAdmin />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/payment" element={<SellyticsPayment />} />
+
             </Route>
           </Routes>
 

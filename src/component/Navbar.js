@@ -26,12 +26,12 @@ const Navbar = () => {
         <div className="flex justify-end items-center bg-gradient-to-r from-white to-indigo-800 w-1/2 px-4 md:px-8 font-bold">
           {/* Desktop Menu (visible on md and larger screens) */}
           <div className="hidden md:flex gap-6 items-center">
-            <Link 
-              to="/register" 
-              className="hover:underline text-white font-bold"
-            >
-              Register
-            </Link>
+          <Link 
+  to="/register" 
+  className="bg-white hover:underline text-indigo-900 font-bold py-2 px-4 rounded-xl block text-center"
+>
+  Start for Free
+</Link>
             <Link 
               to="/login" 
               className="hover:underline text-white font-bold"
@@ -70,7 +70,7 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen(false)}
             className="hover:underline w-full font-bold"
           >
-            Register
+           Start for Free
           </Link>
           <Link
             to="/login"

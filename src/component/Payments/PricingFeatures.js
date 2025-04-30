@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+//import PricingPlans from './PricingPlans';
 
 
 
@@ -14,7 +15,7 @@ const features = {
     '✅ Sales history (last 30 days)',
     '❌ Team collaboration',
     '❌ Multi-store management',
-    '❌ Staff training resources',
+    '❌ Staff training',
     '❌ Priority support',
     '❌ Printable receipts',
   ],
@@ -35,6 +36,7 @@ const features = {
     '✅ Access to upto 3 Multi-store management',
     '✅ Dashboard Access and Monitoring',
     '✅ Product insights & analysis',
+    '✅ Multi-store Team Management',
   ],
 };
 
@@ -86,25 +88,30 @@ const SubscriptionPlansComponent = () => {
 
   
   return (
-    <div className="p-4 grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    
+    <div className="p-14 max-w-7xl mx-auto grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        
       {plans.map((plan) => {
         const planKey = plan.name?.toLowerCase().trim();
         const isFree = plan.price === 0;
-
+  
         return (
+            
           <div
             key={plan.id}
-            className={`bg-white rounded-2xl border-t-[6px] shadow-lg hover:shadow-xl transition-all p-6 flex flex-col justify-between ${
+            
+            className={`bg-indigo-100 rounded-2xl border-t-4 shadow-sm hover:shadow-md transition p-6 flex flex-col justify-between ${
               plan.name === 'Premium'
                 ? 'border-blue-500'
                 : plan.name === 'Business'
                 ? 'border-purple-500'
-                : 'border-gray-300'
+                : 'border-green-500'
             }`}
           >
             <div>
+                
               <h2
-                className={`text-2xl font-bold mb-1 flex items-center gap-2 capitalize ${
+                className={`text-xl font-semibold mb-1 capitalize ${
                   plan.name === 'Premium'
                     ? 'text-blue-600'
                     : plan.name === 'Business'
@@ -112,30 +119,26 @@ const SubscriptionPlansComponent = () => {
                     : 'text-green-600'
                 }`}
               >
-                {plan.name === 'Premium'
-                  ? '🔵 Premium Plan'
-                  : plan.name === 'Business'
-                  ? '🟣 Business Plan'
-                  : '🟢 Free Plan'}
+                {plan.name} Plan
               </h2>
-              <p className="text-3xl font-extrabold text-gray-900 mb-4">
+              <p className="text-2xl font-bold text-gray-900 mb-4">
                 {isFree ? '₦0' : `₦${plan.price.toLocaleString()}`}
-                <span className="text-base font-medium text-gray-500">/month</span>
+                <span className="text-sm text-gray-500 font-normal"> /month</span>
               </p>
+  
               <ul className="text-sm text-gray-700 space-y-2 mb-6">
-  {(features[planKey] || features['free']).map((feature, index) => (
-    <li key={index}>{feature}</li>
-  ))}
-</ul>
-
+                {(features[planKey] || features['free']).map((feature, index) => (
+                  <li key={index}>{feature}</li>
+                ))}
+              </ul>
             </div>
-
+  
             <button
               onClick={() => handleSubscribe(plan)}
               disabled={isFree}
-              className={`mt-6 py-2 px-4 w-full font-semibold rounded-xl transition ${
+              className={`mt-auto py-2 px-4 w-full font-medium rounded-xl transition ${
                 isFree
-                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : plan.name === 'Premium'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-purple-700 text-white hover:bg-purple-800'
@@ -148,6 +151,7 @@ const SubscriptionPlansComponent = () => {
       })}
     </div>
   );
+    
 };
 
 export default SubscriptionPlansComponent;
