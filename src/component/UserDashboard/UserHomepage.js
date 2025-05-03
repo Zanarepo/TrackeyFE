@@ -23,7 +23,7 @@ import Test from './Test';
 import WhatsAppChatPopup from './WhatsAppChatPopup';
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Simplex');
+  const [activeTab, setActiveTab] = useState('Variex');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

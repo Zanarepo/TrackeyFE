@@ -5,11 +5,11 @@ import { FaEdit, FaTrashAlt, FaPrint, FaDownload } from 'react-icons/fa';
 export default function ReceiptManager() {
   const storeId = localStorage.getItem("store_id");
   const [store, setStore] = useState(null);
-  const [saleGroups, setSaleGroups] = useState([]);
+  const [saleGroupsList, setSaleGroupsList] = useState([]);
   const [selectedSaleGroup, setSelectedSaleGroup] = useState(null);
   const [receipts, setReceipts] = useState([]);
   const [filteredReceipts, setFilteredReceipts] = useState([]);
-  const [searchTerm] = useState('');
+  const [searchTerm,] = useState('');
   const [editing, setEditing] = useState(null);
   const [salesSearch, setSalesSearch] = useState('');
   const [sortKey, setSortKey] = useState('created_at');
@@ -26,7 +26,6 @@ export default function ReceiptManager() {
   const printRef = useRef();
   const receiptsRef = useRef();
 
-  // Load store details
   useEffect(() => {
     if (!storeId) return;
     supabase
@@ -41,7 +40,7 @@ export default function ReceiptManager() {
   useEffect(() => {
     if (!storeId) return;
     supabase
-      .from("sale_groups")
+      .from('sale_groups')
       .select(`
         id,
         total_amount,
@@ -49,18 +48,18 @@ export default function ReceiptManager() {
         created_at,
         dynamic_sales (
           id,
-          amount,
+          product_id,
           quantity,
-          sold_at,
+          amount,
           dynamic_product (name, device_id)
         )
       `)
-      .eq("store_id", storeId)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setSaleGroups(data || []));
+      .eq('store_id', storeId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setSaleGroupsList(data || []));
   }, [storeId]);
 
-  // Load or initialize receipts for a sale group
+  // Load or initialize receipts for a sale group whenever selectedSaleGroup changes
   useEffect(() => {
     if (!selectedSaleGroup) {
       setReceipts([]);
@@ -73,15 +72,13 @@ export default function ReceiptManager() {
         .eq("sale_group_id", selectedSaleGroup.id)
         .order('id', { ascending: false });
 
-      // If no receipts exist, create an initial one
+      // If no receipts exist yet, create an initial one
       if (data.length === 0) {
         const initial = {
           sale_group_id: selectedSaleGroup.id,
           receipt_id: `RCPT-${selectedSaleGroup.id}-${Date.now()}`,
-          sales_qty: selectedSaleGroup.dynamic_sales.reduce((sum, s) => sum + s.quantity, 0),
           sales_amount: selectedSaleGroup.total_amount,
-          product_name: selectedSaleGroup.dynamic_sales.map(s => s.dynamic_product.name).join(", "),
-          device_id: selectedSaleGroup.dynamic_sales.map(s => s.dynamic_product.device_id).join(", "),
+          payment_method: selectedSaleGroup.payment_method,
           customer_name: "",
           customer_address: "",
           phone_number: "",
@@ -109,10 +106,8 @@ export default function ReceiptManager() {
           r.receipt_id,
           String(r.sale_group_id),
           dateStr,
-          r.product_name,
-          String(r.sales_qty),
-          r.device_id,
-          r.sales_amount != null ? `₦${r.sales_amount.toFixed(2)}` : '',
+          String(r.sales_amount),
+          r.payment_method,
           r.customer_name,
           r.customer_address,
           r.phone_number,
@@ -123,7 +118,7 @@ export default function ReceiptManager() {
     );
   }, [searchTerm, receipts, selectedSaleGroup]);
 
-  // Scroll receipts into view
+  // Scroll receipts into view whenever receipts list changes
   useEffect(() => {
     if (receiptsRef.current) {
       receiptsRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -151,10 +146,11 @@ export default function ReceiptManager() {
 
   if (!storeId) return <div className="p-4 text-center">Select a store first.</div>;
 
-  const filteredSaleGroups = [...saleGroups]
-    .filter(s =>
-      s.id.toString().includes(salesSearch) ||
-      s.total_amount.toString().includes(salesSearch)
+  const filteredSaleGroups = [...saleGroupsList]
+    .filter(sg =>
+      sg.id.toString().includes(salesSearch) ||
+      sg.total_amount.toString().includes(salesSearch) ||
+      sg.payment_method.toLowerCase().includes(salesSearch.toLowerCase())
     )
     .sort((a, b) => {
       const valA = a[sortKey];
@@ -173,8 +169,9 @@ export default function ReceiptManager() {
       <style>{printStyles}</style>
 
       <div className="print:hidden p-0 space-y-6">
+        {/* Management UI */}
         <div className="p-0 dark:bg-gray-900 dark:text-white">
-          <h2 className="text-lg font-semibold mb-4">Sale Groups</h2>
+          <h2 className="text-lg font-semibold mb-4">Receipts</h2>
 
           {/* Search & Sort Controls */}
           <div className="w-full mb-4">
@@ -183,9 +180,10 @@ export default function ReceiptManager() {
                 type="text"
                 value={salesSearch}
                 onChange={e => setSalesSearch(e.target.value)}
-                placeholder="Search by Sale Group ID or Total Amount"
+                placeholder="Search by Sale Group ID, Amount, or Payment Method"
                 className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
               />
+
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => {
@@ -196,6 +194,7 @@ export default function ReceiptManager() {
                 >
                   Sort by ID {sortKey === 'id' && (sortOrder === 'asc' ? '⬆️' : '⬇️')}
                 </button>
+
                 <button
                   onClick={() => {
                     setSortKey('total_amount');
@@ -217,25 +216,27 @@ export default function ReceiptManager() {
                   <th className="text-left px-4 py-2 border-b">Sale Group ID</th>
                   <th className="text-left px-4 py-2 border-b">Total Amount</th>
                   <th className="text-left px-4 py-2 border-b">Payment Method</th>
+                  <th className="text-left px-4 py-2 border-b">Created At</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredSaleGroups.map(s => (
+                {filteredSaleGroups.map(sg => (
                   <tr
-                    key={s.id}
-                    onClick={() => setSelectedSaleGroup(s)}
+                    key={sg.id}
+                    onClick={() => setSelectedSaleGroup(sg)}
                     className={`cursor-pointer hover:bg-gray-100 dark:bg-gray-900 dark:text-white hover:bg-gray-100 ${
-                      selectedSaleGroup?.id === s.id ? 'bg-gray-200' : ''
+                      selectedSaleGroup?.id === sg.id ? 'bg-gray-200' : ''
                     }`}
                   >
-                    <td className="px-4 py-2 border-b">#{s.id}</td>
-                    <td className="px-4 py-2 border-b">₦{s.total_amount.toFixed(2)}</td>
-                    <td className="px-4 py-2 border-b">{s.payment_method}</td>
+                    <td className="px-4 py-2 border-b">#{sg.id}</td>
+                    <td className="px-4 py-2 border-b">₦{sg.total_amount.toFixed(2)}</td>
+                    <td className="px-4 py-2 border-b">{sg.payment_method}</td>
+                    <td className="px-4 py-2 border-b">{new Date(sg.created_at).toLocaleString()}</td>
                   </tr>
                 ))}
                 {filteredSaleGroups.length === 0 && (
                   <tr>
-                    <td colSpan="3" className="text-center text-gray-500 py-4">
+                    <td colSpan="4" className="text-center text-gray-500 py-4">
                       No sale groups found.
                     </td>
                   </tr>
@@ -250,6 +251,7 @@ export default function ReceiptManager() {
           <h3 className="text-xl font-semibold">
             Receipts {selectedSaleGroup ? `for Sale Group #${selectedSaleGroup.id}` : ''}
           </h3>
+
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm border rounded-lg">
               <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
@@ -329,6 +331,7 @@ export default function ReceiptManager() {
             {/* Style Controls in Modal */}
             <div className="border-t pt-4 space-y-4">
               <h3 className="text-lg font-semibold">Customize Receipt Style</h3>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Header Background</label>
@@ -339,6 +342,7 @@ export default function ReceiptManager() {
                     className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
                   />
                 </div>
+
                 <div>
                   <label className="block font-medium mb-1">Header Text Color</label>
                   <input
@@ -348,6 +352,7 @@ export default function ReceiptManager() {
                     className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
                   />
                 </div>
+
                 <div>
                   <label className="block font-medium mb-1">Header Font</label>
                   <select
@@ -360,6 +365,7 @@ export default function ReceiptManager() {
                     <option value="font-mono">Mono</option>
                   </select>
                 </div>
+
                 <div>
                   <label className="block font-medium mb-1">Body Font</label>
                   <select
@@ -372,6 +378,7 @@ export default function ReceiptManager() {
                     <option value="font-mono">Mono</option>
                   </select>
                 </div>
+
                 <div className="sm:col-span-2">
                   <label className="block font-medium mb-1">Watermark Color</label>
                   <input
@@ -400,7 +407,7 @@ export default function ReceiptManager() {
       )}
 
       {/* Printable Receipt */}
-      {editing && selectedSaleGroup && (
+      {editing && (
         <div ref={printRef} className="printable-area relative bg-white p-6 mt-6 shadow-lg rounded overflow-x-auto">
           {/* Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={watermarkStyle}>
@@ -417,17 +424,17 @@ export default function ReceiptManager() {
           {/* Receipt Table */}
           <table className={`w-full table-fixed border-collapse mb-4 ${bodyFont}`}>
             <thead>
-              <tr className="bg-gray-100">
-                <th className="border px-2 py-1 text-left font-semibold">Product</th>
-                <th className="border px-2 py-1 text-left font-semibold">Device ID</th>
-                <th className="border px-2 py-1 text-left font-semibold">Qty</th>
-                <th className="border px-2 py-1 text-left font-semibold">Unit Price</th>
-                <th className="border px-2 py-1 text-left font-semibold">Amount</th>
+              <tr>
+                <th className="border px-2 py-1 text-left">Product</th>
+                <th className="border px-2 py-1 text-left">Device ID</th>
+                <th className="border px-2 py-1 text-left">Quantity</th>
+                <th className="border px-2 py-1 text-left">Unit Price</th>
+                <th className="border px-2 py-1 text-left">Amount</th>
               </tr>
             </thead>
             <tbody>
               {selectedSaleGroup.dynamic_sales.map(sale => (
-                <tr key={sale.id} className="border-b">
+                <tr key={sale.id}>
                   <td className="border px-2 py-1">{sale.dynamic_product.name}</td>
                   <td className="border px-2 py-1">{sale.dynamic_product.device_id}</td>
                   <td className="border px-2 py-1">{sale.quantity}</td>
@@ -436,28 +443,24 @@ export default function ReceiptManager() {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan="4" className="border px-2 py-1 text-right font-bold">Total:</td>
+                <td className="border px-2 py-1 font-bold">₦{selectedSaleGroup.total_amount.toFixed(2)}</td>
+              </tr>
+            </tfoot>
           </table>
 
-          {/* Summary Table */}
-          <table className={`w-full table-fixed border-collapse mb-4 ${bodyFont}`}>
-            <tbody>
-              {[
-                ['Receipt ID', editing.receipt_id],
-                ['Date', new Date(selectedSaleGroup.created_at).toLocaleDateString()],
-                ['Total Amount', `₦${selectedSaleGroup.total_amount.toFixed(2)}`],
-                ['Payment Method', selectedSaleGroup.payment_method],
-                ['Customer', editing.customer_name],
-                ['Address', editing.customer_address],
-                ['Phone', editing.phone_number],
-                ['Warranty', editing.warranty]
-              ].map(([label, value]) => (
-                <tr key={label} className="border-b">
-                  <th className="border px-2 py-1 text-left font-semibold">{label}</th>
-                  <td className="border px-2 py-1">{value || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Additional Details */}
+          <div className="mt-4">
+            <p><strong>Receipt ID:</strong> {editing.receipt_id}</p>
+            <p><strong>Date:</strong> {new Date(selectedSaleGroup.created_at).toLocaleString()}</p>
+            <p><strong>Payment Method:</strong> {selectedSaleGroup.payment_method}</p>
+            <p><strong>Customer Name:</strong> {editing.customer_name}</p>
+            <p><strong>Address:</strong> {editing.customer_address}</p>
+            <p><strong>Phone:</strong> {editing.phone_number}</p>
+            <p><strong>Warranty:</strong> {editing.warranty}</p>
+          </div>
 
           {/* Signatures */}
           <div className="grid grid-cols-2 gap-8 p-4 mt-4">
