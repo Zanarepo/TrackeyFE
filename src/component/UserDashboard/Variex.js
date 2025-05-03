@@ -21,12 +21,13 @@ import DynamicInventory from '../DynamicSales/DynamicInventory';
 import DynamicProducts  from '../DynamicSales/DynamicProducts';
 import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
-import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
+//import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
 import Customers        from './Customers';
 import VariexFeature  from '../DynamicSales/VariexFeature';
 import Receipts from '../VariexContents/Receipts'
 import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
+import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
 
 const tools = [
   {
@@ -64,7 +65,7 @@ const tools = [
     key: 'returns',
     label: ' Returned Items Tracker',
     icon: < FaUndoAlt className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Monitor store expenses.',
+    desc: 'Track returned items from customers.',
     component: <ReturnedItems/>,
   },
 
@@ -82,7 +83,7 @@ const tools = [
     label: 'Unpaid Supplies',
     icon: <FaBoxOpen className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track unpaid supplies.',
-    component: <DynamicDebtTracker />,
+    component: <Unpaidsupplies />,
   },
 
 

@@ -1,285 +1,517 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../supabaseClient';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from "../../supabaseClient";
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 
-export default function ReturnedItemsManager() {
-  const storeId = Number(localStorage.getItem('store_id'));
-  const pageSize = 5;
-
-  const [customers, setCustomers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [returnedItems, setReturnedItems] = useState([]);
-
-  const [newReturn, setNewReturn] = useState({
-    customer_id: '',
-    product_id: '',
-    suppliers_name: '',
-    device_id: '',
-    //sale_amount: '',
-    quantity: '',
-    remark: '',
-    status: 'no'
-  });
-  const [editingId, setEditingId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+export default function ReturnsByDeviceIdManager() {
+  const storeId = localStorage.getItem("store_id");
+  const [, setStore] = useState(null);
+  const [deviceIdQuery, setDeviceIdQuery] = useState('');
+  const [queriedReceipts, setQueriedReceipts] = useState([]);
+  const [returns, setReturns] = useState([]);
+  const [filteredReturns, setFilteredReturns] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({
+    receipt_id: "",
+    customer_name: "",
+    product_name: "",
+    device_id: "",
+    qty: "",
+    amount: "",
+    remark: "",
+    status: "",
+    returned_date: ""
+  });
+  const [error, setError] = useState(null);
 
-  // lookup fetchers
-  const fetchCustomers = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('customer')
-      .select('id, fullname')
-      .eq('store_id', storeId)
-      .order('fullname');
-    if (error) toast.error('Failed to load customers');
-    else setCustomers(data);
-  }, [storeId]);
+  const returnsRef = useRef();
 
-  const fetchProducts = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('dynamic_product')
-      .select('id, name, suppliers_name, device_id')
-      .eq('store_id', storeId)
-      .order('name');
-    if (error) toast.error('Failed to load products');
-    else setProducts(data);
-  }, [storeId]);
-
-  const fetchReturnedItems = useCallback(async () => {
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    const { data, count, error } = await supabase
-      .from('returned_items')
-      .select(`
-        id,
-        customer_id,
-        product_id,
-        quantity,
-        remark,
-        status,
-        returned_date,
-        customer:customer_id(fullname),
-        product:product_id(name,suppliers_name,device_id)
-      `, { count: 'exact' })
-      .eq('store_id', storeId)
-      .range(from, to)
-      .order('returned_date', { ascending: false });
-    if (error) toast.error('Failed to load returned items');
-    else {
-      setReturnedItems(data || []);
-      setTotalCount(count || 0);
+  // Fetch store details
+  useEffect(() => {
+    if (!storeId) {
+      setError("Store ID is missing. Please log in or select a store.");
+      return;
     }
-  }, [storeId, page]);
+    supabase
+      .from("stores")
+      .select("shop_name,business_address,phone_number")
+      .eq("id", storeId)
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          setError("Failed to fetch store details: " + error.message);
+        } else {
+          setStore(data);
+        }
+      });
+  }, [storeId]);
 
+  // Query receipts by device_id
   useEffect(() => {
-    fetchCustomers();
-    fetchProducts();
-  }, [fetchCustomers, fetchProducts]);
+    if (!deviceIdQuery || !storeId) {
+      setQueriedReceipts([]);
+      return;
+    }
+    supabase
+      .from('receipts')
+      .select('id, receipt_id, customer_name, product_name, device_id, sales_qty, sales_amount')
+      .eq('store_receipt_id', storeId)
+      .ilike('device_id', `%${deviceIdQuery}%`)
+      .then(({ data, error }) => {
+        if (error) {
+          setError("Failed to fetch receipts: " + error.message);
+        } else {
+          setQueriedReceipts(data || []);
+        }
+      });
+  }, [deviceIdQuery, storeId]);
 
+  // Fetch returns for the current store
   useEffect(() => {
-    fetchReturnedItems();
-  }, [fetchReturnedItems]);
+    if (!storeId) return;
 
-  // auto-populate supplier & device
-  const handleProductChange = e => {
-    const pid = e.target.value;
-    const prod = products.find(p => p.id === Number(pid));
-    setNewReturn(r => ({
-      ...r,
-      product_id: pid,
-      suppliers_name: prod?.suppliers_name || '',
-      device_id: prod?.device_id || ''
-    }));
-  };
+    const fetchReturns = async () => {
+      try {
+        // Step 1: Fetch receipt IDs for the current store
+        const { data: receipts, error: receiptError } = await supabase
+          .from('receipts')
+          .select('id')
+          .eq('store_receipt_id', storeId);
+
+        if (receiptError) {
+          throw new Error("Failed to fetch receipts: " + receiptError.message);
+        }
+
+        const receiptIds = receipts.map(r => r.id);
+
+        // Step 2: Fetch returns linked to those receipt IDs
+        const { data: returnsData, error: returnsError } = await supabase
+          .from('returns')
+          .select('*')
+          .in('receipt_id', receiptIds);
+
+        if (returnsError) {
+          throw new Error("Failed to fetch returns: " + returnsError.message);
+        }
+
+        setReturns(returnsData || []);
+        setFilteredReturns(returnsData || []);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    fetchReturns();
+  }, [storeId]);
+
+  // Filter returns on searchTerm
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    setFilteredReturns(
+      returns.filter(r => {
+        const fields = [
+          r.customer_name,
+          r.product_name,
+          r.device_id,
+          String(r.qty),
+          r.amount != null ? `₦${r.amount.toFixed(2)}` : '',
+          r.remark,
+          r.status,
+          r.returned_date
+        ];
+        return fields.some(f => f?.toString().toLowerCase().includes(term));
+      })
+    );
+  }, [searchTerm, returns]);
+
+  // Scroll returns into view
+  useEffect(() => {
+    if (returnsRef.current) {
+      returnsRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [returns]);
 
   const handleChange = e => {
     const { name, value } = e.target;
-    setNewReturn(r => ({ ...r, [name]: value }));
+    setForm(f => ({ ...f, [name]: value }));
+
+    // Auto-populate fields when receipt_id changes
+    if (name === 'receipt_id' && value) {
+      const selectedReceipt = queriedReceipts.find(r => r.id === parseInt(value));
+      if (selectedReceipt) {
+        setForm(f => ({
+          ...f,
+          receipt_id: value,
+          customer_name: selectedReceipt.customer_name || "",
+          product_name: selectedReceipt.product_name,
+          device_id: selectedReceipt.device_id || "",
+          qty: selectedReceipt.sales_qty || "",
+          amount: selectedReceipt.sales_amount || ""
+        }));
+      }
+    }
   };
 
+  const openEdit = r => {
+    setEditing(r);
+    setForm({
+      receipt_id: r.receipt_id.toString(),
+      customer_name: r.customer_name || "",
+      product_name: r.product_name,
+      device_id: r.device_id || "",
+      qty: r.qty || "",
+      amount: r.amount || "",
+      remark: r.remark || "",
+      status: r.status || "",
+      returned_date: r.returned_date || ""
+    });
+  };
 
-  
-  const handleAddOrUpdate = async e => {
-    e.preventDefault();
-    const { customer_id, product_id, remark, status } = newReturn;
-    if (!customer_id || !product_id || !remark || !status) {
-      toast.error('Please fill all required fields');
+  const saveReturn = async () => {
+    // Validate receipt_id
+    if (!form.receipt_id || isNaN(parseInt(form.receipt_id))) {
+      setError("Please select a valid receipt.");
       return;
     }
-    const payload = {
-      store_id: storeId,
-      customer_id: Number(customer_id),
-      product_id: Number(product_id),
-      remark,
-      status,
-      quantity: newReturn.quantity ? Number(newReturn.quantity) : null,
-      created_by_owner: storeId
+
+    const returnData = {
+      receipt_id: parseInt(form.receipt_id),
+      customer_name: form.customer_name,
+      product_name: form.product_name,
+      device_id: form.device_id,
+      qty: parseInt(form.qty),
+      amount: parseFloat(form.amount),
+      remark: form.remark,
+      status: form.status,
+      returned_date: form.returned_date
     };
-  
-    let error;
-    if (editingId) {
-      ({ error } = await supabase
-        .from('returned_items')
-        .update(payload)
-        .eq('id', editingId)
-      );
-    } else {
-      ({ error } = await supabase
-        .from('returned_items')
-        .insert([payload])
-      );
-    }
-    if (error) toast.error(error.message);
-    else {
-      toast.success(editingId ? 'Return updated' : 'Return logged');
-      setEditingId(null);
-      setNewReturn({
-        customer_id: '',
-        product_id: '',
-        suppliers_name: '',
-        device_id: '',
-        //sale_amount: '', // reset UI fields, even though not sent
-        quantity: '',
-        remark: '',
-        status: 'no'
+
+    try {
+      if (editing && editing.id) {
+        await supabase.from("returns").update(returnData).eq("id", editing.id);
+      } else {
+        await supabase.from("returns").insert([returnData]);
+      }
+
+      setEditing(null);
+      setForm({
+        receipt_id: "",
+        customer_name: "",
+        product_name: "",
+        device_id: "",
+        qty: "",
+        amount: "",
+        remark: "",
+        status: "",
+        returned_date: ""
       });
-      fetchReturnedItems();
-      setShowForm(false);
+      setError(null);
+
+      // Refetch returns for the current store
+      const { data: receipts, error: receiptError } = await supabase
+        .from('receipts')
+        .select('id')
+        .eq('store_receipt_id', storeId);
+
+      if (receiptError) {
+        throw new Error("Failed to fetch receipts: " + receiptError.message);
+      }
+
+      const receiptIds = receipts.map(r => r.id);
+
+      const { data: returnsData, error: returnsError } = await supabase
+        .from('returns')
+        .select('*')
+        .in('receipt_id', receiptIds);
+
+      if (returnsError) {
+        throw new Error("Failed to fetch updated returns: " + returnsError.message);
+      }
+
+      setReturns(returnsData || []);
+      setFilteredReturns(returnsData || []);
+    } catch (err) {
+      setError("Failed to save return: " + err.message);
     }
   };
-  
 
-  const handleDelete = async id => {
-    if (!window.confirm('Delete this return?')) return;
-    const { error } = await supabase.from('returned_items').delete().eq('id', id);
-    if (error) toast.error(error.message);
-    else fetchReturnedItems();
+  const deleteReturn = async id => {
+    try {
+      await supabase.from("returns").delete().eq("id", id);
+
+      // Refetch returns for the current store
+      const { data: receipts, error: receiptError } = await supabase
+        .from('receipts')
+        .select('id')
+        .eq('store_receipt_id', storeId);
+
+      if (receiptError) {
+        throw new Error("Failed to fetch receipts: " + receiptError.message);
+      }
+
+      const receiptIds = receipts.map(r => r.id);
+
+      const { data: returnsData, error: returnsError } = await supabase
+        .from('returns')
+        .select('*')
+        .in('receipt_id', receiptIds);
+
+      if (returnsError) {
+        throw new Error("Failed to fetch updated returns: " + returnsError.message);
+      }
+
+      setReturns(returnsData || []);
+      setFilteredReturns(returnsData || []);
+    } catch (err) {
+      setError("Failed to delete return: " + err.message);
+    }
   };
 
-  
-  // filtering
-  const filtered = returnedItems.filter(r => {
-    const q = searchTerm.toLowerCase();
-    return (
-      r.product.name.toLowerCase().includes(q) ||
-      r.product.suppliers_name.toLowerCase().includes(q) ||
-      r.product.device_id.toLowerCase().includes(q)
-    );
-  });
-
-  const totalPages = Math.ceil(totalCount / pageSize);
+  if (!storeId) {
+    return <div className="p-4 text-center text-red-500">Store ID is missing. Please log in or select a store.</div>;
+  }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-6 bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
-      <h2 className="text-3xl font-bold text-center text-indigo-700 dark:bg-gray-900 dark:text-white">Returned Items</h2>
-
-      <div className="text-center">
-        <button
-          onClick={() => setShowForm(prev => !prev)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition "
-        >
-          {showForm ? 'Close Form' : (editingId ? 'Edit Return' : '+ New Return')}
-        </button>
-      </div>
-
-      {showForm && (
-        <form onSubmit={handleAddOrUpdate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 bg-white p-4 rounded shadow">
-          <select name="customer_id" value={newReturn.customer_id} onChange={handleChange} required className="p-2 border rounded">
-            <option value="">Select Customer</option>
-            {customers.map(c => <option key={c.id} value={c.id}>{c.fullname}</option>)}
-          </select>
-
-          <select name="product_id" value={newReturn.product_id} onChange={handleProductChange} required className="p-2 border rounded">
-            <option value="">Select Product</option>
-            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-
-          <input type="text" readOnly value={newReturn.suppliers_name} placeholder="Supplier" className="p-2 border rounded bg-gray-100" />
-          <input type="text" readOnly value={newReturn.device_id} placeholder="Device ID" className="p-2 border rounded bg-gray-100" />
-
-          <input name="quantity" value={newReturn.quantity} onChange={handleChange} placeholder="Quantity (opt)" className="p-2 border rounded" type="number" />
-
-          <input name="remark" value={newReturn.remark} onChange={handleChange} placeholder="Remark" required className="p-2 border rounded" />
-          <select name="status" value={newReturn.status} onChange={handleChange} required className="p-2 border rounded">
-            <option value="no">Not Returned</option>
-            <option value="yes">Returned</option>
-          </select>
-
-          <button type="submit" className="col-span-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition">
-            {editingId ? 'Update Return' : 'Create Return'}
-          </button>
-        </form>
+    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white">
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 mb-4 bg-red-100 text-red-700 rounded">
+          {error}
+        </div>
       )}
 
-      {/* Search */}
-      <div className="flex justify-center">
-        <input
-          type="text"
-          placeholder="Search by product, supplier, or device..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="w-full sm:w-1/2 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
-        />
-      </div>
+      {/* Returns Management UI */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Returns by Device ID</h2>
 
-      <div className="overflow-x-auto bg-white rounded shadow dark:bg-gray-900 dark:text-white">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
-            <tr>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Customer</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Product</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Supplier</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Device ID</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Qty</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Remark</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Status</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold">Returned Date</th>
-              <th className="px-4 py-2 text-center text-sm font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filtered.map(r => (
-              <tr key={r.id} className="hover:bg-gray-50 dark:bg-gray-900 dark:text-white">
-                <td className="px-4 py-2 text-sm">{r.customer.fullname}</td>
-                <td className="px-4 py-2 text-sm">{r.product.name}</td>
-                <td className="px-4 py-2 text-sm">{r.product.suppliers_name}</td>
-                <td className="px-4 py-2 text-sm">{r.product.device_id}</td>
-                {/*<td className="px-4 py-2 text-sm">{r.sale_amount || '-'}</td>*/}
-                <td className="px-4 py-2 text-sm">{r.quantity || '-'}</td>
-                <td className="px-4 py-2 text-sm">{r.remark}</td>
-                <td className="px-4 py-2 text-sm">{r.status === 'yes' ? 'Yes' : 'No'}</td>
-                <td className="px-4 py-2 text-sm">{new Date(r.returned_date).toLocaleDateString()}</td>
-                <td className="px-4 py-2 text-sm text-center space-x-2">
-                  <button onClick={() => {
-                    setEditingId(r.id);
-                    setNewReturn({
-                      customer_id: r.customer_id,
-                      product_id: r.product_id,
-                      suppliers_name: r.product.suppliers_name,
-                      device_id: r.product.device_id,
-                      
-                 
-                      remark: r.remark,
-                      status: r.status
-                    });
-                    setShowForm(true);
-                  }} className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition">Edit</button>
-                  <button onClick={() => handleDelete(r.id)} className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition">Delete</button>
-                </td>
+        {/* Device ID Query Input */}
+        <div className="w-full mb-4">
+          <input
+            type="text"
+            value={deviceIdQuery}
+            onChange={e => setDeviceIdQuery(e.target.value)}
+            placeholder="Enter Device ID to search receipts"
+            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
+          />
+        </div>
+
+        {/* Queried Receipts */}
+        {queriedReceipts.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-md font-semibold mb-2">Matching Receipts</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border rounded-lg">
+                <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
+                  <tr>
+                    <th className="text-left px-4 py-2 border-b">Receipt ID</th>
+                    <th className="text-left px-4 py-2 border-b">Customer Name</th>
+                    <th className="text-left px-4 py-2 border-b">Product</th>
+                    <th className="text-left px-4 py-2 border-b">Device ID</th>
+                    <th className="text-left px-4 py-2 border-b">Qty</th>
+                    <th className="text-left px-4 py-2 border-b">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queriedReceipts.map(r => (
+                    <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
+                      <td className="px-4 py-2 border-b truncate">{r.receipt_id}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.product_name}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.device_id || '-'}</td>
+                      <td className="px-4 py-2 border-b">{r.sales_qty}</td>
+                      <td className="px-4 py-2 border-b">₦{r.sales_amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Add Return Button */}
+        <div className="mb-4">
+          <button
+            onClick={() => setEditing({})}
+            className={`px-4 py-2 rounded text-white ${queriedReceipts.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600'}`}
+            disabled={queriedReceipts.length === 0}
+          >
+            Add Return
+          </button>
+        </div>
+
+        {/* Search Returns */}
+        <div className="w-full mb-4">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search returns..."
+            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
+          />
+        </div>
+
+        {/* Returns Table */}
+        <div ref={returnsRef} className="overflow-x-auto">
+          <table className="min-w-full text-sm border rounded-lg">
+            <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
+              <tr>
+                <th className="text-left px-4 py-2 border-b">Customer Name</th>
+                <th className="text-left px-4 py-2 border-b">Product</th>
+                <th className="text-left px-4 py-2 border-b">Device ID</th>
+                <th className="text-left px-4 py-2 border-b">Qty</th>
+                <th className="text-left px-4 py-2 border-b">Amount</th>
+                <th className="text-left px-4 py-2 border-b">Remark</th>
+                <th className="text-left px-4 py-2 border-b">Status</th>
+                <th className="text-left px-4 py-2 border-b">Returned Date</th>
+                <th className="text-left px-4 py-2 border-b">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredReturns.map(r => (
+                <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
+                  <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.product_name}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.device_id || '-'}</td>
+                  <td className="px-4 py-2 border-b">{r.qty}</td>
+                  <td className="px-4 py-2 border-b">₦{r.amount.toFixed(2)}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.remark || '-'}</td>
+                  <td className="px-4 py-2 border-b">{r.status}</td>
+                  <td className="px-4 py-2 border-b">{r.returned_date}</td>
+                  <td className="px-4 py-2 border-b">
+                    <div className="flex gap-3">
+                      <button onClick={() => openEdit(r)} className="hover:text-indigo-600 dark:bg-gray-900 dark:text-white">
+                        <FaEdit />
+                      </button>
+                      <button
+                        onClick={() => deleteReturn(r.id)}
+                        className="hover:text-red-600 dark:bg-gray-900 dark:text-white"
+                      >
+                        <FaTrashAlt />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredReturns.length === 0 && (
+                <tr>
+                  <td colSpan="9" className="text-center text-gray-500 py-4 dark:bg-gray-900 dark:text-white">
+                    No returns found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Pagination */}
-      <div className="flex justify-between items-center mt-4 dark:bg-gray-900 dark:text-white">
-        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 bg-gray-200 rounded-full disabled:opacity-50 dark:bg-gray-900 dark:text-white ">Prev</button>
-        <span className="text-sm">Page {page} of {totalPages}</span>
-        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 bg-gray-200 rounded-full disabled:opacity-50">Next</button>
-      </div>
+      {/* Edit/Add Modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-auto mt-24">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-full sm:max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6 dark:bg-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold text-center">{editing.id ? 'Edit Return' : 'Add Return'}</h2>
+
+            {/* Return Fields */}
+            <div className="space-y-4">
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Receipt</span>
+                <select
+                  name="receipt_id"
+                  value={form.receipt_id}
+                  onChange={handleChange}
+                  className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
+                  required
+                >
+                  <option value="">Select Receipt</option>
+                  {queriedReceipts.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.receipt_id} - {r.product_name} ({r.customer_name || 'No Customer'})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Customer Name</span>
+                <input
+                  name="customer_name"
+                  value={form.customer_name}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Product</span>
+                <input
+                  name="product_name"
+                  value={form.product_name}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Device ID</span>
+                <input
+                  name="device_id"
+                  value={form.device_id}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Quantity</span>
+                <input
+                  name="qty"
+                  value={form.qty}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Amount</span>
+                <input
+                  name="amount"
+                  value={form.amount}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              {['remark', 'status', 'returned_date'].map(field => (
+                <label key={field} className="block w-full">
+                  <span className="font-semibold capitalize block mb-1">
+                    {field.replace('_', ' ')}
+                  </span>
+                  <input
+                    type={field === 'returned_date' ? 'date' : 'text'}
+                    name={field}
+                    value={form[field]}
+                    onChange={handleChange}
+                    className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
+                    required={field !== 'remark'}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded">
+                Cancel
+              </button>
+              <button
+                onClick={saveReturn}
+                className={`px-4 py-2 rounded text-white ${form.receipt_id && !isNaN(parseInt(form.receipt_id)) ? 'bg-indigo-600' : 'bg-gray-400 cursor-not-allowed'}`}
+                disabled={!form.receipt_id || isNaN(parseInt(form.receipt_id))}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

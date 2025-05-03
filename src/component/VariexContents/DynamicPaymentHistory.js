@@ -95,7 +95,7 @@ export default function DebtPaymentManager() {
   const submitPayment = async e => {
     e.preventDefault();
     if (!selectedDebt) return;
-    await supabase.from('debt_payment_history2').insert([{
+    await supabase.from('debts').insert([{
       debt_tracker_id: selectedDebt.id,
       customer_id: selectedDebt.customer_id,
       debt_product_id: selectedDebt.product_id,
