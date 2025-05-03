@@ -264,7 +264,7 @@ export default function DynamicProducts() {
                     { name: 'purchase_qty', label: 'Quantity Purchased' },
                     { name: 'selling_price', label: 'Selling Price' },
                     { name: 'suppliers_name', label: 'Supplier Name' },
-                    { name: 'device_id', label: 'Device ID' },
+                    { name: 'device_id', label: 'Product ID' },
                   ].map(field => (
                     <div key={field.name} className="mb-2">
                       <label className="block mb-1">{field.label}</label>
@@ -320,7 +320,7 @@ export default function DynamicProducts() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-200 dark:bg-gray-700">
             <tr>
-              {['Name','Description','Purchase','Qty','Selling','Supplier','Device ID','Date','Actions'].map(h => (
+              {['Name','Description','Purchase','Qty','Selling','Supplier','Product ID','Date','Actions'].map(h => (
                 <th key={h} className="px-4 py-2 text-left text-sm font-semibold">{h}</th>
               ))}
             </tr>
@@ -407,7 +407,7 @@ export default function DynamicProducts() {
               { name: 'purchase_qty', label: 'Quantity Purchased' },
               { name: 'selling_price', label: 'Selling Price' },
               { name: 'suppliers_name', label: 'Supplier Name' },
-              { name: 'device_id', label: 'Device ID' },
+              { name: 'device_id', label: 'Product ID' },
             ].map(field => (
               <div className="mb-3" key={field.name}>
                 <label className="block mb-1">{field.label}</label>

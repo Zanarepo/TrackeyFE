@@ -37,7 +37,7 @@ export default function ReceiptManager() {
       .then(({ data }) => setStore(data));
   }, [storeId]);
 
-  // Load sale groups with associated dynamic sales
+  // Load sale groups with associated dynamic sales and dynamic_product
   useEffect(() => {
     if (!storeId) return;
     supabase
@@ -50,11 +50,14 @@ export default function ReceiptManager() {
         created_at,
         dynamic_sales (
           id,
-         
+          device_id,
           quantity,
           amount,
           sale_group_id,
-          dynamic_product (id, name, device_id)
+          dynamic_product (
+            id,
+            name
+          )
         )
       `)
       .eq('store_id', storeId)
@@ -87,7 +90,7 @@ export default function ReceiptManager() {
           sales_amount: selectedSaleGroup.total_amount,
           sales_qty: totalQuantity,
           product_name: firstSale.dynamic_product.name, // Representative product name
-          device_id: firstSale.dynamic_product.device_id || null,
+          device_id: firstSale.device_id || null, // Corrected to use firstSale.device_id
           customer_name: "",
           customer_address: "",
           phone_number: "",
@@ -473,7 +476,7 @@ export default function ReceiptManager() {
               {selectedSaleGroup.dynamic_sales?.map(sale => (
                 <tr key={sale.id}>
                   <td className="border px-2 py-1">{sale.dynamic_product.name}</td>
-                  <td className="border px-2 py-1">{sale.dynamic_product.device_id || '-'}</td>
+                  <td className="border px-2 py-1">{sale.device_id || '-'}</td>
                   <td className="border px-2 py-1">{sale.quantity}</td>
                   <td className="border px-2 py-1">₦{(sale.amount / sale.quantity).toFixed(2)}</td>
                   <td className="border px-2 py-1">₦{sale.amount.toFixed(2)}</td>

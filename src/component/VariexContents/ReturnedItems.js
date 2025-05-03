@@ -357,7 +357,7 @@ export default function ReturnsByDeviceIdManager() {
               <tr>
                 <th className="text-left px-4 py-2 border-b">Customer Name</th>
                 <th className="text-left px-4 py-2 border-b">Product</th>
-                <th className="text-left px-4 py-2 border-b">Device ID</th>
+                <th className="text-left px-4 py-2 border-b">Product ID</th>
                 <th className="text-left px-4 py-2 border-b">Qty</th>
                 <th className="text-left px-4 py-2 border-b">Amount</th>
                 <th className="text-left px-4 py-2 border-b">Remark</th>

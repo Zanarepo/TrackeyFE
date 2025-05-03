@@ -179,7 +179,7 @@ export default function DebtPaymentManager() {
           <div className="w-full mb-4">
               <input
                 type="text"
-                placeholder="Search by customer, product, device ID, or payment type..."
+                placeholder="Search by customer, product, product ID, or payment type..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-4 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
@@ -195,7 +195,7 @@ export default function DebtPaymentManager() {
                 <tr className="bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-indigo-600">
                   <th className="px-4 py-3 text-left text-sm font-bold">Customer</th>
                   <th className="px-4 py-3 text-left text-sm font-bold">Product</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Device ID</th>
+                  <th className="px-4 py-3 text-left text-sm font-bold">Product ID</th>
                   <th className="px-4 py-3 text-left text-sm font-bold">Owed</th>
                   <th className="px-4 py-3 text-left text-sm font-bold">Paid</th>
                   <th className="px-4 py-3 text-left text-sm font-bold">Balance</th>
@@ -286,7 +286,7 @@ export default function DebtPaymentManager() {
               <span className="font-medium">Product:</span> {selectedDebt.product_name}
             </p>
             <p>
-              <span className="font-medium">Device ID:</span> {selectedDebt.device_id || '-'}
+              <span className="font-medium">Product ID:</span> {selectedDebt.device_id || '-'}
             </p>
             <p>
               <span className="font-medium">Remaining Balance:</span> ₦{(selectedDebt.remaining_balance || 0).toFixed(2)}

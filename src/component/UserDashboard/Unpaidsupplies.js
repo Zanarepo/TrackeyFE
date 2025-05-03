@@ -407,7 +407,7 @@ export default function DebtsManager() {
                 <th className="text-left px-4 py-2 border-b">Customer</th>
                 <th className="text-left px-4 py-2 border-b">Product</th>
                 <th className="text-left px-4 py-2 border-b">Supplier</th>
-                <th className="text-left px-4 py-2 border-b">Device ID</th>
+                <th className="text-left px-4 py-2 border-b">Product ID</th>
                 <th className="text-left px-4 py-2 border-b">Qty</th>
                 <th className="text-left px-4 py-2 border-b">Owed</th>
                 <th className="text-left px-4 py-2 border-b">Deposited</th>
@@ -528,7 +528,7 @@ export default function DebtsManager() {
                   </label>
 
                   <label className="block">
-                    <span className="font-semibold block mb-1">Device ID</span>
+                    <span className="font-semibold block mb-1">Product ID</span>
                     <input
                       name="device_id"
                       value={entry.device_id}

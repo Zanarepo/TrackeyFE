@@ -210,14 +210,12 @@ export default function SalesTracker() {
         return;
       }
       for (const line of lines) {
-        if (!line.dynamic_product_id || line.quantity <= 0 || line.unit_price <= 0 || !line.device_id) {
-          toast.error('Please fill in all fields for each sale line.');
+        if (!line.dynamic_product_id || line.quantity <= 0 || line.unit_price <= 0) {
+          toast.error('Please fill in all required fields for each sale line.');
           return;
         }
         const inv = inventory.find((i) => i.dynamic_product_id === line.dynamic_product_id);
-        if (!inv || inv.available_qty < line
-
-.quantity) {
+        if (!inv || inv.available_qty < line.quantity) {
           const prod = products.find((p) => p.id === line.dynamic_product_id);
           toast.error(`Insufficient stock for ${prod.name}: only ${inv?.available_qty || 0} available`);
           return;
@@ -239,7 +237,7 @@ export default function SalesTracker() {
         quantity: l.quantity,
         unit_price: l.unit_price,
         amount: l.quantity * l.unit_price,
-        device_id: l.device_id,
+        device_id: l.device_id || null,  // Allow device_id to be optional
         payment_method: paymentMethod,
       }));
       const { error: insErr } = await supabase.from('dynamic_sales').insert(inserts);
@@ -293,7 +291,7 @@ export default function SalesTracker() {
         .update({
           quantity: saleForm.quantity,
           unit_price: saleForm.unit_price,
-          device_id: saleForm.device_id,
+          device_id: saleForm.device_id || null,  // Allow device_id to be optional
           payment_method: saleForm.payment_method || originalSale.payment_method,
         })
         .eq('id', editing);
@@ -356,11 +354,11 @@ export default function SalesTracker() {
   const exportCSV = () => {
     let csv;
     if (viewMode === 'list') {
-      csv = 'Product,Device ID,Qty,Unit Price,Amount,Payment,Sold At\n';
+      csv = 'Product, Qty,Unit Price,Amount,Payment, Product ID,Sold At\n';
       filtered.forEach((s) => {
         csv += [
           s.dynamic_product.name,
-          s.device_id,
+          s.device_id || '',
           s.quantity,
           s.unit_price.toFixed(2),
           s.amount.toFixed(2),
@@ -392,7 +390,7 @@ export default function SalesTracker() {
       if (viewMode === 'list') {
         filtered.forEach((s) => {
           doc.text(
-            `Product: ${s.dynamic_product.name}, Device: ${s.device_id}, Qty: ${s.quantity}, Unit: ${s.unit_price.toFixed(2)}, Amt: ${s.amount.toFixed(2)}, Pay: ${s.payment_method}, At: ${new Date(s.sold_at).toLocaleString()}`,
+            `Product: ${s.dynamic_product.name}, Device: ${s.device_id || ''}, Qty: ${s.quantity}, Unit: ${s.unit_price.toFixed(2)}, Amt: ${s.amount.toFixed(2)}, Pay: ${s.payment_method}, At: ${new Date(s.sold_at).toLocaleString()}`,
             10,
             y
           );
@@ -496,14 +494,13 @@ export default function SalesTracker() {
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <label className="block mb-1 text-sm font-medium">Device ID</label>
+                  <label className="block mb-1 text-sm font-medium">Product ID (Optional)</label>
                   <input
                     type="text"
                     name="device_id"
                     value={line.device_id}
                     onChange={(e) => handleLineChange(idx, e)}
                     className="w-full p-2 border rounded dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
                   />
                 </div>
                 <div className="sm:col-span-1 flex items-end">
@@ -596,7 +593,7 @@ export default function SalesTracker() {
                     value={saleForm[field] || ''}
                     onChange={handleEditChange}
                     className="w-full p-2 border rounded dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
+                    required={field !== 'device_id'}  // Make Device ID optional
                   />
                 )}
               </div>
@@ -626,7 +623,7 @@ export default function SalesTracker() {
           <table className="min-w-full bg-white dark:bg-gray-800 divide-y divide-gray-200">
             <thead className="bg-gray-100 dark:bg-gray-700">
               <tr>
-                {['Product', 'Device ID', 'Quantity', 'Unit Price', 'Amount', 'Payment', 'Sold At', 'Actions'].map((h) => (
+                {['Product', 'Quantity', 'Unit Price', 'Amount', 'Payment', 'Product ID', 'Sold At', 'Actions'].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200"
@@ -640,11 +637,12 @@ export default function SalesTracker() {
               {paginatedSales.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-2 text-sm">{s.dynamic_product.name}</td>
-                  <td className="px-4 py-2 text-sm">{s.device_id}</td>
+                  
                   <td className="px-4 py-2 text-sm">{s.quantity}</td>
                   <td className="px-4 py-2 text-sm">{s.unit_price.toFixed(2)}</td>
                   <td className="px-4 py-2 text-sm">{s.amount.toFixed(2)}</td>
                   <td className="px-4 py-2 text-sm">{s.payment_method}</td>
+                  <td className="px-4 py-2 text-sm">{s.device_id || '-'}</td>
                   <td className="px-4 py-2 text-sm">{new Date(s.sold_at).toLocaleString()}</td>
                   <td className="px-4 py-2 text-sm flex gap-2">
                     <button
@@ -653,7 +651,7 @@ export default function SalesTracker() {
                         setSaleForm({
                           quantity: s.quantity,
                           unit_price: s.unit_price,
-                          device_id: s.device_id,
+                          device_id: s.device_id || '',
                           payment_method: s.payment_method,
                         });
                       }}
@@ -748,7 +746,6 @@ export default function SalesTracker() {
       </div>
 
       <ToastContainer position="top-right" autoClose={3000} />
-      
     </div>
   );
 }

@@ -1,659 +1,524 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from "../../supabaseClient";
-import { FaTrashAlt, FaPlus, FaBell } from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import DynamicDebtRepayment from './DynamicDebtRepayment'
+import { FaEdit, FaTrashAlt, FaPrint, FaDownload } from 'react-icons/fa';
 
-export default function DebtsManager() {
+export default function ReceiptManager() {
   const storeId = localStorage.getItem("store_id");
-  const [, setStore] = useState(null);
-  const [customers, setCustomers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [debts, setDebts] = useState([]);
-  const [filteredDebts, setFilteredDebts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [store, setStore] = useState(null);
+  const [saleGroupsList, setSaleGroupsList] = useState([]);
+  const [selectedSaleGroup, setSelectedSaleGroup] = useState(null);
+  const [receipts, setReceipts] = useState([]);
+  const [filteredReceipts, setFilteredReceipts] = useState([]);
+  const [searchTerm, ] = useState('');
   const [editing, setEditing] = useState(null);
-  const [debtEntries, setDebtEntries] = useState([
-    {
-      customer_id: "",
-      customer_name: "",
-      phone_number: "",
-      dynamic_product_id: "",
-      product_name: "",
-      supplier: "",
-      device_id: "",
-      qty: "",
-      owed: "",
-      deposited: "",
-      date: ""
-    }
-  ]);
-  const [error, setError] = useState(null);
-  const [showReminderForm, setShowReminderForm] = useState(false);
-  const [reminderType, setReminderType] = useState('one-time');
-  const [reminderTime, setReminderTime] = useState('');
-  const debtsRef = useRef();
-  const reminderIntervalRef = useRef(null);
+  const [salesSearch, setSalesSearch] = useState('');
+  const [sortKey, setSortKey] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [form, setForm] = useState({ customer_name: "", customer_address: "", phone_number: "", warranty: "" });
+
+  // Dynamic style states
+  const [headerBgColor, setHeaderBgColor] = useState('#1E3A8A');
+  const [headerTextColor, setHeaderTextColor] = useState('#FFFFFF');
+  const [headerFont, setHeaderFont] = useState('font-serif');
+  const [bodyFont, setBodyFont] = useState('font-sans');
+  const [watermarkColor, setWatermarkColor] = useState('rgba(30,58,138,0.1)');
+
+  const printRef = useRef();
+  const receiptsRef = useRef();
 
   // Fetch store details
   useEffect(() => {
-    if (!storeId) {
-      setError("Store ID is missing. Please log in or select a store.");
-      toast.error("Store ID is missing.");
-      return;
-    }
+    if (!storeId) return;
     supabase
       .from("stores")
       .select("shop_name,business_address,phone_number")
       .eq("id", storeId)
       .single()
-      .then(({ data, error }) => {
-        if (error) {
-          setError("Failed to fetch store details: " + error.message);
-          toast.error("Failed to fetch store details.");
-        } else {
-          setStore(data);
-        }
-      });
+      .then(({ data }) => setStore(data));
   }, [storeId]);
 
-  // Fetch customers for the current store
+  // Load sale groups with associated dynamic sales and dynamic_product
   useEffect(() => {
     if (!storeId) return;
     supabase
-      .from('customer')
-      .select('id, fullname, phone_number')
-      .eq('store_id', storeId) // Filter customers by store_id
-      .then(({ data, error }) => {
-        if (error) {
-          setError("Failed to fetch customers: " + error.message);
-          toast.error("Failed to fetch customers.");
-        } else {
-          setCustomers(data || []);
-        }
-      });
-  }, [storeId]);
-
-  // Fetch products
-  useEffect(() => {
-    if (!storeId) return;
-    supabase
-      .from('dynamic_product')
-      .select('id, name')
+      .from('sale_groups')
+      .select(`
+        id,
+        store_id,
+        total_amount,
+        payment_method,
+        created_at,
+        dynamic_sales (
+          id,
+          device_id,
+          quantity,
+          amount,
+          sale_group_id,
+          dynamic_product (
+            id,
+            name
+          )
+        )
+      `)
       .eq('store_id', storeId)
-      .then(({ data, error }) => {
-        if (error) {
-          setError("Failed to fetch products: " + error.message);
-          toast.error("Failed to fetch products.");
-        } else {
-          setProducts(data || []);
-        }
-      });
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setSaleGroupsList(data || []));
   }, [storeId]);
 
-  // Fetch debts
+  // Load or initialize a single receipt for a sale group
   useEffect(() => {
-    if (!storeId) return;
-    supabase
-      .from('debts')
-      .select('*')
-      .eq('store_id', storeId)
-      .then(({ data, error }) => {
-        if (error) {
-          setError("Failed to fetch debts: " + error.message);
-          toast.error("Failed to fetch debts.");
-        } else {
-          setDebts(data || []);
-          setFilteredDebts(data || []);
-        }
-      });
-  }, [storeId]);
+    if (!selectedSaleGroup) {
+      setReceipts([]);
+      return;
+    }
+    (async () => {
+      // Fetch existing receipts
+      let { data: receiptData } = await supabase
+        .from("receipts")
+        .select("*")
+        .eq("sale_group_id", selectedSaleGroup.id)
+        .order('id', { ascending: false });
 
-  // Filter debts on searchTerm
+      // If no receipt exists, create one for the sale group
+      if (receiptData.length === 0 && selectedSaleGroup.dynamic_sales?.length > 0) {
+        const firstSale = selectedSaleGroup.dynamic_sales[0]; // Use first sale for representative fields
+        const totalQuantity = selectedSaleGroup.dynamic_sales.reduce((sum, sale) => sum + sale.quantity, 0);
+        const receiptInsert = {
+          store_receipt_id: selectedSaleGroup.store_id,
+          sale_group_id: selectedSaleGroup.id,
+          product_id: firstSale.dynamic_product.id, // Representative product_id
+          sales_amount: selectedSaleGroup.total_amount,
+          sales_qty: totalQuantity,
+          product_name: firstSale.dynamic_product.name, // Representative product name
+          device_id: firstSale.device_id || null, // Corrected to use firstSale.device_id
+          customer_name: "",
+          customer_address: "",
+          phone_number: "",
+          warranty: "",
+          date: new Date(selectedSaleGroup.created_at).toISOString(),
+          receipt_id: `RCPT-${selectedSaleGroup.id}-${Date.now()}`
+        };
+
+        const { data: newReceipt } = await supabase
+          .from("receipts")
+          .insert([receiptInsert])
+          .select()
+          .single();
+        receiptData = [newReceipt];
+      }
+
+      // Ensure only one receipt is kept (delete extras if any)
+      if (receiptData.length > 1) {
+        const [latestReceipt] = receiptData; // Keep the latest
+        await supabase
+          .from("receipts")
+          .delete()
+          .eq("sale_group_id", selectedSaleGroup.id)
+          .neq("id", latestReceipt.id);
+        receiptData = [latestReceipt];
+      }
+
+      setReceipts(receiptData || []);
+    })();
+  }, [selectedSaleGroup]);
+
+  // Filter receipts on searchTerm or receipts change
   useEffect(() => {
     const term = searchTerm.toLowerCase();
-    setFilteredDebts(
-      debts.filter(d => {
+    const dateStr = selectedSaleGroup ? new Date(selectedSaleGroup.created_at).toLocaleDateString().toLowerCase() : '';
+    setFilteredReceipts(
+      receipts.filter(r => {
         const fields = [
-          d.customer_name,
-          d.product_name,
-          d.phone_number,
-          d.supplier,
-          d.device_id,
-          String(d.qty),
-          d.owed != null ? `₦${d.owed.toFixed(2)}` : '',
-          d.deposited != null ? `₦${d.deposited.toFixed(2)}` : '',
-          d.remaining_balance != null ? `₦${d.remaining_balance.toFixed(2)}` : '',
-          d.date
+          r.receipt_id,
+          String(r.sale_group_id),
+          r.product_name,
+          String(r.sales_qty),
+          r.device_id,
+          r.sales_amount != null ? `₦${r.sales_amount.toFixed(2)}` : '',
+          r.customer_name,
+          r.customer_address,
+          r.phone_number,
+          r.warranty,
+          dateStr
         ];
         return fields.some(f => f?.toString().toLowerCase().includes(term));
       })
     );
-  }, [searchTerm, debts]);
+  }, [searchTerm, receipts, selectedSaleGroup]);
 
-  // Scroll debts into view
+  // Scroll receipts into view whenever receipts list changes
   useEffect(() => {
-    if (debtsRef.current) {
-      debtsRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (receiptsRef.current) {
+      receiptsRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [debts]);
+  }, [receipts]);
 
-  // Handle reminder notifications
-  const showDebtReminders = () => {
-    const unpaidDebts = debts.filter(d => (d.remaining_balance || 0) > 0);
-    if (unpaidDebts.length === 0) {
-      toast.info("No unpaid debts found.");
-      return;
-    }
-
-    unpaidDebts.forEach(d => {
-      toast.warn(
-        <div>
-          <p><strong>Debtor:</strong> {d.customer_name}</p>
-          <p><strong>Outstanding:</strong> ₦{(d.remaining_balance || 0).toFixed(2)}</p>
-          <p><strong>Product:</strong> {d.product_name}</p>
-          <p><strong>Date:</strong> {d.date}</p>
-        </div>,
-        { autoClose: 5000 }
-      );
+  const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const openEdit = r => {
+    setEditing(r);
+    setForm({
+      customer_name: r.customer_name || "",
+      customer_address: r.customer_address || "",
+      phone_number: r.phone_number || "",
+      warranty: r.warranty || ""
     });
   };
-
-  const scheduleReminders = () => {
-    if (!reminderTime) {
-      toast.error("Please select a reminder time.");
-      return;
-    }
-
-    const now = new Date();
-    const [hours, minutes] = reminderTime.split(':').map(Number);
-    let nextReminder = new Date(now);
-    nextReminder.setHours(hours, minutes, 0, 0);
-
-    if (nextReminder <= now) {
-      nextReminder.setDate(nextReminder.getDate() + 1);
-    }
-
-    const msUntilReminder = nextReminder - now;
-
-    if (reminderIntervalRef.current) {
-      clearInterval(reminderIntervalRef.current);
-    }
-
-    if (reminderType === 'one-time') {
-      setTimeout(showDebtReminders, msUntilReminder);
-      toast.success(`Reminder set for ${nextReminder.toLocaleString()}`);
-    } else {
-      setTimeout(() => {
-        showDebtReminders();
-        reminderIntervalRef.current = setInterval(
-          showDebtReminders,
-          reminderType === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000
-        );
-      }, msUntilReminder);
-      toast.success(`Recurring ${reminderType} reminders set starting ${nextReminder.toLocaleString()}`);
-    }
-
-    setShowReminderForm(false);
+  const saveReceipt = async () => {
+    await supabase.from("receipts").update({ ...editing, ...form }).eq("id", editing.id);
+    setEditing(null);
+    setForm({ customer_name: "", customer_address: "", phone_number: "", warranty: "" });
+    const { data } = await supabase
+      .from("receipts")
+      .select("*")
+      .eq("sale_group_id", selectedSaleGroup.id)
+      .order('id', { ascending: false });
+    setReceipts(data);
+  };
+  const handlePrint = r => {
+    openEdit(r);
+    setTimeout(() => window.print(), 200);
   };
 
-  const handleDebtChange = (index, e) => {
-    const { name, value } = e.target;
-    const updatedEntries = [...debtEntries];
-    updatedEntries[index] = { ...updatedEntries[index], [name]: value };
+  if (!storeId) return <div className="p-4 text-center">Select a store first.</div>;
 
-    // Auto-populate customer fields
-    if (name === 'customer_id' && value) {
-      const selectedCustomer = customers.find(c => c.id === parseInt(value));
-      if (selectedCustomer) {
-        updatedEntries[index] = {
-          ...updatedEntries[index],
-          customer_id: value,
-          customer_name: selectedCustomer.fullname,
-          phone_number: selectedCustomer.phone_number || ""
-        };
-      }
-    }
-
-    // Auto-populate product field
-    if (name === 'dynamic_product_id' && value) {
-      const selectedProduct = products.find(p => p.id === parseInt(value));
-      if (selectedProduct) {
-        updatedEntries[index] = {
-          ...updatedEntries[index],
-          dynamic_product_id: value,
-          product_name: selectedProduct.name
-        };
-      }
-    }
-
-    setDebtEntries(updatedEntries);
-  };
-
-  const addDebtEntry = () => {
-    setDebtEntries([
-      ...debtEntries,
-      {
-        customer_id: "",
-        customer_name: "",
-        phone_number: "",
-        dynamic_product_id: "",
-        product_name: "",
-        supplier: "",
-        device_id: "",
-        qty: "",
-        owed: "",
-        deposited: "",
-        date: ""
-      }
-    ]);
-  };
-
-  const removeDebtEntry = index => {
-    if (debtEntries.length === 1) return;
-    setDebtEntries(debtEntries.filter((_, i) => i !== index));
-  };
-
-  const saveDebts = async () => {
-    let hasError = false;
-    const validEntries = debtEntries.filter(entry => {
-      if (
-        !entry.customer_id ||
-        isNaN(parseInt(entry.customer_id)) ||
-        !entry.dynamic_product_id ||
-        isNaN(parseInt(entry.dynamic_product_id)) ||
-        !entry.qty ||
-        isNaN(parseInt(entry.qty)) ||
-        !entry.owed ||
-        isNaN(parseFloat(entry.owed)) ||
-        !entry.date
-      ) {
-        hasError = true;
-        return false;
-      }
-      return true;
+  const filteredSaleGroups = [...saleGroupsList]
+    .filter(sg =>
+      sg.id.toString().includes(salesSearch) ||
+      sg.total_amount.toString().includes(salesSearch) ||
+      sg.payment_method.toLowerCase().includes(salesSearch.toLowerCase())
+    )
+    .sort((a, b) => {
+      const valA = a[sortKey];
+      const valB = b[sortKey];
+      if (sortOrder === 'asc') return valA > valB ? 1 : -1;
+      return valA < valB ? 1 : -1;
     });
 
-    if (hasError) {
-      setError("Please fill all required fields (Customer, Product, Qty, Owed, Date) correctly.");
-      toast.error("Please fill all required fields correctly.");
-      return;
-    }
-
-    const debtData = validEntries.map(entry => ({
-      store_id: parseInt(storeId),
-      customer_id: parseInt(entry.customer_id),
-      dynamic_product_id: parseInt(entry.dynamic_product_id),
-      customer_name: entry.customer_name,
-      product_name: entry.product_name,
-      phone_number: entry.phone_number || null,
-      supplier: entry.supplier || null,
-      device_id: entry.device_id || null,
-      qty: parseInt(entry.qty),
-      owed: parseFloat(entry.owed),
-      deposited: entry.deposited ? parseFloat(entry.deposited) : 0.00,
-      remaining_balance: parseFloat(entry.owed) - (entry.deposited ? parseFloat(entry.deposited) : 0.00),
-      date: entry.date
-    }));
-
-    try {
-      if (editing && editing.id) {
-        await supabase.from("debts").update(debtData[0]).eq("id", editing.id);
-      } else {
-        await supabase.from("debts").insert(debtData);
-      }
-
-      setEditing(null);
-      setDebtEntries([{
-        customer_id: "",
-        customer_name: "",
-        phone_number: "",
-        dynamic_product_id: "",
-        product_name: "",
-        supplier: "",
-        device_id: "",
-        qty: "",
-        owed: "",
-        deposited: "",
-        date: ""
-      }]);
-      setError(null);
-      toast.success(`${debtData.length} debt(s) saved successfully!`);
-
-      const { data, error } = await supabase.from("debts").select("*").eq('store_id', storeId);
-      if (error) {
-        setError("Failed to fetch updated debts: " + error.message);
-        toast.error("Failed to fetch updated debts.");
-      } else {
-        setDebts(data);
-      }
-    } catch (err) {
-      setError("Failed to save debts: " + err.message);
-      toast.error("Failed to save debts.");
-    }
-  };
-
-  const deleteDebt = async id => {
-    try {
-      await supabase.from("debts").delete().eq("id", id);
-      const { data, error } = await supabase.from("debts").select("*").eq('store_id', storeId);
-      if (error) {
-        setError("Failed to fetch updated debts: " + error.message);
-        toast.error("Failed to fetch updated debts.");
-      } else {
-        setDebts(data);
-        toast.success("Debt deleted successfully!");
-      }
-    } catch (err) {
-      setError("Failed to delete debt: " + err.message);
-      toast.error("Failed to delete debt.");
-    }
-  };
-
-  if (!storeId) {
-    return <div className="p-4 text-center text-red-500">Store ID is missing. Please log in or select a store.</div>;
-  }
+  // Print CSS
+  const printStyles = `@media print { body * { visibility: hidden; } .printable-area, .printable-area * { visibility: visible; } .printable-area { position: absolute; top:0; left:0; width:100%; } }`;
+  const headerStyle = { backgroundColor: headerBgColor, color: headerTextColor };
+  const watermarkStyle = { color: watermarkColor, fontSize: '4rem', opacity: 1 };
 
   return (
-    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white">
-      <DynamicDebtRepayment/>
-      <ToastContainer position="top-right" autoClose={3000} />
+    <>
+      <style>{printStyles}</style>
 
-      {/* Error Message */}
-      {error && (
-        <div className="p-4 mb-4 bg-red-100 text-red-700 rounded">
-          {error}
-        </div>
-      )}
+      <div className="print:hidden p-0 space-y-6">
+        {/* Management UI */}
+        <div className="p-0 dark:bg-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold mb-4">Receipts</h2>
 
-      {/* Debts Management UI */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Debts</h2>
+          {/* Search & Sort Controls */}
+          <div className="w-full mb-4">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+              <input
+                type="text"
+                value={salesSearch}
+                onChange={e => setSalesSearch(e.target.value)}
+                placeholder="Search by Sale Group ID, Amount, or Payment Method"
+                className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
+              />
 
-        {/* Search */}
-        <div className="w-full mb-4">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search debts..."
-            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
-          />
-        </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => {
+                    setSortKey('id');
+                    setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'));
+                  }}
+                  className="border px-4 py-2 rounded text-sm w-full sm:w-auto dark:bg-gray-800 dark:text-white"
+                >
+                  Sort by ID {sortKey === 'id' && (sortOrder === 'asc' ? '⬆️' : '⬇️')}
+                </button>
 
-        {/* Add Debt and Reminder Buttons */}
-        <div className="mb-4 flex gap-3">
-          <button
-            onClick={() => setEditing({})}
-            className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center gap-2"
-          >
-            <FaPlus /> Debt
-          </button>
-          <button
-            onClick={() => setShowReminderForm(true)}
-            className="px-4 py-2 bg-yellow-600 text-white rounded flex items-center gap-2"
-          >
-            <FaBell /> Set Debt Reminders
-          </button>
-        </div>
+                <button
+                  onClick={() => {
+                    setSortKey('total_amount');
+                    setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'));
+                  }}
+                  className="border px-4 py-2 rounded text-sm w-full sm:w-auto dark:bg-gray-800 dark:text-white"
+                >
+                  Sort by Amount {sortKey === 'total_amount' && (sortOrder === 'asc' ? '⬆️' : '⬇️')}
+                </button>
+              </div>
+            </div>
+          </div>
 
-        {/* Debts Table */}
-        <div ref={debtsRef} className="overflow-x-auto">
-          <table className="min-w-full text-sm border rounded-lg">
-            <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
-              <tr>
-                <th className="text-left px-4 py-2 border-b">Customer</th>
-                <th className="text-left px-4 py-2 border-b">Product</th>
-                <th className="text-left px-4 py-2 border-b">Supplier</th>
-                <th className="text-left px-4 py-2 border-b">Device ID</th>
-                <th className="text-left px-4 py-2 border-b">Qty</th>
-                <th className="text-left px-4 py-2 border-b">Owed</th>
-                <th className="text-left px-4 py-2 border-b">Deposited</th>
-                <th className="text-left px-4 py-2 border-b">Remaining Balance</th>
-                <th className="text-left px-4 py-2 border-b">Date</th>
-                <th className="text-left px-4 py-2 border-b">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDebts.map(d => (
-                <tr key={d.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
-                  <td className="px-4 py-2 border-b truncate">{d.customer_name}</td>
-                  <td className="px-4 py-2 border-b truncate">{d.product_name}</td>
-                  <td className="px-4 py-2 border-b truncate">{d.supplier || '-'}</td>
-                  <td className="px-4 py-2 border-b truncate">{d.device_id || '-'}</td>
-                  <td className="px-4 py-2 border-b">{d.qty}</td>
-                  <td className="px-4 py-2 border-b">₦{(d.owed || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2 border-b">₦{(d.deposited || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2 border-b">₦{(d.remaining_balance || 0).toFixed(2)}</td>
-                  <td className="px-4 py-2 border-b">{d.date}</td>
-                  <td className="px-4 py-2 border-b">
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => deleteDebt(d.id)}
-                        className=" text-red-400 hover:text-red-600 dark:bg-gray-900 dark:text-white"
-                      >
-                        <FaTrashAlt />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredDebts.length === 0 && (
+          {/* Sale Groups Table */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full border rounded-lg text-sm dark:bg-gray-900 dark:text-white">
+              <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
                 <tr>
-                  <td colSpan="10" className="text-center text-gray-500 py-4 dark:bg-gray-900 dark:text-white">
-                    No debts found.
-                  </td>
+                  <th className="text-left px-4 py-2 border-b">Sale Group ID</th>
+                  <th className="text-left px-4 py-2 border-b">Total Amount</th>
+                  <th className="text-left px-4 py-2 border-b">Payment Method</th>
+                  <th className="text-left px-4 py-2 border-b">Created At</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredSaleGroups.map(sg => (
+                  <tr
+                    key={sg.id}
+                    onClick={() => setSelectedSaleGroup(sg)}
+                    className={`cursor-pointer hover:bg-gray-100 dark:bg-gray-900 dark:text-white hover:bg-gray-100 ${
+                      selectedSaleGroup?.id === sg.id ? 'bg-gray-200' : ''
+                    }`}
+                  >
+                    <td className="px-4 py-2 border-b">#{sg.id}</td>
+                    <td className="px-4 py-2 border-b">₦{sg.total_amount.toFixed(2)}</td>
+                    <td className="px-4 py-2 border-b">{sg.payment_method}</td>
+                    <td className="px-4 py-2 border-b">{new Date(sg.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+                {filteredSaleGroups.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="text-center text-gray-500 py-4">
+                      No sale groups found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Receipts Section */}
+        <div ref={receiptsRef} className="space-y-4 p-0 dark:bg-gray-900 dark:text-white">
+          <h3 className="text-xl font-semibold">
+            Receipts {selectedSaleGroup ? `for Sale Group #${selectedSaleGroup.id}` : ''}
+          </h3>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm border rounded-lg">
+              <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
+                <tr>
+                  <th className="text-left px-4 py-2 border-b">Receipt ID</th>
+                  <th className="text-left px-4 py-2 border-b">Customer</th>
+                  <th className="text-left px-4 py-2 border-b">Phone</th>
+                  <th className="text-left px-4 py-2 border-b">Warranty</th>
+                  <th className="text-left px-4 py-2 border-b">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredReceipts.map(r => (
+                  <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
+                    <td className="px-4 py-2 border-b truncate">{r.receipt_id}</td>
+                    <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
+                    <td className="px-4 py-2 border-b truncate">{r.phone_number || '-'}</td>
+                    <td className="px-4 py-2 border-b truncate">{r.warranty || '-'}</td>
+                    <td className="px-4 py-2 border-b">
+                      <div className="flex gap-3">
+                        <button onClick={() => openEdit(r)} className="hover:text-indigo-600 dark:bg-gray-900 dark:text-white">
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await supabase.from("receipts").delete().eq("id", r.id);
+                            const { data } = await supabase
+                              .from("receipts")
+                              .select("*")
+                              .eq("sale_group_id", selectedSaleGroup.id);
+                            setReceipts(data);
+                          }}
+                          className="hover:text-red-600 dark:bg-gray-900 dark:text-white"
+                        >
+                          <FaTrashAlt />
+                        </button>
+                        <button onClick={() => handlePrint(r)} className="hover:text-green-600">
+                          <FaPrint />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredReceipts.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center text-gray-500 py-4 dark:bg-gray-900 dark:text-white">
+                      No receipts found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Add/Edit Debt Modal */}
+      {/* Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-auto mt-24">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6 dark:bg-gray-900 dark:text-white">
-            <h2 className="text-xl font-bold text-center">{editing.id ? 'Edit Debt' : 'Add Debt'}</h2>
+        <div className="print:hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-auto mt-24">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-full sm:max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6 dark:bg-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold text-center">Edit Receipt {editing.receipt_id}</h2>
 
-            {/* Debt Entries */}
-            {debtEntries.map((entry, index) => (
-              <div key={index} className="border p-4 rounded-lg space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold">Debt Entry {index + 1}</h3>
-                  {debtEntries.length > 1 && (
-                    <button
-                      onClick={() => removeDebtEntry(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  )}
+            {/* Receipt Fields */}
+            <div className="space-y-4">
+              {['customer_name', 'customer_address', 'phone_number', 'warranty'].map(field => (
+                <label key={field} className="block w-full">
+                  <span className="font-semibold capitalize block mb-1">
+                    {field.replace('_', ' ')}
+                  </span>
+                  <input
+                    name={field}
+                    value={form[field]}
+                    onChange={handleChange}
+                    className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
+                  />
+                </label>
+              ))}
+            </div>
+
+            {/* Style Controls in Modal */}
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="text-lg font-semibold">Customize Receipt Style</h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium mb-1">Header Background</label>
+                  <input
+                    type="color"
+                    value={headerBgColor}
+                    onChange={e => setHeaderBgColor(e.target.value)}
+                    className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Customer</span>
-                    <select
-                      name="customer_id"
-                      value={entry.customer_id}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                      required
-                    >
-                      <option value="">Select Customer</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.fullname} ({c.phone_number || 'No Phone'})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                <div>
+                  <label className="block font-medium mb-1">Header Text Color</label>
+                  <input
+                    type="color"
+                    value={headerTextColor}
+                    onChange={e => setHeaderTextColor(e.target.value)}
+                    className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
 
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Product</span>
-                    <select
-                      name="dynamic_product_id"
-                      value={entry.dynamic_product_id}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                      required
-                    >
-                      <option value="">Select Product</option>
-                      {products.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                <div>
+                  <label className="block font-medium mb-1">Header Font</label>
+                  <select
+                    value={headerFont}
+                    onChange={e => setHeaderFont(e.target.value)}
+                    className="border p-2 rounded w-full dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="font-sans">Sans</option>
+                    <option value="font-serif">Serif</option>
+                    <option value="font-mono">Mono</option>
+                  </select>
+                </div>
 
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Supplier</span>
-                    <input
-                      name="supplier"
-                      value={entry.supplier}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                    />
-                  </label>
+                <div>
+                  <label className="block font-medium mb-1">Body Font</label>
+                  <select
+                    value={bodyFont}
+                    onChange={e => setBodyFont(e.target.value)}
+                    className="border p-2 rounded w-full dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="font-sans">Sans</option>
+                    <option value="font-serif">Serif</option>
+                    <option value="font-mono">Mono</option>
+                  </select>
+                </div>
 
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Device ID</span>
-                    <input
-                      name="device_id"
-                      value={entry.device_id}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Quantity</span>
-                    <input
-                      type="number"
-                      name="qty"
-                      value={entry.qty}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                      required
-                      min="1"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Owed</span>
-                    <input
-                      type="number"
-                      name="owed"
-                      value={entry.owed}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                      required
-                      min="0"
-                      step="0.01"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Deposited</span>
-                    <input
-                      type="number"
-                      name="deposited"
-                      value={entry.deposited}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                      min="0"
-                      step="0.01"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="font-semibold block mb-1">Date</span>
-                    <input
-                      type="date"
-                      name="date"
-                      value={entry.date}
-                      onChange={e => handleDebtChange(index, e)}
-                      className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                      required
-                    />
-                  </label>
+                <div className="sm:col-span-2">
+                  <label className="block font-medium mb-1">Watermark Color</label>
+                  <input
+                    type="color"
+                    value={watermarkColor}
+                    onChange={e => setWatermarkColor(e.target.value)}
+                    className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
+                  />
                 </div>
               </div>
-            ))}
+            </div>
 
-            {!editing.id && (
-              <button
-                onClick={addDebtEntry}
-                className="px-4 py-2 bg-green-600 text-white rounded flex items-center gap-2"
-              >
-                <FaPlus /> Add Another Debt
-              </button>
-            )}
+            {/* Preview Header */}
+            <div className="mt-6 p-4 rounded" style={headerStyle}>
+              <h3 className={`${headerFont} text-lg font-semibold`}>{store?.shop_name}</h3>
+              <p className={`${headerFont} text-sm`}>{store?.business_address}</p>
+              <p className={`${headerFont} text-sm`}>Phone: {store?.phone_number}</p>
+            </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded">
-                Cancel
-              </button>
-              <button
-                onClick={saveDebts}
-                className="px-4 py-2 bg-indigo-600 text-white rounded"
-              >
-                {editing.id ? 'Save Debt' : 'Create Debt'}
+              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded">Cancel</button>
+              <button onClick={saveReceipt} className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center gap-1">
+                <FaDownload /> Save & Print
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Reminder Form Modal */}
-      {showReminderForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 space-y-4 dark:bg-gray-900 dark:text-white">
-            <h2 className="text-xl font-bold text-center">Set Debt Reminders</h2>
-            <div className="space-y-4">
-              <label className="block">
-                <span className="font-semibold block mb-1">Reminder Type</span>
-                <select
-                  value={reminderType}
-                  onChange={e => setReminderType(e.target.value)}
-                  className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                >
-                  <option value="one-time">One-Time</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="font-semibold block mb-1">Reminder Time</span>
-                <input
-                  type="time"
-                  value={reminderTime}
-                  onChange={e => setReminderTime(e.target.value)}
-                  className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                  required
-                />
-              </label>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowReminderForm(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={scheduleReminders}
-                className="px-4 py-2 bg-indigo-600 text-white rounded"
-              >
-                Set Reminder
-              </button>
-            </div>
+      {/* Printable Receipt */}
+      {editing && selectedSaleGroup && (
+        <div ref={printRef} className="printable-area relative bg-white p-6 mt-6 shadow-lg rounded overflow-x-auto">
+          {/* Watermark */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={watermarkStyle}>
+            <span className={`${bodyFont}`} style={{ opacity: 0.1 }}>{store?.shop_name}</span>
+          </div>
+
+          {/* Header */}
+          <div className={`p-4 rounded-t ${headerFont}`} style={headerStyle}>
+            <h1 className="text-2xl font-bold">{store?.shop_name}</h1>
+            <p className="text-sm">{store?.business_address}</p>
+            <p className="text-sm">Phone: {store?.phone_number}</p>
+          </div>
+
+          {/* Receipt Table */}
+          <table className={`w-full table-fixed border-collapse mb-4 ${bodyFont}`}>
+            <thead>
+              <tr>
+                <th className="border px-2 py-1 text-left">Product</th>
+                <th className="border px-2 py-1 text-left">Device ID</th>
+                <th className="border px-2 py-1 text-left">Quantity</th>
+                <th className="border px-2 py-1 text-left">Unit Price</th>
+                <th className="border px-2 py-1 text-left">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedSaleGroup.dynamic_sales?.map(sale => (
+                <tr key={sale.id}>
+                  <td className="border px-2 py-1">{sale.dynamic_product.name}</td>
+                  <td className="border px-2 py-1">{sale.device_id || '-'}</td>
+                  <td className="border px-2 py-1">{sale.quantity}</td>
+                  <td className="border px-2 py-1">₦{(sale.amount / sale.quantity).toFixed(2)}</td>
+                  <td className="border px-2 py-1">₦{sale.amount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan="4" className="border px-2 py-1 text-right font-bold">Total:</td>
+                <td className="border px-2 py-1 font-bold">₦{selectedSaleGroup.total_amount.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          {/* Additional Details */}
+          <div className="mt-4">
+            <p><strong>Receipt ID:</strong> {editing.receipt_id}</p>
+            <p><strong>Date:</strong> {new Date(selectedSaleGroup.created_at).toLocaleString()}</p>
+            <p><strong>Payment Method:</strong> {selectedSaleGroup.payment_method}</p>
+            <p><strong>Customer Name:</strong> {editing.customer_name || '-'}</p>
+            <p><strong>Address:</strong> {editing.customer_address || '-'}</p>
+            <p><strong>Phone:</strong> {editing.phone_number || '-'}</p>
+            <p><strong>Warranty:</strong> {editing.warranty || '-'}</p>
+          </div>
+
+          {/* Signatures */}
+          <div className="grid grid-cols-2 gap-8 p-4 mt-4">
+            <div className="border-t text-center pt-2">Manager Signature</div>
+            <div className="border-t text-center pt-2">Customer Signature</div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end space-x-3 mt-4 print:hidden">
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2"
+            >
+              <FaPrint /> Print
+            </button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -248,7 +248,7 @@ export default function DebtTracker() {
             name="device_id"
             value={newDebt.device_id}
             readOnly
-            placeholder="Device ID"
+            placeholder="Product ID"
             className="p-2 border rounded bg-gray-200 dark:bg-gray-900 text-gray-800 dark:text-white"
           />
 
@@ -300,7 +300,7 @@ export default function DebtTracker() {
               <th className="p-2 text-left">Customer</th>
               <th className="p-2 text-left">Product</th>
               <th className="p-2 text-left">Supplier</th>
-              <th className="p-2 text-left">Device ID</th>
+              <th className="p-2 text-left">Product ID</th>
               <th className="p-2 text-center">Qty</th>
               <th className="p-2 text-right">Owed</th>
               <th className="p-2 text-right">Deposited</th>
