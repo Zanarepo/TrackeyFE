@@ -17,7 +17,8 @@ import Test from '../UserDashboard/Test';
 import WhatsAppChatPopup from '../UserDashboard/WhatsAppChatPopup';
 import MyStores from '../Ops/MyStores'
 import Profile from '../UserDashboard/Profile'
-import Employees from '../UserDashboard/Employees'
+//import Employees from '../UserDashboard/Employees'
+import StoreOwnersEmployees from '../UserDashboard/StoreOwnersEmployees'
 import MultiSales from './MultiSales'
 import StoreNotications from './StoreNotications'
 
@@ -91,7 +92,7 @@ const Dashboard = () => {
       case 'Employees':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
-           <Employees/>
+           <StoreOwnersEmployees/>
           </div>
 
 
@@ -220,7 +221,7 @@ const Dashboard = () => {
 
                 <li 
                   onClick={() => handleNavClick('Employees')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Employees' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'StoreOwnersEmployees' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaIdBadge  className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Employees</span>

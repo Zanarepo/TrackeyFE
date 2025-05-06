@@ -60,13 +60,13 @@ export default function NotificationsTable() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-0">
+    <div className="max-w-4xl mx-auto p-0 dark:bg-gray-900 dark:text-white">
       <h2 className="text-2xl font-bold text-center mb-4">Notifications</h2>
 
       <div className="flex justify-end mb-4 space-x-2">
         <label className="self-center text-sm font-medium">Sort by:</label>
         <select
-          className="border border-gray-300 rounded px-2 py-1"
+          className="border border-gray-300 rounded px-2 py-1 dark:bg-gray-900 dark:text-white"
           value={sortOrder}
           onChange={e => setSortOrder(e.target.value)}
         >
@@ -80,7 +80,7 @@ export default function NotificationsTable() {
           <thead>
             <tr className="bg-gray-100">
               {['ID', 'Activity', 'Product Name', 'Amount', 'Qty', 'Time', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b border-gray-200">
+                <th key={h} className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b border-gray-200 dark:bg-gray-900 dark:text-indigo-600">
                   {h}
                 </th>
               ))}
@@ -95,8 +95,8 @@ export default function NotificationsTable() {
 
               
               return (
-                <tr key={n.id} className="hover:bg-gray-50 text-sm">
-                <td className="px-2 py-2 border-b border-gray-200 text-center">
+                <tr key={n.id} className="text-sm">
+                <td className="px-2 py-2 border-b border-gray-200 text-center ">
                   <span className="block truncate">{n.id}</span>
                 </td>
                 <td className="px-2 py-2 border-b border-gray-200 text-center">
@@ -147,15 +147,15 @@ export default function NotificationsTable() {
       </div>
 
       {viewDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">Details for #{viewDetails.id}</h3>
-            <div className="space-y-2 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 dark:bg-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold mb-4 ">Details for #{viewDetails.id}</h3>
+            <div className="space-y-2 mb-4 ">
               {(viewDetails.details ?? {}) &&
                 Object.entries(viewDetails.details ?? {}).map(([k, v]) => (
-                  <div key={k} className="flex justify-between text-sm">
-                    <span className="font-medium text-gray-700">{formatDetailKey(k)}</span>
-                    <span className="text-gray-900">{String(v)}</span>
+                  <div key={k} className="flex justify-between text-sm ">
+                    <span className="font-medium text-gray-700 dark:bg-gray-900 dark:text-white">{formatDetailKey(k)}</span>
+                    <span className="text-gray-900 dark:bg-gray-900 dark:text-white">{String(v)}</span>
                   </div>
                 ))}
               {(!viewDetails.details || Object.keys(viewDetails.details).length === 0) && (
