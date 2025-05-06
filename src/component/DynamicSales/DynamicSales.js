@@ -655,7 +655,7 @@ export default function SalesTracker() {
                           payment_method: s.payment_method,
                         });
                       }}
-                      className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                       title="Edit sale"
                     >
                       <FaEdit />

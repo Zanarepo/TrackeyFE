@@ -16,14 +16,21 @@ import Employees from './Employees';
 import Profile from './Profile';
 //import ShopOwner from './ShopOwner';
 import Variex from './Variex';
-import VDashboard from '../Ops/VDashboard';
-import SDashboard from '../Ops/SDashboard';
-import Simplex from './Simplex';
+//import VDashboard from '../Ops/VDashboard';
+import VsalesSummary from '../Ops/VsalesSummary'
+//import SDashboard from '../Ops/SDashboard';
+//import Simplex from './Simplex';
 import Test from './Test';
 import WhatsAppChatPopup from './WhatsAppChatPopup';
+import  Notifications from './Notifications'
+
+
+
+
+
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Variex');
+  const [activeTab, setActiveTab] = useState('Toolkits');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -37,30 +44,6 @@ const Dashboard = () => {
     switch (activeTab) {
      
 
-      case 'SDashboard':
-        return (
-          <div className="w-full bg-white dark:bg-gray-800  p-4">
-            <SDashboard />
-          </div>
-        );
-      
-
-      case 'Simplex':
-        return (
-          <div className="w-full bg-white dark:bg-gray-700 p-4">
-            <Simplex />
-          </div>
-        );
-      
-        case 'VDashboard':
-          return (
-            <div className="w-full bg-white dark:bg-gray-800  p-4">
-              <VDashboard/>
-            </div>
-  
-  
-          );
-          
           case 'Test':
             return (
               <div className="w-full bg-white dark:bg-gray-800  p-4">
@@ -70,15 +53,31 @@ const Dashboard = () => {
     
             );
 
+            case 'Notifications':
+              return (
+                <div className="w-full bg-white dark:bg-gray-800  p-4">
+                  <Notifications />
+                </div>
+      
+      
+              );
   
+case 'Sales Summary':
+         return (
+           <div className="w-full bg-white dark:bg-gray-800  p-4">
+            <VsalesSummary/>
+          </div>
+  
+  
+        );
+          
 
-
-
+           
 
 
    
 
-        case 'Variex':
+        case 'Toolkits':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
             <Variex />
@@ -144,52 +143,26 @@ const Dashboard = () => {
             </div>
             <nav className="mt-4">
               <ul className="space-y-2">
-  
-
-              <li 
-                  onClick={() => handleNavClick('Simplex')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Simplex' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Simplex</span>
-                </li>
-
-
-
-              
+         
                 
-           
-
+ 
 
                 <li 
-                  onClick={() => handleNavClick('Variex')}
+                  onClick={() => handleNavClick('Toolkits')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Variex' ? 'bg-indigo-200 dark:bg-indigo-600 text-white' : ''}`}
                 >
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Variex</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Toolkits</span>
                 </li>
 
+    
 
                 <li 
-                  onClick={() => handleNavClick('SDashboard')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'SDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Simplex Dashboard</span>
-                </li>
-
-
-
-
-
-           
-
-                <li 
-                  onClick={() => handleNavClick('VDashboard')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'VDashboard' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('Sales Summary')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Sales Summary' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Variex Dashboard</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Smart Dashboard</span>
 
               
                 </li>
@@ -205,7 +178,13 @@ const Dashboard = () => {
 
 
 
-                
+                <li 
+                  onClick={() => handleNavClick('Notifications')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Notifications' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Notifications</span>
+                </li>
 
              
 
@@ -278,3 +257,32 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
+
+
+
+      //case 'SDashboard':
+        //return (
+        //  <div className="w-full bg-white dark:bg-gray-800  p-4">
+         //   <SDashboard />
+        //  </div>
+       // );
+
+        //case 'VDashboard':
+         // return (
+          //  <div className="w-full bg-white dark:bg-gray-800  p-4">
+           //   <VDashboard/>
+          //  </div>
+  
+  
+        //  );
+          
+
+        
+
+
+ 
+       
+ 
+      

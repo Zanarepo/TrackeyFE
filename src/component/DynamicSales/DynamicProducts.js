@@ -40,7 +40,10 @@ export default function DynamicProducts() {
 
   // Fetch products
   const fetchProducts = useCallback(async () => {
-    if (!storeId) return;
+    if (!storeId) {
+      toast.error('No store ID found. Please log in.');
+      return;
+    }
     const { data, error } = await supabase
       .from('dynamic_product')
       .select('id, name, description, purchase_price, purchase_qty, selling_price, suppliers_name, device_id, created_at')
@@ -55,7 +58,9 @@ export default function DynamicProducts() {
     }
   }, [storeId]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   // Search filter
   useEffect(() => {
@@ -99,31 +104,60 @@ export default function DynamicProducts() {
       toast.error('Please add at least one product');
       return;
     }
-    const isValid = addForm.every(product => 
+    const isValid = addForm.every(product =>
       product.name && product.purchase_price && product.purchase_qty && product.selling_price
     );
     if (!isValid) {
       toast.error('Please fill all required fields for each product');
       return;
     }
-    const productsToInsert = addForm.map(product => ({ store_id: storeId, ...product }));
-    const { error } = await supabase.from('dynamic_product').insert(productsToInsert);
-    if (error) {
-      toast.error(`Failed to add products: ${error.message}`);
-    } else {
-      toast.success('Products added successfully');
-      setShowAdd(false);
-      setAddForm([{
-        name: '',
-        description: '',
-        purchase_price: '',
-        purchase_qty: '',
-        selling_price: '',
-        suppliers_name: '',
-        device_id: '',
-      }]);
-      fetchProducts();
+    const productsToInsert = addForm.map(product => ({
+      store_id: storeId,
+      name: product.name,
+      description: product.description,
+      purchase_price: parseFloat(product.purchase_price),
+      purchase_qty: parseInt(product.purchase_qty),
+      selling_price: parseFloat(product.selling_price),
+      suppliers_name: product.suppliers_name,
+      device_id: product.device_id
+    }));
+    const { data: insertedProducts, error: insertError } = await supabase
+      .from('dynamic_product')
+      .insert(productsToInsert)
+      .select();
+    if (insertError) {
+      toast.error(`Failed to add products: ${insertError.message}`);
+      return;
     }
+
+    // Update dynamic_inventory for each inserted product
+    const inventoryUpdates = insertedProducts.map(product => ({
+      dynamic_product_id: product.id,
+      store_id: storeId,
+      available_qty: parseInt(product.purchase_qty),
+      quantity_sold: 0,
+      last_updated: new Date().toISOString()
+    }));
+    const { error: inventoryError } = await supabase
+      .from('dynamic_inventory')
+      .upsert(inventoryUpdates, { onConflict: ['dynamic_product_id', 'store_id'] });
+    if (inventoryError) {
+      toast.error(`Failed to update inventory: ${inventoryError.message}`);
+      return;
+    }
+
+    toast.success('Products added successfully');
+    setShowAdd(false);
+    setAddForm([{
+      name: '',
+      description: '',
+      purchase_price: '',
+      purchase_qty: '',
+      selling_price: '',
+      suppliers_name: '',
+      device_id: '',
+    }]);
+    fetchProducts();
   };
 
   // Edit handlers
@@ -135,8 +169,8 @@ export default function DynamicProducts() {
       purchase_price: p.purchase_price,
       purchase_qty: p.purchase_qty,
       selling_price: p.selling_price,
-      suppliers_name: p.suppliers_name,
-      device_id: p.device_id,
+      suppliers_name: p.suppliers_name || '',
+      device_id: p.device_id || '',
     });
   };
 
@@ -150,25 +184,45 @@ export default function DynamicProducts() {
       toast.error('Please fill all required fields');
       return;
     }
-    const { error } = await supabase
+
+    // Update dynamic_product
+    const productUpdate = {
+      name: form.name,
+      description: form.description,
+      purchase_price: parseFloat(form.purchase_price),
+      purchase_qty: parseInt(form.purchase_qty),
+      selling_price: parseFloat(form.selling_price),
+      suppliers_name: form.suppliers_name,
+      device_id: form.device_id
+    };
+    const { error: productError } = await supabase
       .from('dynamic_product')
-      .update({ 
-        name: form.name,
-        description: form.description,
-        purchase_price: form.purchase_price,
-        purchase_qty: form.purchase_qty,
-        selling_price: form.selling_price,
-        suppliers_name: form.suppliers_name,
-        device_id: form.device_id
-      })
+      .update(productUpdate)
       .eq('id', editing.id);
-    if (error) {
-      toast.error(`Failed to update product: ${error.message}`);
-    } else {
-      toast.success('Product updated successfully');
-      setEditing(null);
-      fetchProducts();
+    if (productError) {
+      toast.error(`Failed to update product: ${productError.message}`);
+      return;
     }
+
+    // Update dynamic_inventory
+    const inventoryUpdate = {
+      dynamic_product_id: editing.id,
+      store_id: storeId,
+      available_qty: parseInt(form.purchase_qty),
+      quantity_sold: 0,
+      last_updated: new Date().toISOString()
+    };
+    const { error: inventoryError } = await supabase
+      .from('dynamic_inventory')
+      .upsert([inventoryUpdate], { onConflict: ['dynamic_product_id', 'store_id'] });
+    if (inventoryError) {
+      toast.error(`Failed to update inventory: ${inventoryError.message}`);
+      return;
+    }
+
+    toast.success('Product updated successfully');
+    setEditing(null);
+    fetchProducts();
   };
 
   const deleteProduct = async p => {
@@ -177,6 +231,12 @@ export default function DynamicProducts() {
       if (error) {
         toast.error(`Failed to delete product: ${error.message}`);
       } else {
+        // Clean up dynamic inventory
+        await supabase
+          .from('dynamic_inventory')
+          .delete()
+          .eq('dynamic_product_id', p.id)
+          .eq('store_id', storeId);
         toast.success('Product deleted successfully');
         fetchProducts();
       }
@@ -190,12 +250,12 @@ export default function DynamicProducts() {
     filtered.forEach(p => {
       const row = [
         p.name,
-        (p.description||'').replace(/,/g,' '),
+        (p.description || '').replace(/,/g, ' '),
         parseFloat(p.purchase_price).toFixed(2),
         p.purchase_qty,
         parseFloat(p.selling_price).toFixed(2),
-        p.suppliers_name,
-        p.device_id,
+        p.suppliers_name || '',
+        p.device_id || '',
         p.created_at
       ].join(',');
       csv += row + '\n';
@@ -213,9 +273,10 @@ export default function DynamicProducts() {
     import('jspdf').then(({ jsPDF }) => {
       const doc = new jsPDF();
       let y = 10;
-      doc.text('Dynamic Products', 10, y); y += 10;
+      doc.text('Dynamic Products', 10, y);
+      y += 10;
       filtered.forEach(p => {
-        const line = `Name: ${p.name}, Purchase: ${parseFloat(p.purchase_price).toFixed(2)}, Qty: ${p.purchase_qty}, Sell: ${parseFloat(p.selling_price).toFixed(2)}`;
+        const line = `Name: ${p.name}, Purchase: $${parseFloat(p.purchase_price).toFixed(2)}, Qty: ${p.purchase_qty}, Sell: $${parseFloat(p.selling_price).toFixed(2)}`;
         doc.text(line, 10, y);
         y += 10;
       });
@@ -225,7 +286,6 @@ export default function DynamicProducts() {
 
   return (
     <div className="p-0">
-      {/* Toast Container */}
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Search & Add */}
@@ -249,8 +309,8 @@ export default function DynamicProducts() {
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto pt-24">
           <div className="w-full max-w-3xl mx-auto">
-            <form 
-              onSubmit={createProducts} 
+            <form
+              onSubmit={createProducts}
               className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full dark:text-white"
             >
               <h2 className="text-2xl font-bold mb-6">Add Products</h2>
@@ -296,15 +356,15 @@ export default function DynamicProducts() {
                 Add Another Product
               </button>
               <div className="w-full flex justify-center gap-2 mt-6">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAdd(false)} 
+                <button
+                  type="button"
+                  onClick={() => setShowAdd(false)}
                   className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                 >
                   Add Products
@@ -320,7 +380,7 @@ export default function DynamicProducts() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-200 dark:bg-gray-700">
             <tr>
-              {['Name','Description','Purchase','Qty','Selling','Supplier','Product ID','Date','Actions'].map(h => (
+              {['Name', 'Description', 'Purchase', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Actions'].map(h => (
                 <th key={h} className="px-4 py-2 text-left text-sm font-semibold">{h}</th>
               ))}
             </tr>
@@ -331,14 +391,14 @@ export default function DynamicProducts() {
                 <td className="px-4 py-2 text-sm">{p.name}</td>
                 <td className="px-4 py-2 text-sm">{p.description}</td>
                 <td className="px-4 py-2 text-sm">
-                  {p.purchase_price != null 
-                    ? parseFloat(p.purchase_price).toFixed(2) 
+                  {p.purchase_price != null
+                    ? parseFloat(p.purchase_price).toFixed(2)
                     : ''}
                 </td>
                 <td className="px-4 py-2 text-sm">{p.purchase_qty}</td>
                 <td className="px-4 py-2 text-sm">
-                  {p.selling_price != null 
-                    ? parseFloat(p.selling_price).toFixed(2) 
+                  {p.selling_price != null
+                    ? parseFloat(p.selling_price).toFixed(2)
                     : ''}
                 </td>
                 <td className="px-4 py-2 text-sm">{p.suppliers_name}</td>
@@ -348,10 +408,10 @@ export default function DynamicProducts() {
                 </td>
                 <td className="px-4 py-2 flex gap-2">
                   <button onClick={() => startEdit(p)} className="text-indigo-600 hover:text-indigo-800">
-                    <FaEdit/>
+                    <FaEdit />
                   </button>
                   <button onClick={() => deleteProduct(p)} className="text-red-600 hover:text-red-800">
-                    <FaTrashAlt/>
+                    <FaTrashAlt />
                   </button>
                 </td>
               </tr>
@@ -362,27 +422,27 @@ export default function DynamicProducts() {
 
       {/* Pagination */}
       <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
-        <button 
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
-          disabled={currentPage === 1} 
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
           className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
         >
           Prev
         </button>
         {[...Array(totalPages)].map((_, i) => (
-          <button 
-            key={i} 
-            onClick={() => setCurrentPage(i + 1)} 
-            className={`px-3 py-1 rounded ${currentPage === i + 1 
-              ? 'bg-indigo-600 text-white' 
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i + 1)}
+            className={`px-3 py-1 rounded ${currentPage === i + 1
+              ? 'bg-indigo-600 text-white'
               : 'bg-gray-200 hover:bg-gray-300'}`}
           >
             {i + 1}
           </button>
         ))}
-        <button 
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
-          disabled={currentPage === totalPages} 
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
           className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
         >
           Next
@@ -391,8 +451,12 @@ export default function DynamicProducts() {
 
       {/* Exports */}
       <div className="flex justify-center gap-4 mt-4">
-        <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"><FaFileCsv/>CSV</button>
-        <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"><FaFilePdf/>PDF</button>
+        <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+          <FaFileCsv /> CSV
+        </button>
+        <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+          <FaFilePdf /> PDF
+        </button>
       </div>
 
       {/* Edit Modal */}
@@ -404,7 +468,7 @@ export default function DynamicProducts() {
               { name: 'name', label: 'Name' },
               { name: 'description', label: 'Description' },
               { name: 'purchase_price', label: 'Total Purchase Price' },
-              { name: 'purchase_qty', label: 'Quantity Purchased' },
+              { name: 'purchase_qty', label: 'Qty Purchased (Restock)' },
               { name: 'selling_price', label: 'Selling Price' },
               { name: 'suppliers_name', label: 'Supplier Name' },
               { name: 'device_id', label: 'Product ID' },
@@ -423,8 +487,12 @@ export default function DynamicProducts() {
               </div>
             ))}
             <div className="flex justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
-              <button onClick={saveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                Cancel
+              </button>
+              <button onClick={saveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                Save
+              </button>
             </div>
           </div>
         </div>

@@ -197,7 +197,7 @@ const StoreOwnerDashboard = () => {
               className={`p-2 border rounded mt-1 ${
                 isEditing ? 'bg-white' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'
               }`}
-              placeholder="Enter your shop name dark:bg-gray-800 dark:text-white"
+              placeholder="Enter your shop name"
             />
           </div>
 

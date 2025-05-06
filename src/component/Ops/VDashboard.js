@@ -1,35 +1,44 @@
 // Dashboard.jsx
 import React, { useState } from 'react';
 
-import { FaDollarSign, FaChartBar, FaArrowLeft } from 'react-icons/fa';
+import {  FaChartBar, FaArrowLeft } from 'react-icons/fa';
 import WhatsAppChatPopup from '../UserDashboard/WhatsAppChatPopup';
-import ExpenseSummary from '../UserDashboard/ExpenseSummary';
-import ProductCost from '../UserDashboard/ProductCost';
+//import ExpenseSummary from '../UserDashboard/ExpenseSummary';
+//import ProductCost from '../UserDashboard/ProductCost';
 import VsalesSummary from '../Ops/VsalesSummary';
+
 
 export default function Dashboard() {
   const [view, setView] = useState(null); // null | 'productCost' | 'salesMetrics'
 
   // Card definitions
   const cards = [
-    {
-      key: 'productCost',
-      label: 'Product Cost',
-      icon: <FaDollarSign className="text-4xl text-indigo-600" />,
-      component: <ProductCost />,
-    },
+
     {
       key: 'salesMetrics',
       label: 'Sales Metrics',
       icon: <FaChartBar className="text-4xl text-indigo-600" />,
       component: <VsalesSummary />,
     },
+
+  {/* 
+
+    {
+      key: 'productCost',
+      label: 'Product Cost',
+      icon: <FaDollarSign className="text-4xl text-indigo-600" />,
+      component: <ProductCost />,
+    },
+   
+  
     {
       key: 'expenseMetrics',
       label: 'Expense Metrics',
       icon: <FaChartBar className="text-4xl text-indigo-600" />,
       component: <ExpenseSummary />,
     },
+
+    */}
   ];
 
   // If a view is selected, show its content + back button

@@ -37,12 +37,14 @@ export default function Login() {
         case 'store_owner': // ⭐️ New role you asked for
         localStorage.setItem('owner_id', opt.ownerId);
         localStorage.setItem('role', 'store_owner');
+        
         navigate('/owner-dashboard');
         break;
 
       case 'team':
         localStorage.setItem('store_id', opt.storeId);
         localStorage.setItem('user_id', opt.userId);
+        
         localStorage.setItem('role', opt.role);
         navigate('/team-dashboard');
         break;
@@ -115,7 +117,7 @@ export default function Login() {
       owners.forEach((o) => {
         opts.push({
           type: 'owner',
-          label: `Store Owner: ${o.shop_name}`,
+          label: ` Single Store Dashboard : ${o.shop_name}`,
           storeId: o.id,
         });
       });
@@ -133,7 +135,7 @@ export default function Login() {
       storeOwnersData.forEach((so) => {
         opts.push({
           type: 'store_owner',
-          label: `Owner Dashboard (${so.full_name})`,
+          label: `Multi-Store Dashboard (${so.full_name})`,
           ownerId: so.id, // from store_owners table
         });
       });

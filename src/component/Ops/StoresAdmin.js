@@ -6,7 +6,7 @@ import {
   FaUser,
   FaBars,
   FaTimes,
-  //FaStore,
+  FaStore,
   
   FaIdBadge
   
@@ -18,6 +18,8 @@ import WhatsAppChatPopup from '../UserDashboard/WhatsAppChatPopup';
 import MyStores from '../Ops/MyStores'
 import Profile from '../UserDashboard/Profile'
 import Employees from '../UserDashboard/Employees'
+import MultiSales from './MultiSales'
+import StoreNotications from './StoreNotications'
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('MyStores');
@@ -42,10 +44,10 @@ const Dashboard = () => {
         );
       
 
-      case 'Simplex':
+      case 'Multi Sales':
         return (
           <div className="w-full bg-white dark:bg-gray-700 p-4">
-           
+           <MultiSales/>
           </div>
         );
       
@@ -94,20 +96,27 @@ const Dashboard = () => {
 
 
       );
+    
       case 'Profile':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
            <Profile/>
           </div>
-
-
-
-
-
-
-
-
         );
+
+
+
+ 
+        case 'Store Notifications':
+          return (
+            <div className="w-full bg-white dark:bg-gray-800 p-4">
+             <StoreNotications/>
+            </div>
+          );
+  
+  
+
+
       default:
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
@@ -164,7 +173,31 @@ const Dashboard = () => {
 
               
                 </li>
-                {/* 
+
+                <li 
+                  onClick={() => handleNavClick('Multi Sales')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Multi Sales' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200"> Sales Dashboard</span>
+
+              
+                </li>
+
+
+                <li 
+                  onClick={() => handleNavClick('Store Notifications')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'StoreNotications' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Notifications</span>
+
+              
+                </li>
+
+
+                
+                {/* */}
                 
                 <li 
                   onClick={() => handleNavClick('Test')}
@@ -173,7 +206,7 @@ const Dashboard = () => {
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">TESTING</span>
                 </li>
-*/}
+
 
 
                 

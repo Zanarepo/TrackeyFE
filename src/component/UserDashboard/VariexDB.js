@@ -1,23 +1,33 @@
 // DynamicDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+ 
 import {
   FaRegMoneyBillAlt,
   FaMoneyCheckAlt,
   FaBoxes,
   FaChartLine,
- // FaUsers,
+  //FaUsers,
   FaTasks,
   FaArrowLeft,
+  FaReceipt,
+  FaUndoAlt,
+  FaBoxOpen
+
+
 } from 'react-icons/fa';
 
 import DynamicInventory from '../DynamicSales/DynamicInventory';
 import DynamicProducts  from '../DynamicSales/DynamicProducts';
 import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
-import DebtTracker      from './DebtTracker';
+//import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
 //import Customers        from './Customers';
 import VariexFeature  from '../DynamicSales/VariexFeature';
+import Receipts from '../VariexContents/Receipts'
+import ReturnedItems from '../VariexContents/ReturnedItems'
+import DebtTracker from './DebtTracker'
+import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
 
 const tools = [
   {
@@ -36,26 +46,66 @@ const tools = [
   },
   {
     key: 'inventory',
-    label: 'Inventory Manager',
+    label: 'Manage Inventory (Stocks)',
     icon: <FaTasks className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track stock levels.',
     component: <DynamicInventory />,
   },
+
+  {
+    key: 'receipts',
+    label: 'Sales Receipts',
+    icon: <FaReceipt className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Monitor store expenses.',
+    component: <Receipts />,
+  },
+
+
+  {
+    key: 'returns',
+    label: ' Returned Items Tracker',
+    icon: < FaUndoAlt className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Track returned items from customers.',
+    component: <ReturnedItems/>,
+  },
+
+
   {
     key: 'expenses',
-    label: 'Expense Manager',
+    label: 'Expenses Tracker',
     icon: <FaRegMoneyBillAlt className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Monitor store expenses.',
     component: <ExpenseTracker />,
   },
+
   {
-    key: 'debts',
-    label: 'Debt Manager',
-    icon: <FaMoneyCheckAlt className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Track customer debts.',
-    component: <DebtTracker />,
+    key: 'unpaid supplies',
+    label: 'Unpaid Supplies',
+    icon: <FaBoxOpen className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Track unpaid supplies.',
+    component: <Unpaidsupplies />,
   },
 
+
+  {
+    key: 'debts',
+    label: 'Debtors',
+    icon: <FaMoneyCheckAlt className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Track debtors.',
+    component: <DebtTracker/>,
+  },
+
+
+{/*
+  {
+    key: 'customers',
+    label: 'Customer Manager',
+    icon: <FaUsers className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Manage your customers.',
+    component: <Customers />,
+  },
+
+ */}
 
 ];
 
@@ -81,7 +131,7 @@ export default function DynamicDashboard() {
   const tool = tools.find(t => t.key === activeTool);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 p-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-0">
   
       <header className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white">

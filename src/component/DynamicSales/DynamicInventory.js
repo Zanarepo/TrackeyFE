@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Edit2, Trash2, Save, X, RefreshCw, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Trash2, Save, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export default function InventoryManager() {
@@ -21,7 +21,7 @@ export default function InventoryManager() {
   const pageSize = 5;
 
   // Restock/edit state
-  const [restockQty, setRestockQty] = useState({});
+  //const [] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [editQty, setEditQty] = useState(0);
 
@@ -227,48 +227,7 @@ export default function InventoryManager() {
     });
 
   // --- HANDLERS ---
-  async function handleRestock(id) {
-    const qty = parseInt(restockQty[id] || '0', 10);
-    if (qty <= 0) {
-      toast.error('Restock quantity must be positive', { position: 'top-right' });
-      return;
-    }
-    const item = inventory.find(i => i.id === id);
-    const newAvail = item.available_qty + qty;
 
-    console.log(`Restocking item ${id}: Adding ${qty} to ${item.available_qty} -> ${newAvail}`);
-
-    const { error } = await supabase
-      .from('dynamic_inventory')
-      .update({ available_qty: newAvail, updated_at: new Date() })
-      .eq('id', id);
-    if (error) {
-      toast.error(`Restock error: ${error.message}`, { position: 'top-right' });
-      console.error('Restock error:', error);
-    } else {
-      const productName = item.dynamic_product?.name || 'Unknown';
-      toast.success(`Restocked ${qty} units of ${productName}`, { position: 'top-right' });
-      setHistory(prev => [
-        {
-          id: historyIdCounter,
-          action: 'restock',
-          product_name: productName,
-          quantity: qty,
-          timestamp: new Date().toISOString()
-        },
-        ...prev.slice(0, 9)
-      ]);
-      setHistoryIdCounter(prev => prev + 1);
-      setRestockQty({ ...restockQty, [id]: '' });
-      await fetchInventory(storeId); // Ensure immediate refresh
-      console.log(`Restock completed for ${productName}: New quantity ${newAvail}`);
-    }
-  }
-
-  function startEdit(item) {
-    setEditingId(item.id);
-    setEditQty(item.available_qty);
-  }
 
   function cancelEdit() {
     setEditingId(null);
@@ -452,7 +411,7 @@ export default function InventoryManager() {
         <table className="min-w-full table-auto border-collapse">
           <thead className="bg-gray-200 text-indigo-500 dark:bg-gray-700 dark:text-indigo-400">
             <tr>
-              {['ID', 'Item', 'Avail.', 'Sold', 'Restock', 'Actions'].map((h, i) => (
+              {['ID', 'Item', 'Avail.', 'Sold', 'Actions'].map((h, i) => (
                 <th key={i} className="p-2 text-left whitespace-nowrap">
                   {h}
                 </th>
@@ -483,24 +442,7 @@ export default function InventoryManager() {
                   )}
                 </td>
                 <td className="p-2 whitespace-nowrap">{item.quantity_sold}</td>
-                <td className="p-2 whitespace-nowrap">
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min="0"
-                      value={restockQty[item.id] || ''}
-                      onChange={e => setRestockQty({ ...restockQty, [item.id]: e.target.value })}
-                      className="border p-1 rounded w-16 dark:bg-gray-800 dark:text-white dark:border-gray-600"
-                      placeholder="Qty"
-                    />
-                    <button
-                      onClick={() => handleRestock(item.id)}
-                      className="p-1 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-                    >
-                      <RefreshCw size={14} />
-                    </button>
-                  </div>
-                </td>
+               
                 <td className="p-2 whitespace-nowrap">
                   <div className="flex gap-2">
                     {editingId === item.id ? (
@@ -520,12 +462,7 @@ export default function InventoryManager() {
                       </>
                     ) : (
                       <>
-                        <button
-                          onClick={() => startEdit(item)}
-                          className="p-1 bg-yellow-400 text-white rounded hover:bg-yellow-500"
-                        >
-                          <Edit2 size={14} />
-                        </button>
+                       
                         <button
                           onClick={() => handleDelete(item.id)}
                           className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
