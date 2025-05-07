@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from "../../supabaseClient";
-import {  FaTrashAlt, FaPlus, FaBell } from 'react-icons/fa';
+import { FaTrashAlt, FaPlus, FaBell } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DynamicDebtRepayment from './DynamicDebtRepayment'
@@ -58,12 +58,13 @@ export default function DebtsManager() {
       });
   }, [storeId]);
 
-  // Fetch customers
+  // Fetch customers for the current store
   useEffect(() => {
     if (!storeId) return;
     supabase
       .from('customer')
       .select('id, fullname, phone_number')
+      .eq('store_id', storeId) // Restrict customers to the current store
       .then(({ data, error }) => {
         if (error) {
           setError("Failed to fetch customers: " + error.message);
@@ -253,8 +254,6 @@ export default function DebtsManager() {
     if (debtEntries.length === 1) return;
     setDebtEntries(debtEntries.filter((_, i) => i !== index));
   };
- 
-  
 
   const saveDebts = async () => {
     let hasError = false;
@@ -430,16 +429,9 @@ export default function DebtsManager() {
                   <td className="px-4 py-2 border-b">{d.date}</td>
                   <td className="px-4 py-2 border-b">
                     <div className="flex gap-3">
-                      
-                       {/* 
-                      
-                      
-                      <button onClick={() => openEdit(d)} className="hover:text-indigo-600 dark:bg-gray-900 dark:text-white">
-                        <FaEdit />
-                      </button>*/}
                       <button
                         onClick={() => deleteDebt(d.id)}
-                        className=" text-red-400 hover:text-red-600 dark:bg-gray-900 dark:text-white"
+                        className="text-red-400 hover:text-red-600 dark:bg-gray-900 dark:text-white"
                       >
                         <FaTrashAlt />
                       </button>

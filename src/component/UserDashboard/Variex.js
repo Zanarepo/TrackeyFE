@@ -12,7 +12,8 @@ import {
   FaArrowLeft,
   FaReceipt,
   FaUndoAlt,
-  FaBoxOpen
+  FaBoxOpen,
+  FaSearch
 
 
 } from 'react-icons/fa';
@@ -28,6 +29,8 @@ import Receipts from '../VariexContents/Receipts'
 import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
 import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
+import Suppliers from '../Ops/Suppliers'
+
 
 const tools = [
   {
@@ -37,6 +40,10 @@ const tools = [
     desc: 'Analyze your sales performance.',
     component: <DynamicSales />,
   },
+
+
+
+
   {
     key: 'products',
     label: 'Products & Pricing',
@@ -96,6 +103,18 @@ const tools = [
   },
 
 
+  {
+    key: 'Suppliers',
+    label: 'Product Search',
+    icon: <FaSearch className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Track product & suppliers.',
+    component: <Suppliers/>,
+  },
+
+
+
+
+  
 
   {
     key: 'customers',

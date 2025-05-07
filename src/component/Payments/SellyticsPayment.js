@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { PaystackButton } from 'react-paystack'; // Paystack button component
-import { supabase } from '../../supabaseClient'; // Supabase client
+import { PaystackButton } from 'react-paystack';
+import { supabase } from '../../supabaseClient';
 
 const PaymentComponent = () => {
   const location = useLocation();
-  const { plan } = location.state || {}; // Get plan data passed from SubscriptionPlans component
+  const { plan } = location.state || {};
   const [storeId, setStoreId] = useState('');
   const [userId, setUserId] = useState('');
+  const [ownerId, setOwnerId] = useState(''); // NEW
   const [userEmail, setUserEmail] = useState('');
   const [storeEmail, setStoreEmail] = useState('');
   const [paymentReady, setPaymentReady] = useState(false);
@@ -15,17 +16,18 @@ const PaymentComponent = () => {
   useEffect(() => {
     const storedStoreId = localStorage.getItem('store_id');
     const storedUserId = localStorage.getItem('user_id');
+    const storedOwnerId = localStorage.getItem('owner_id'); // NEW
 
     if (storedStoreId || storedUserId) {
       setStoreId(storedStoreId);
       setUserId(storedUserId);
+      setOwnerId(storedOwnerId); // NEW
       fetchEmails(storedUserId, storedStoreId);
     } else {
       console.error('Missing store_id or user_id');
     }
   }, []);
 
-  // Fetch user/store email for payment processing
   const fetchEmails = async (user_id, store_id) => {
     try {
       if (user_id) {
@@ -54,14 +56,14 @@ const PaymentComponent = () => {
     }
   };
 
-  // Paystack configuration
   const paystackConfig = {
-    email: userEmail || storeEmail, // Use user email or store email
-    amount: plan?.price * 100, // Paystack expects amount in kobo (cents), so we multiply by 100
-    publicKey: process.env.REACT_APP_PAYSTACK_PUBLIC_KEY, // Public key from Paystack
+    email: userEmail || storeEmail,
+    amount: plan?.price * 100,
+    publicKey: process.env.REACT_APP_PAYSTACK_PUBLIC_KEY,
     metadata: {
       store_id: storeId,
       user_id: userId,
+      owner_id: ownerId, // NEW
       plan_id: plan?.id,
     },
   };

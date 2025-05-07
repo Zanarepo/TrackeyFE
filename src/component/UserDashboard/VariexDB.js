@@ -12,7 +12,8 @@ import {
   FaArrowLeft,
   FaReceipt,
   FaUndoAlt,
-  FaBoxOpen
+  FaBoxOpen,
+  FaSearch
 
 
 } from 'react-icons/fa';
@@ -23,11 +24,12 @@ import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
 //import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
 //import Customers        from './Customers';
-import VariexFeature  from '../DynamicSales/VariexFeature';
+//import VariexFeature  from '../DynamicSales/VariexFeature';
 import Receipts from '../VariexContents/Receipts'
 import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
 import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
+import Suppliers from '../Ops/Suppliers'
 
 const tools = [
   {
@@ -87,6 +89,20 @@ const tools = [
   },
 
 
+
+  {
+    key: 'Product Search',
+    label: 'Product Search',
+    icon: <FaSearch className="text-5xl sm:text-6xl text-indigo-600" />,
+    desc: 'Track Products and Suppliers.',
+    component: <Suppliers />,
+  },
+
+  
+
+
+
+
   {
     key: 'debts',
     label: 'Debtors',
@@ -95,17 +111,6 @@ const tools = [
     component: <DebtTracker/>,
   },
 
-
-{/*
-  {
-    key: 'customers',
-    label: 'Customer Manager',
-    icon: <FaUsers className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Manage your customers.',
-    component: <Customers />,
-  },
-
- */}
 
 ];
 
@@ -140,7 +145,7 @@ export default function DynamicDashboard() {
 
             
 <div className="mb-6">
-      <VariexFeature />
+   
       </div>
       
         {!activeTool && (

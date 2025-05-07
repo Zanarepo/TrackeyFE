@@ -162,7 +162,7 @@ case 'Sales Summary':
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Sales Summary' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Smart Dashboard</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Sales Dashboard</span>
 
               
                 </li>

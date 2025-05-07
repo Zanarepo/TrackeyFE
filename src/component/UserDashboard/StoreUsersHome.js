@@ -7,6 +7,8 @@ import {
   FaUser,
   FaBars,
   FaTimes,
+  FaConciergeBell,
+  FaBell,
   //FaConciergeBell,
   FaIdBadge
 } from 'react-icons/fa';
@@ -24,6 +26,8 @@ import Colleagues from './Colleagues';
 import SDashboard from '../Ops/SDashboard';
 import SimplexDb from './SimplexDb';
 import StoresSalesSummary from '../Ops/StoresSalesSummary'
+import Notifications from './Notifications'
+
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Toolkits');
@@ -112,6 +116,23 @@ const Dashboard = () => {
               </div>
             );
 
+
+            case 'Notifications':
+            return (
+              <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+                <Notifications/>
+              </div>
+            );
+
+
+            
+
+
+
+
+
+
+
       default:
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
@@ -150,38 +171,17 @@ const Dashboard = () => {
 
                 
                 
-                {/* 
- 
-                <li 
-                  onClick={() => handleNavClick('SimplexDb')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'SimplexDb' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Simplex</span>
-                </li>
-*/}
-
+             
                 <li 
                   onClick={() => handleNavClick('Toolkits')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Toolkits' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Toolkits</span>
                 </li>
 
-
                 
-              {/*
-                <li 
-                  onClick={() => handleNavClick('SDashboard')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'SDashboard' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
-                >
-                  <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Simplex Dashboard</span>
-                </li>
-                
- */} 
-
+          
                 <li 
                   onClick={() => handleNavClick('Sales Summary')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Sales Summary' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
@@ -190,7 +190,13 @@ const Dashboard = () => {
                   <span className="text-indigo-800 dark:text-indigo-200">Sales Dashboard</span>
                 </li>
                 
-               
+               <li 
+                  onClick={() => handleNavClick('Notifications')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${activeTab === 'Notifications' ? 'bg-gray-400 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Notifications</span>
+                </li>
 
 
 

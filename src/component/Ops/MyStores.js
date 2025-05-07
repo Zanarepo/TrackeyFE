@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import PricingFeatures from '../Payments/PricingFeatures'
 import {
   FaStore,
   FaHome,
@@ -24,6 +25,7 @@ export default function OwnerDashboard() {
   const [ownerName, setOwnerName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showPricing, setShowPricing] = useState(false);
 
   // UI state
   const [darkMode, setDarkMode] = useState(
@@ -205,17 +207,19 @@ export default function OwnerDashboard() {
       </div>
 
       {/* ─── EMPTY STATE ─────────────────────────────────── */}
-      {sorted.length === 0 && (
-        <div className="text-center text-gray-600 dark:text-gray-400 py-20">
-          <p className="mb-4">You don’t have any stores yet.</p>
-          <button
-            onClick={() => navigate('/add-store')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            Add Your First Store
-          </button>
-        </div>
-      )}
+      {sorted.length === 0 && !showPricing && (
+  <div className="text-center text-gray-600 dark:text-gray-400 py-20">
+    <p className="mb-4">This is a premium feature. Upgrade to access store management.</p>
+    <button
+      onClick={() => setShowPricing(true)}
+      className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+    >
+      Upgrade to Premium
+    </button>
+  </div>
+)}
+
+{showPricing && <PricingFeatures />}
 
       {/* ─── STORES GRID ─────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

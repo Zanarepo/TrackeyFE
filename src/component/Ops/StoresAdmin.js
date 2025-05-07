@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { 
 
   FaMoneyBillWave,
-
+  FaBell ,
   FaUser,
   FaBars,
   FaTimes,
   FaStore,
-  
-  FaIdBadge
+  //FaBoxOpen,
+  FaChartLine,
+  FaTasks,
+  FaIdBadge,
+  FaCrown ,
   
 } from 'react-icons/fa';
 
@@ -20,7 +23,10 @@ import Profile from '../UserDashboard/Profile'
 //import Employees from '../UserDashboard/Employees'
 import StoreOwnersEmployees from '../UserDashboard/StoreOwnersEmployees'
 import MultiSales from './MultiSales'
+import MultiInventory from './MultiInventory'
 import StoreNotications from './StoreNotications'
+import MultiDebt from './MultiDebt'
+import PricingFeatures from '../Payments/PricingFeatures'
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('MyStores');
@@ -52,6 +58,23 @@ const Dashboard = () => {
           </div>
         );
       
+
+        case 'Multi Inventory':
+          return (
+            <div className="w-full bg-white dark:bg-gray-700 p-4">
+             <MultiInventory/>
+            </div>
+          );
+
+        
+          case 'Multi Debts':
+            return (
+              <div className="w-full bg-white dark:bg-gray-700 p-4">
+               <MultiDebt/>
+              </div>
+            );
+
+        
         case 'VDashboard':
           return (
             <div className="w-full bg-white dark:bg-gray-800  p-4">
@@ -72,7 +95,17 @@ const Dashboard = () => {
 
   
 
-
+            case 'Upgrade':
+              return (
+                <div className="w-full bg-white dark:bg-gray-800  p-4">
+                  <PricingFeatures />
+                </div>
+      
+      
+              );
+  
+    
+  
 
 
 
@@ -169,7 +202,7 @@ const Dashboard = () => {
                   onClick={() => handleNavClick('MyStores')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'MyStores' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaStore  className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200"> Stores Dashboard</span>
 
               
@@ -179,24 +212,68 @@ const Dashboard = () => {
                   onClick={() => handleNavClick('Multi Sales')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Multi Sales' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaChartLine className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200"> Sales Dashboard</span>
 
               
                 </li>
 
+                <li 
+                  onClick={() => handleNavClick('Multi Inventory')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Multi Inventory' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaTasks className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200"> Inventory Dashboard</span>
 
+              
+                </li>
+
+
+
+
+                <li 
+                  onClick={() => handleNavClick('Multi Debts')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Multi Debts' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaMoneyBillWave  className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200"> Debtors Dashboard</span>
+
+              
+                </li>
+
+
+                
+
+
+
+
+
+
+
+                
                 <li 
                   onClick={() => handleNavClick('Store Notifications')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'StoreNotications' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
-                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <FaBell  className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Notifications</span>
 
               
                 </li>
 
 
+
+                <li 
+                  onClick={() => handleNavClick('Upgrade')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Upgrade' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaCrown   className="text-yellow-800 dark:text-yellow-800 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Upgrade</span>
+
+              
+                </li>
+
+                
                 
                 {/* */}
                 

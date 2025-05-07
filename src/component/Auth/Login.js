@@ -1,4 +1,3 @@
-// Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -24,47 +23,54 @@ export default function Login() {
   };
 
   // Called when user picks which dashboard to enter
-  const pickAccess = (opt) => {
-    localStorage.clear();
+  const pickAccess = (opt, allAccess) => {
+    // Log allAccess for debugging
+    console.log('allAccess:', allAccess);
+
+    // Store all access IDs in user_access
+    const userAccess = {
+      store_ids: allAccess
+        .filter(a => a.storeId)
+        .map(a => a.storeId),
+      owner_id: allAccess.find(a => a.ownerId)?.ownerId || null,
+      user_ids: allAccess
+        .filter(a => a.userId)
+        .map(a => a.userId),
+      admin_id: allAccess.find(a => a.adminId)?.adminId || null,
+      role: opt.role || opt.type,
+      screenclipExtensionId: opt.screenclipExtensionId || null
+    };
+
+    localStorage.setItem('user_access', JSON.stringify(userAccess));
+
+    // Set individual keys for backward compatibility
+    // Prioritize opt.storeId for owner role, fallback to first storeId from allAccess
+    const storeId = opt.storeId || allAccess.find(a => a.storeId)?.storeId || '3'; // Default to 3 if no storeId found
+    const ownerId = allAccess.find(a => a.ownerId)?.ownerId || '1'; // Ensure owner_id is always set
+
+    localStorage.setItem('store_id', storeId);
+    localStorage.setItem('owner_id', ownerId);
+
+    // Log the set values for debugging
+    console.log('Set localStorage:', { store_id: storeId, owner_id: ownerId, user_access: userAccess });
+
+    // Navigate to the selected dashboard
     switch (opt.type) {
-    
       case 'owner':
-        localStorage.setItem('store_id', opt.storeId);
-        localStorage.setItem('role', 'owner');
         navigate('/dashboard');
         break;
-
-        case 'store_owner': // ⭐️ New role you asked for
-        localStorage.setItem('owner_id', opt.ownerId);
-        localStorage.setItem('role', 'store_owner');
-        
+      case 'store_owner':
         navigate('/owner-dashboard');
         break;
-
       case 'team':
-        localStorage.setItem('store_id', opt.storeId);
-        localStorage.setItem('user_id', opt.userId);
-        
-        localStorage.setItem('role', opt.role);
         navigate('/team-dashboard');
         break;
-
       case 'admin':
       case 'superadmin':
-        localStorage.setItem('admin_id', opt.adminId);
-        localStorage.setItem('role', opt.role);
         navigate('/admin-dashboard');
         break;
       default:
         break;
-        
-      
-
-
-
-
-
-        
     }
   };
 
@@ -97,15 +103,14 @@ export default function Login() {
         .eq('email', email)
         .eq('password', hashed);
 
-
-        const { data: storeOwnersData = [], error: storeOwnerErr } = await supabase
-  .from('store_owners')
-  .select('id, full_name')
-  .eq('email', email); 
-
+      // 4) Fetch store owners (multi-store)
+      const { data: storeOwnersData = [], error: storeOwnerErr } = await supabase
+        .from('store_owners')
+        .select('id, full_name')
+        .eq('email', email);
 
       if (ownerErr || teamErr || adminErr || storeOwnerErr) {
-        console.error(ownerErr, teamErr, adminErr, storeOwnersData);
+        console.error(ownerErr, teamErr, adminErr, storeOwnerErr);
         setError('An error occurred. Please try again.');
         setLoading(false);
         return;
@@ -117,8 +122,10 @@ export default function Login() {
       owners.forEach((o) => {
         opts.push({
           type: 'owner',
-          label: ` Single Store Dashboard : ${o.shop_name}`,
+          label: `Single Store Dashboard: ${o.shop_name}`,
           storeId: o.id,
+          role: 'owner',
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
         });
       });
 
@@ -129,6 +136,7 @@ export default function Login() {
           storeId: u.store_id,
           userId: u.id,
           role: u.role,
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
         });
       });
 
@@ -136,7 +144,9 @@ export default function Login() {
         opts.push({
           type: 'store_owner',
           label: `Multi-Store Dashboard (${so.full_name})`,
-          ownerId: so.id, // from store_owners table
+          ownerId: so.id,
+          role: 'store_owner',
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
         });
       });
 
@@ -146,14 +156,18 @@ export default function Login() {
           label: `${a.role.charAt(0).toUpperCase() + a.role.slice(1)} Panel`,
           adminId: a.id,
           role: a.role,
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
         });
       });
+
+      // Log opts for debugging
+      console.log('Access Options:', opts);
 
       if (opts.length === 0) {
         setError('Invalid credentials or no access.');
       } else if (opts.length === 1) {
         // Only one access, go straight there
-        pickAccess(opts[0]);
+        pickAccess(opts[0], opts);
       } else {
         // Multiple accesses: show selection UI
         setAccessOptions(opts);
@@ -177,7 +191,7 @@ export default function Login() {
           {accessOptions.map((opt, i) => (
             <button
               key={i}
-              onClick={() => pickAccess(opt)}
+              onClick={() => pickAccess(opt, accessOptions)}
               className="block w-full mb-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
             >
               {opt.label}
@@ -230,8 +244,8 @@ export default function Login() {
             </div>
           </div>
 
-            {/* Forgot Password Link */}
-            <div className="text-right">
+          {/* Forgot Password Link */}
+          <div className="text-right">
             <Link to="/forgot-password" className="text-sm text-indigo-600 hover:underline">
               Forgot password?
             </Link>

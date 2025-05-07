@@ -23,7 +23,7 @@ const features = {
     '✅ Everything in Free Plan',
     '✅ Sales analytics',
     '✅ Full sales history & reports',
-    '✅ Staff training materials',
+    '✅ Staff Onboarding',
     '✅ Priority customer support',
     '✅ Receipts printing',
     '✅ Single-Store Team Collaboration',
@@ -89,7 +89,7 @@ const SubscriptionPlansComponent = () => {
   
   return (
     
-    <div className="p-14 max-w-7xl mx-auto grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    <div className="p-2 max-w-7xl mx-auto grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         
       {plans.map((plan) => {
         const planKey = plan.name?.toLowerCase().trim();
