@@ -47,6 +47,8 @@ import SalesTracker from './component/UserDashboard/SalesTracker'
 import StoresAdmin from './component/Ops/StoresAdmin'
 import Profile from './component/UserDashboard/Profile'
 import SellyticsPayment from './component/Payments/SellyticsPayment'
+import PremiumHomepage from './component/Premiums/PremiumHomepage'
+import PushNotifications from "./component/Premiums/PushNotifications";
 
 
 
@@ -81,7 +83,8 @@ const App = () => {
             
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/team-signup" element={<TeamSignup/>} />
-            
+            <Route path="/push-notifications" element={< PushNotifications/>} />
+           
 
             {/* premium routes duplicates */}
             
@@ -111,6 +114,9 @@ const App = () => {
           <Route path="/owner-dashboard" element={<StoresAdmin />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/payment" element={<SellyticsPayment />} />
+          <Route path="/premiumdashboard" element={<PremiumHomepage />} />
+          <Route path="/push-notifications" element={< PushNotifications/>} />
+           
 
 
 
@@ -151,6 +157,8 @@ const App = () => {
               <Route path="/owner-dashboard" element={<StoresAdmin />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/payment" element={<SellyticsPayment />} />
+              <Route path="/premiumdashboard" element={<PremiumHomepage />} />
+          
 
             </Route>
           </Routes>

@@ -5,7 +5,7 @@ import PricingFeatures from '../Payments/PricingFeatures'
 import {
   FaStore,
   FaHome,
-  FaArrowRight,
+  FaArrowDown,
 } from 'react-icons/fa';
 import {
   Sun,
@@ -177,11 +177,12 @@ export default function OwnerDashboard() {
 
       {/* ─── WELCOME ──────────────────────────────────────── */}
       <section className="text-center mb-8">
-        <h2 className="text-xl">
-          Welcome, <span className="font-semibold">{ownerName}</span>!
+        <h2 className="text-3xl">
+          Welcome, <span className=" text-3xl font-semibold text-indigo-800">{ownerName}</span>!
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Click a card to manage that store’s dashboard <FaArrowRight className="inline" />
+          Click a card to manage that store’s dashboard <br/>
+          <FaArrowDown className="inline text-indigo-600" />
         </p>
       </section>
 
