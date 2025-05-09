@@ -156,7 +156,7 @@ const App = () => {
               <Route path="/salestrack" element={<SalesTracker />} />
               <Route path="/owner-dashboard" element={<StoresAdmin />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/payment" element={<SellyticsPayment />} />
+            
               <Route path="/premiumdashboard" element={<PremiumHomepage />} />
           
 
