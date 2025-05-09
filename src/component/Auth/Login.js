@@ -1,8 +1,35 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useNavigate, Link } from 'react-router-dom';
+import { FaEye, FaEyeSlash, FaStore, FaUsers, FaUserShield, FaUserCog } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
-import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, staggerChildren: 0.2 } },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, type: 'spring', stiffness: 100 } },
+};
+
+const formVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
+
+const buttonVariants = {
+  rest: { scale: 1 },
+  hover: { scale: 1.1, transition: { type: 'spring', stiffness: 300 } },
+};
+
+const errorVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -10,10 +37,9 @@ export default function Login() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [accessOptions, setAccessOptions] = useState(null);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
-  // SHA-256 → hex
   const hashPwd = async (plain) => {
     const buf = new TextEncoder().encode(plain);
     const hash = await crypto.subtle.digest('SHA-256', buf);
@@ -22,39 +48,48 @@ export default function Login() {
       .join('');
   };
 
-  // Called when user picks which dashboard to enter
-  const pickAccess = (opt, allAccess) => {
-    // Log allAccess for debugging
-    console.log('allAccess:', allAccess);
+  const validateForm = () => {
+    const newErrors = {};
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Please enter a valid email address.';
+    }
+    if (!password || password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    // Store all access IDs in user_access
+  const pickAccess = (opt, allAccess) => {
     const userAccess = {
-      store_ids: allAccess
-        .filter(a => a.storeId)
-        .map(a => a.storeId),
-      owner_id: allAccess.find(a => a.ownerId)?.ownerId || null,
-      user_ids: allAccess
-        .filter(a => a.userId)
-        .map(a => a.userId),
-      admin_id: allAccess.find(a => a.adminId)?.adminId || null,
+      store_ids: allAccess.filter((a) => a.storeId).map((a) => a.storeId),
+      owner_id: allAccess.find((a) => a.ownerId)?.ownerId || null,
+      user_ids: allAccess.filter((a) => a.userId).map((a) => a.userId),
+      admin_id: allAccess.find((a) => a.adminId)?.adminId || null,
       role: opt.role || opt.type,
-      screenclipExtensionId: opt.screenclipExtensionId || null
+      screenclipExtensionId: opt.screenclipExtensionId || null,
     };
 
     localStorage.setItem('user_access', JSON.stringify(userAccess));
 
-    // Set individual keys for backward compatibility
-    // Prioritize opt.storeId for owner role, fallback to first storeId from allAccess
-    const storeId = opt.storeId || allAccess.find(a => a.storeId)?.storeId || '3'; // Default to 3 if no storeId found
-    const ownerId = allAccess.find(a => a.ownerId)?.ownerId || '1'; // Ensure owner_id is always set
+    const storeId = opt.storeId || allAccess.find((a) => a.storeId)?.storeId || '3';
+    const ownerId = allAccess.find((a) => a.ownerId)?.ownerId || '1';
 
     localStorage.setItem('store_id', storeId);
     localStorage.setItem('owner_id', ownerId);
 
-    // Log the set values for debugging
     console.log('Set localStorage:', { store_id: storeId, owner_id: ownerId, user_access: userAccess });
 
-    // Navigate to the selected dashboard
+    toast.success(`Accessing ${opt.label}...`, {
+      position: 'top-right',
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: 'colored',
+    });
+
     switch (opt.type) {
       case 'owner':
         navigate('/dashboard');
@@ -76,34 +111,41 @@ export default function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form.', {
+        position: 'top-right',
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: 'colored',
+      });
+      return;
+    }
 
+    setLoading(true);
     try {
       const hashed = await hashPwd(password);
 
-      // 1) Fetch store owners
       const { data: owners = [], error: ownerErr } = await supabase
         .from('stores')
         .select('id, shop_name')
         .eq('email_address', email)
         .eq('password', hashed);
 
-      // 2) Fetch team members + store name via foreign select
       const { data: teamData = [], error: teamErr } = await supabase
         .from('store_users')
         .select('id, role, store_id, stores(id, shop_name)')
         .eq('email_address', email)
         .eq('password', hashed);
 
-      // 3) Fetch admins
       const { data: adminData = [], error: adminErr } = await supabase
         .from('admins')
         .select('id, role')
         .eq('email', email)
         .eq('password', hashed);
 
-      // 4) Fetch store owners (multi-store)
       const { data: storeOwnersData = [], error: storeOwnerErr } = await supabase
         .from('store_owners')
         .select('id, full_name')
@@ -111,12 +153,19 @@ export default function Login() {
 
       if (ownerErr || teamErr || adminErr || storeOwnerErr) {
         console.error(ownerErr, teamErr, adminErr, storeOwnerErr);
-        setError('An error occurred. Please try again.');
+        toast.error('An error occurred. Please try again.', {
+          position: 'top-right',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          theme: 'colored',
+        });
         setLoading(false);
         return;
       }
 
-      // Build all possible accesses
       const opts = [];
 
       owners.forEach((o) => {
@@ -125,7 +174,8 @@ export default function Login() {
           label: `Single Store Dashboard: ${o.shop_name}`,
           storeId: o.id,
           role: 'owner',
-          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
+          icon: <FaStore />,
         });
       });
 
@@ -136,7 +186,8 @@ export default function Login() {
           storeId: u.store_id,
           userId: u.id,
           role: u.role,
-          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
+          icon: <FaUsers />,
         });
       });
 
@@ -146,7 +197,8 @@ export default function Login() {
           label: `Multi-Store Dashboard (${so.full_name})`,
           ownerId: so.id,
           role: 'store_owner',
-          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
+          icon: <FaUserShield />,
         });
       });
 
@@ -156,110 +208,297 @@ export default function Login() {
           label: `${a.role.charAt(0).toUpperCase() + a.role.slice(1)} Panel`,
           adminId: a.id,
           role: a.role,
-          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp'
+          screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
+          icon: <FaUserCog />,
         });
       });
 
-      // Log opts for debugging
       console.log('Access Options:', opts);
 
       if (opts.length === 0) {
-        setError('Invalid credentials or no access.');
+        toast.error('Invalid credentials or no access.', {
+          position: 'top-right',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          theme: 'colored',
+        });
       } else if (opts.length === 1) {
-        // Only one access, go straight there
         pickAccess(opts[0], opts);
       } else {
-        // Multiple accesses: show selection UI
         setAccessOptions(opts);
       }
     } catch (e) {
       console.error(e);
-      setError('Unexpected error. Please try again.');
+      toast.error('Unexpected error. Please try again.', {
+        position: 'top-right',
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        theme: 'colored',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Selection UI if multiple accesses
   if (accessOptions) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-        <div className="bg-white p-6 rounded shadow max-w-md w-full text-center">
-          <h2 className="text-xl font-semibold text-indigo-800 mb-4">
-            Choose Your Dashboard
-          </h2>
-          {accessOptions.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => pickAccess(opt, accessOptions)}
-              className="block w-full mb-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+      <motion.section
+        className="py-20 md:py-24 px-6 bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden"
+        initial="hidden"
+        animate="visible"
+        variants={sectionVariants}
+        role="dialog"
+        aria-labelledby="dashboard-selection-title"
+      >
+        {/* Wavy Top Border */}
+        <svg className="absolute top-0 w-full" viewBox="0 0 1440 100" preserveAspectRatio="none">
+          <path
+            d="M0,0 C280,100 720,0 1440,100 L1440,0 Z"
+            fill="url(#gradient)"
+            className="dark:fill-gray-800"
+          />
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{ stopColor: '#e0e7ff', stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: '#c7d2fe', stopOpacity: 1 }} />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        {/* Wavy Bottom Border */}
+        <svg className="absolute bottom-0 w-full" viewBox="0 0 1440 100" preserveAspectRatio="none">
+          <path
+            d="M0,100 C280,0 720,100 1440,0 L1440,100 Z"
+            fill="url(#gradient)"
+            className="dark:fill-gray-800"
+          />
+        </svg>
+
+        <div className="container mx-auto max-w-md relative z-10">
+          <motion.div
+            className="bg-white/70 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-8 shadow-lg hover:shadow-xl hover:shadow-indigo-500/20 transition-all duration-300 border-l-4 border-transparent hover:border-indigo-500 dark:hover:border-indigo-300"
+            variants={cardVariants}
+            whileHover={{ scale: 1.05, y: -10 }}
+          >
+            <motion.h2
+              id="dashboard-selection-title"
+              className="text-2xl md:text-3xl font-extrabold text-center text-indigo-900 dark:text-white mb-6 font-sans relative before:absolute before:bottom-[-8px] before:left-1/2 before:-translate-x-1/2 before:w-24 before:h-1 before:bg-gradient-to-r before:from-indigo-500 before:to-indigo-700"
+              variants={sectionVariants}
             >
-              {opt.label}
-            </button>
-          ))}
+              Select Your Dashboard
+            </motion.h2>
+            <motion.div
+              className="space-y-4"
+              variants={formVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {accessOptions.map((opt, i) => (
+                <motion.button
+                  key={i}
+                  onClick={() => pickAccess(opt, accessOptions)}
+                  className="flex items-center w-full px-4 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 text-white rounded-xl hover:shadow-indigo-500/30 transition-all duration-300"
+                  variants={buttonVariants}
+                  initial="rest"
+                  whileHover="hover"
+                  aria-label={`Access ${opt.label}`}
+                >
+                  <span className="mr-3 text-indigo-200">{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </motion.button>
+              ))}
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+          toastClassName="bg-white/70 dark:bg-gray-800/80 backdrop-blur-md text-indigo-900 dark:text-white rounded-xl shadow-lg"
+          progressClassName="bg-indigo-500"
+        />
+      </motion.section>
     );
   }
 
-  // Default: Login form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white p-6 rounded shadow max-w-md w-full"
-      >
-        <h1 className="text-2xl font-bold text-indigo-800 mb-6 text-center">
-          Sign In
-        </h1>
-        {error && <div className="mb-4 text-red-600 text-center">{error}</div>}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-indigo-800 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-indigo-800 mb-1">Password</label>
-            <div className="relative">
-              <input
-                type={showPwd ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full p-2 border rounded"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd((s) => !s)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600"
-              >
-                {showPwd ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-          </div>
+    <motion.section
+      className="py-20 md:py-24 px-6 bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden"
+      initial="hidden"
+      animate="visible"
+      variants={sectionVariants}
+      role="region"
+      aria-labelledby="login-form-title"
+    >
+      {/* Wavy Top Border */}
+      <svg className="absolute top-0 w-full" viewBox="0 0 1440 100" preserveAspectRatio="none">
+        <path
+          d="M0,0 C280,100 720,0 1440,100 L1440,0 Z"
+          fill="url(#gradient)"
+          className="dark:fill-gray-800"
+        />
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style={{ stopColor: '#e0e7ff', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#c7d2fe', stopOpacity: 1 }} />
+          </linearGradient>
+        </defs>
+      </svg>
 
-          {/* Forgot Password Link */}
-          <div className="text-right">
-            <Link to="/forgot-password" className="text-sm text-indigo-600 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
+      {/* Wavy Bottom Border */}
+      <svg className="absolute bottom-0 w-full" viewBox="0 0 1440 100" preserveAspectRatio="none">
+        <path
+          d="M0,100 C280,0 720,100 1440,0 L1440,100 Z"
+          fill="url(#gradient)"
+          className="dark:fill-gray-800"
+        />
+      </svg>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-50"
+      <div className="container mx-auto max-w-md relative z-10">
+        <motion.div
+          className="bg-white/70 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-8 shadow-lg hover:shadow-xl hover:shadow-indigo-500/20 transition-all duration-300 border-l-4 border-transparent hover:border-indigo-500 dark:hover:border-indigo-300"
+          variants={cardVariants}
+          whileHover={{ scale: 1.05, y: -10 }}
+        >
+          <motion.h1
+            id="login-form-title"
+            className="text-3xl md:text-4xl font-extrabold text-center text-indigo-900 dark:text-white mb-8 font-sans relative before:absolute before:bottom-[-8px] before:left-1/2 before:-translate-x-1/2 before:w-24 before:h-1 before:bg-gradient-to-r before:from-indigo-500 before:to-indigo-700"
+            variants={sectionVariants}
           >
-            {loading ? 'Logging in…' : 'Login'}
-          </button>
-        </div>
-      </form>
-    </div>
+            Welcome Back to Sellytics
+          </motion.h1>
+          <motion.form
+            onSubmit={handleLogin}
+            className="space-y-6"
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            role="form"
+            aria-labelledby="login-form-title"
+          >
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email address"
+                className="w-full py-3 px-4 rounded-xl border-gray-300 dark:border-gray-600 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-base dark:bg-gray-800 dark:text-white transition-all duration-200"
+                required
+                aria-label="Email Address input"
+                aria-describedby={errors.email ? 'email-error' : undefined}
+              />
+              {errors.email && (
+                <motion.p
+                  id="email-error"
+                  className="mt-1 text-sm text-red-600 dark:text-red-400"
+                  variants={errorVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {errors.email}
+                </motion.p>
+              )}
+            </div>
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full py-3 px-4 rounded-xl border-gray-300 dark:border-gray-600 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-base dark:bg-gray-800 dark:text-white transition-all duration-200"
+                  required
+                  aria-label="Password input"
+                  aria-describedby={errors.password ? 'password-error' : undefined}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((s) => !s)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
+                  aria-label="Toggle Password Visibility"
+                >
+                  {showPwd ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+                </button>
+              </div>
+              {errors.password && (
+                <motion.p
+                  id="password-error"
+                  className="mt-1 text-sm text-red-600 dark:text-red-400"
+                  variants={errorVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {errors.password}
+                </motion.p>
+              )}
+            </div>
+            <div className="text-right">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-indigo-500 hover:bg-gradient-to-r hover:from-indigo-500 hover:to-indigo-600 hover:text-white hover:px-2 hover:py-1 hover:rounded-md transition-all duration-200"
+                aria-label="Forgot Password"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <motion.button
+              type="submit"
+              disabled={loading}
+              className={`w-full bg-gradient-to-r from-indigo-500 to-indigo-600 dark:from-indigo-600 dark:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl hover:shadow-indigo-500/30 transition-all duration-300 ${
+                loading ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
+              variants={buttonVariants}
+              initial="rest"
+              whileHover="hover"
+              aria-label="Login"
+              aria-disabled={loading}
+            >
+              {loading ? 'Logging in…' : 'Login'}
+            </motion.button>
+          </motion.form>
+        </motion.div>
+      </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+        toastClassName="bg-white/70 dark:bg-gray-800/80 backdrop-blur-md text-indigo-900 dark:text-white rounded-xl shadow-lg"
+        progressClassName="bg-indigo-500"
+      />
+    </motion.section>
   );
 }

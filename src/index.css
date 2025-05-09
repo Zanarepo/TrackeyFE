@@ -12,6 +12,9 @@ code {
     monospace;
 }
 
+html {
+  scroll-behavior: smooth;
+}
 
 /* Add this to your styles in `src/index.css` */
 @tailwind base;
