@@ -136,7 +136,7 @@ const PaymentComponent = () => {
 
           {paymentReady && plan ? (
             <motion.div
-              className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-md text-center"
+              className="bg-white dark:bg-gray-900 rounded-xl p-6  text-center"
               variants={textVariants}
             >
               <h3 className="text-xl md:text-2xl font-semibold text-indigo-800 dark:text-indigo-200 mb-3">
