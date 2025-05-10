@@ -8,22 +8,28 @@ export default function WhatsAppChatPopup() {
   const message = encodeURIComponent('Welcome to Sellytics');
   const whatsappUrl = `https://wa.me/${phone}?text=${message}`;
 
-  // Auto-display welcome message on page load
+  // Auto-display welcome message with a 3-second delay on page load
   useEffect(() => {
-    setShowAutoMessage(true);
-    // Clear the auto message after 10 seconds
-    const timer = setTimeout(() => {
-      setShowAutoMessage(false);
-    }, 10000);
+    const messageTimer = setTimeout(() => {
+      setShowAutoMessage(true);
+    }, 10000); // 3-second delay
 
-    // Cleanup timer on component unmount
-    return () => clearTimeout(timer);
+    // Clear the auto-message after 10 seconds
+    const clearTimer = setTimeout(() => {
+      setShowAutoMessage(false);
+    }, 16000); // 3-second delay + 10-second display
+
+    // Cleanup timers on component unmount
+    return () => {
+      clearTimeout(messageTimer);
+      clearTimeout(clearTimer);
+    };
   }, []);
 
   return (
     <>
       {/* CTA text above the chat icon */}
-      <div className="fixed bottom-20 right-4 text-sm text-gray-800 z-50">
+      <div className="fixed bottom-20 right-4 text-sm text-indigo-800 z-50">
         Talk to us
       </div>
 

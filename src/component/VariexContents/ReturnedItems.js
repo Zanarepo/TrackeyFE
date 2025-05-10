@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from "../../supabaseClient";
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+
+const tooltipVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function ReturnsByDeviceIdManager() {
   const storeId = localStorage.getItem("store_id");
@@ -23,8 +29,37 @@ export default function ReturnsByDeviceIdManager() {
     returned_date: ""
   });
   const [error, setError] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
   const returnsRef = useRef();
+
+  // Onboarding steps
+  const onboardingSteps = [
+    {
+      target: '.device-id-query',
+      content: 'Search for receipts by device ID to start a return.',
+    },
+    {
+      target: '.add-return',
+      content: 'Add a new return after finding a matching receipt.',
+    },
+    {
+      target: '.search-returns',
+      content: 'Search existing returns by customer, product, or status.',
+    },
+   
+  ];
+
+  // Check if onboarding has been completed
+  useEffect(() => {
+    if (!localStorage.getItem('returnsManagerOnboardingCompleted')) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 3000); // 3-second delay
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Fetch store details
   useEffect(() => {
@@ -130,6 +165,32 @@ export default function ReturnsByDeviceIdManager() {
       returnsRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [returns]);
+
+  // Onboarding handlers
+  const handleNextStep = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      setShowOnboarding(false);
+      localStorage.setItem('returnsManagerOnboardingCompleted', 'true');
+    }
+  };
+
+  const handleSkipOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('returnsManagerOnboardingCompleted', 'true');
+  };
+
+  // Tooltip positioning
+  const getTooltipPosition = (target) => {
+    const element = document.querySelector(target);
+    if (!element) return { top: 0, left: 0 };
+    const rect = element.getBoundingClientRect();
+    return {
+      top: rect.bottom + window.scrollY + 10,
+      left: rect.left + window.scrollX,
+    };
+  };
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -291,7 +352,7 @@ export default function ReturnsByDeviceIdManager() {
             value={deviceIdQuery}
             onChange={e => setDeviceIdQuery(e.target.value)}
             placeholder="Enter Device ID to search receipts"
-            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
+            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white device-id-query"
           />
         </div>
 
@@ -332,7 +393,7 @@ export default function ReturnsByDeviceIdManager() {
         <div className="mb-4">
           <button
             onClick={() => setEditing({})}
-            className={`px-4 py-2 rounded text-white ${queriedReceipts.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600'}`}
+            className={`px-4 py-2 rounded text-white add-return ${queriedReceipts.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600'}`}
             disabled={queriedReceipts.length === 0}
           >
             Add Return
@@ -346,7 +407,7 @@ export default function ReturnsByDeviceIdManager() {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search returns..."
-            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
+            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white search-returns"
           />
         </div>
 
@@ -367,7 +428,7 @@ export default function ReturnsByDeviceIdManager() {
               </tr>
             </thead>
             <tbody>
-              {filteredReturns.map(r => (
+              {filteredReturns.map((r, index) => (
                 <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
                   <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
                   <td className="px-4 py-2 border-b truncate">{r.product_name}</td>
@@ -379,7 +440,7 @@ export default function ReturnsByDeviceIdManager() {
                   <td className="px-4 py-2 border-b">{r.returned_date}</td>
                   <td className="px-4 py-2 border-b">
                     <div className="flex gap-3">
-                      <button onClick={() => openEdit(r)} className="hover:text-indigo-600 dark:bg-gray-900 dark:text-white">
+                      <button onClick={() => openEdit(r)} className={`hover:text-indigo-600 dark:bg-gray-900 dark:text-white edit-return-${index}`}>
                         <FaEdit />
                       </button>
                       <button
@@ -511,6 +572,45 @@ export default function ReturnsByDeviceIdManager() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Onboarding Tooltip */}
+      {showOnboarding && onboardingStep < onboardingSteps.length && (
+      <motion.div
+  className="fixed z-[9999] bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 w-[90vw] max-w-sm sm:max-w-xs overflow-auto"
+  style={{
+    ...getTooltipPosition(onboardingSteps[onboardingStep].target),
+    maxHeight: '90vh',
+  }}
+  variants={tooltipVariants}
+  initial="hidden"
+  animate="visible"
+>
+  <p className="text-sm text-white dark:text-gray-300 mb-2">
+    {onboardingSteps[onboardingStep].content}
+  </p>
+  <div className="flex justify-between items-center flex-wrap gap-y-2">
+    <span className="text-sm text-gray-200">
+      Step {onboardingStep + 1} of {onboardingSteps.length}
+    </span>
+    
+    <div className="space-x-2">
+      <button
+        onClick={handleSkipOnboarding}
+        className="text-sm text-gray-300 hover:text-gray-800 dark:text-gray-300"
+      >
+        Skip
+      </button>
+      <button
+        onClick={handleNextStep}
+        className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
+      >
+        {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
+      </button>
+    </div>
+  </div>
+</motion.div>
+
       )}
     </div>
   );

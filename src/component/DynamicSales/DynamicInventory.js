@@ -1,31 +1,59 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Trash2, Save, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Trash2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { motion } from 'framer-motion';
+
+const tooltipVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function InventoryManager() {
   const [storeId, setStoreId] = useState(null);
   const [storeName, setStoreName] = useState('');
   const [dynamicProducts, setDynamicProducts] = useState([]);
   const [inventory, setInventory] = useState([]);
-  const [history, setHistory] = useState([]); // State for action history
-  const [historyIdCounter, setHistoryIdCounter] = useState(1); // Counter for int IDs
-  const [showLowStock, setShowLowStock] = useState(false); // Toggle low stock table
-  const [lowStockThreshold, setLowStockThreshold] = useState(5); // Low stock threshold
-  const [lowStockSort, setLowStockSort] = useState('quantity'); // Sort by quantity or name
-
-  // Search & pagination
+  const [history, setHistory] = useState([]);
+  const [historyIdCounter, setHistoryIdCounter] = useState(1);
+  const [showLowStock, setShowLowStock] = useState(false);
+  const [lowStockThreshold, setLowStockThreshold] = useState(5);
+  const [lowStockSort, setLowStockSort] = useState('quantity');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredInv, setFilteredInv] = useState([]);
   const [page, setPage] = useState(0);
   const pageSize = 5;
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
-  // Restock/edit state
-  //const [] = useState({});
-  const [editingId, setEditingId] = useState(null);
-  const [editQty, setEditQty] = useState(0);
+  // Onboarding steps
+  const onboardingSteps = [
+    {
+      target: '.search-input',
+      content: 'Search by product name to filter inventory items.',
+    },
+    {
+      target: '.low-stock-toggle',
+      content: 'Toggle to view items with low stock levels.',
+    },
+    {
+      target: inventory.length > 0 ? '.delete-button-0' : '.search-input',
+      content: inventory.length > 0 ? 'Click to remove an item from inventory.' : 'Add products to start managing your inventory!',
+    },
+    
+  ];
 
-  // --- INITIAL LOAD ---
+  // Check if onboarding has been completed
+  useEffect(() => {
+    if (!localStorage.getItem('inventoryManagerOnboardingCompleted')) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 3000); // 3-second delay
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // INITIAL LOAD
   useEffect(() => {
     const sid = parseInt(localStorage.getItem('store_id'));
     if (!sid) {
@@ -47,12 +75,12 @@ export default function InventoryManager() {
     fetchDynamicProducts(sid);
   }, []);
 
-  // --- FETCH INVENTORY WHEN STORE ID SET ---
+  // FETCH INVENTORY WHEN STORE ID SET
   useEffect(() => {
     if (storeId) fetchInventory(storeId);
   }, [storeId]);
 
-  // --- SEED NEW PRODUCTS INTO INVENTORY ---
+  // SEED NEW PRODUCTS INTO INVENTORY
   useEffect(() => {
     if (!storeId || dynamicProducts.length === 0) return;
 
@@ -83,7 +111,7 @@ export default function InventoryManager() {
     })();
   }, [dynamicProducts, storeId, inventory]);
 
-  // --- REAL-TIME SYNC: PRODUCT INSERT/UPDATE ---
+  // REAL-TIME SYNC: PRODUCT INSERT/UPDATE
   useEffect(() => {
     if (!storeId) return;
     const chan = supabase
@@ -131,7 +159,6 @@ export default function InventoryManager() {
         { event: 'UPDATE', schema: 'public', table: 'dynamic_product', filter: `store_id=eq.${storeId}` },
         async ({ new: p }) => {
           console.log('Real-time UPDATE received:', p);
-          // Only update if purchase_qty changed significantly
           const { data: existing } = await supabase
             .from('dynamic_inventory')
             .select('available_qty')
@@ -163,7 +190,7 @@ export default function InventoryManager() {
     };
   }, [storeId, historyIdCounter]);
 
-  // --- FETCHERS ---
+  // FETCHERS
   async function fetchDynamicProducts(sid) {
     const { data, error } = await supabase
       .from('dynamic_product')
@@ -202,7 +229,7 @@ export default function InventoryManager() {
     console.log('Fetched inventory:', data);
   }
 
-  // --- SEARCH & PAGINATION ---
+  // SEARCH & PAGINATION
   useEffect(() => {
     const q = searchTerm.toLowerCase();
     const results = !q
@@ -216,7 +243,7 @@ export default function InventoryManager() {
     setPage(0);
   }, [inventory, searchTerm]);
 
-  // --- LOW STOCK ITEMS ---
+  // LOW STOCK ITEMS
   const lowStockItems = inventory
     .filter(item => item.available_qty <= lowStockThreshold)
     .sort((a, b) => {
@@ -226,54 +253,7 @@ export default function InventoryManager() {
       return (a.dynamic_product?.name || '').localeCompare(b.dynamic_product?.name || '');
     });
 
-  // --- HANDLERS ---
-
-
-  function cancelEdit() {
-    setEditingId(null);
-  }
-
-  async function saveEdit(id) {
-    const qty = parseInt(editQty, 10);
-    if (qty < 0) {
-      toast.error('Quantity cannot be negative', { position: 'top-right' });
-      return;
-    }
-    const item = inventory.find(i => i.id === id);
-    const oldQty = item.available_qty;
-    const qtyChange = qty - oldQty;
-
-    console.log(`Editing item ${id}: Changing from ${oldQty} to ${qty}`);
-
-    const { error } = await supabase
-      .from('dynamic_inventory')
-      .update({ available_qty: qty, updated_at: new Date() })
-      .eq('id', id);
-    if (error) {
-      toast.error(`Save error: ${error.message}`, { position: 'top-right' });
-      console.error('Edit error:', error);
-    } else {
-      const productName = item.dynamic_product?.name || 'Unknown';
-      toast.success(`Updated ${productName} to ${qty} units`, { position: 'top-right' });
-      if (qtyChange !== 0) {
-        setHistory(prev => [
-          {
-            id: historyIdCounter,
-            action: 'edit',
-            product_name: productName,
-            quantity: qtyChange,
-            timestamp: new Date().toISOString()
-          },
-          ...prev.slice(0, 9)
-        ]);
-        setHistoryIdCounter(prev => prev + 1);
-      }
-      setEditingId(null);
-      await fetchInventory(storeId);
-      console.log(`Edit completed for ${productName}: New quantity ${qty}`);
-    }
-  }
-
+  // HANDLERS
   async function handleDelete(id) {
     const item = inventory.find(i => i.id === id);
     const productName = item.dynamic_product?.name || 'Unknown';
@@ -305,6 +285,32 @@ export default function InventoryManager() {
     }
   }
 
+  // Onboarding handlers
+  const handleNextStep = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      setShowOnboarding(false);
+      localStorage.setItem('inventoryManagerOnboardingCompleted', 'true');
+    }
+  };
+
+  const handleSkipOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('inventoryManagerOnboardingCompleted', 'true');
+  };
+
+  // Tooltip positioning
+  const getTooltipPosition = (target) => {
+    const element = document.querySelector(target);
+    if (!element) return { top: 0, left: 0 };
+    const rect = element.getBoundingClientRect();
+    return {
+      top: rect.bottom + window.scrollY + 10,
+      left: rect.left + window.scrollX,
+    };
+  };
+
   if (!storeId) return <div className="p-4">Loading…</div>;
 
   const start = page * pageSize;
@@ -315,67 +321,56 @@ export default function InventoryManager() {
     <div className="p-0 space-y-6">
       <h1 className="text-2xl font-bold text-center">{storeName} Inventory</h1>
 
-    {/* Search and Low Stock Controls */}
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-  {/* Search Input */}
-  <input
-    type="text"
-    placeholder="Search by product…"
-    value={searchTerm}
-    onChange={e => setSearchTerm(e.target.value)}
-    className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600"
-  />
+      {/* Search and Low Stock Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Search Input */}
+        <input
+          type="text"
+          placeholder="Search by product…"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 search-input"
+        />
 
-  {/* Controls Section */}
-  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-    {/* Threshold Input */}
-    <input
-      type="number"
-      min="0"
-      value={lowStockThreshold}
-      onChange={e => setLowStockThreshold(parseInt(e.target.value) || 5)}
-      className="p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 w-full sm:w-24"
-      placeholder="Threshold"
-    />
+        {/* Controls Section */}
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {/* Threshold Input */}
+          <input
+            type="number"
+            min="0"
+            value={lowStockThreshold}
+            onChange={e => setLowStockThreshold(parseInt(e.target.value) || 5)}
+            className="p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 w-full sm:w-24"
+            placeholder="Threshold"
+          />
 
-    {/* Sort Dropdown */}
-    <select
-      value={lowStockSort}
-      onChange={e => setLowStockSort(e.target.value)}
-      className="p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 w-full sm:w-auto"
-    >
-      <option value="quantity">Sort by Quantity</option>
-      <option value="name">Sort by Name</option>
-    </select>
+          {/* Sort Dropdown */}
+          <select
+            value={lowStockSort}
+            onChange={e => setLowStockSort(e.target.value)}
+            className="p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 w-full sm:w-auto"
+          >
+            <option value="quantity">Sort by Quantity</option>
+            <option value="name">Sort by Name</option>
+          </select>
 
-
-
-
-
-
-
-    {/* Toggle Button */}
-    <button
-      onClick={() => setShowLowStock(!showLowStock)}
-      disabled={lowStockItems.length === 0}
-      className={`flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors duration-200 w-full sm:w-auto
-        ${lowStockItems.length === 0
-          ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-          : 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none'}
-      `}
-    >
-      {showLowStock ? <EyeOff size={18} /> : <Eye size={18} />}
-      {lowStockItems.length === 0
-        ? 'No Low Stock'
-        : `${showLowStock ? '' : ''} Low Stock (${lowStockItems.length})`}
-    </button>
-  </div>
-
-
-
-
-</div>
-
+          {/* Toggle Button */}
+          <button
+            onClick={() => setShowLowStock(!showLowStock)}
+            disabled={lowStockItems.length === 0}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors duration-200 w-full sm:w-auto low-stock-toggle
+              ${lowStockItems.length === 0
+                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 focus:outline-none'}
+            `}
+          >
+            {showLowStock ? <EyeOff size={18} /> : <Eye size={18} />}
+            {lowStockItems.length === 0
+              ? 'No Low Stock'
+              : `${showLowStock ? '' : ''} Low Stock (${lowStockItems.length})`}
+          </button>
+        </div>
+      </div>
 
       {/* Low Stock Table */}
       {showLowStock && lowStockItems.length > 0 && (
@@ -419,58 +414,27 @@ export default function InventoryManager() {
             </tr>
           </thead>
           <tbody>
-            {pageData.map(item => (
+            {pageData.map((item, index) => (
               <tr key={item.id} className="border-b hover:bg-gray-100 dark:hover:bg-gray-700">
                 <td className="p-2 whitespace-nowrap">{item.id}</td>
                 <td className="p-2 whitespace-nowrap">{item.dynamic_product?.name || 'Unknown'}</td>
                 <td className="p-2 whitespace-nowrap">
-                  {editingId === item.id ? (
-                    <input
-                      type="number"
-                      min="0"
-                      value={editQty}
-                      onChange={e => setEditQty(e.target.value)}
-                      className="border p-1 rounded w-20 dark:bg-gray-800 dark:text-white dark:border-gray-600"
-                    />
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      {item.available_qty}
-                      {item.available_qty <= lowStockThreshold && (
-                        <AlertCircle size={16} className="text-red-500" />
-                      )}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {item.available_qty}
+                    {item.available_qty <= lowStockThreshold && (
+                      <AlertCircle size={16} className="text-red-500" />
+                    )}
+                  </div>
                 </td>
                 <td className="p-2 whitespace-nowrap">{item.quantity_sold}</td>
-               
                 <td className="p-2 whitespace-nowrap">
                   <div className="flex gap-2">
-                    {editingId === item.id ? (
-                      <>
-                        <button
-                          onClick={() => saveEdit(item.id)}
-                          className="p-1 bg-green-600 text-white rounded hover:bg-green-600"
-                        >
-                          <Save size={14} />
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="p-1 bg-gray-300 rounded hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500"
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                       
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className={`p-1 bg-red-500 text-white rounded hover:bg-red-600 delete-button-${index}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -503,7 +467,7 @@ export default function InventoryManager() {
       )}
 
       {/* History Section */}
-      <div className="mt-6">
+      <div className="mt-6 history-table">
         <h2 className="text-xl font-semibold mb-4">Inventory Action History</h2>
         {history.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400">No actions recorded yet.</p>
@@ -538,6 +502,40 @@ export default function InventoryManager() {
           </div>
         )}
       </div>
+
+      {/* Onboarding Tooltip */}
+      {showOnboarding && onboardingStep < onboardingSteps.length && (
+        <motion.div
+          className="fixed z-50 bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 max-w-xs"
+          style={getTooltipPosition(onboardingSteps[onboardingStep].target)}
+          variants={tooltipVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <p className="text-sm text-white dark:text-gray-300 mb-2">
+            {onboardingSteps[onboardingStep].content}
+          </p>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-200">
+              Step {onboardingStep + 1} of {onboardingSteps.length}
+            </span>
+            <div className="space-x-2">
+              <button
+                onClick={handleSkipOnboarding}
+                className="text-sm text-white hover:text-gray-800 dark:text-gray-300"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleNextStep}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
+              >
+                {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

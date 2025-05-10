@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from "../../supabaseClient";
 import { FaEdit, FaTrashAlt, FaPrint, FaDownload } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+
+const tooltipVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function ReceiptManager() {
   const storeId = localStorage.getItem("store_id");
@@ -9,12 +15,14 @@ export default function ReceiptManager() {
   const [selectedSaleGroup, setSelectedSaleGroup] = useState(null);
   const [receipts, setReceipts] = useState([]);
   const [filteredReceipts, setFilteredReceipts] = useState([]);
-  const [searchTerm, ] = useState('');
+  const [searchTerm,] = useState('');
   const [editing, setEditing] = useState(null);
   const [salesSearch, setSalesSearch] = useState('');
   const [sortKey, setSortKey] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
   const [form, setForm] = useState({ customer_name: "", customer_address: "", phone_number: "", warranty: "" });
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
   // Dynamic style states
   const [headerBgColor, setHeaderBgColor] = useState('#1E3A8A');
@@ -25,6 +33,33 @@ export default function ReceiptManager() {
 
   const printRef = useRef();
   const receiptsRef = useRef();
+
+  // Onboarding steps
+  const onboardingSteps = [
+    {
+      target: '.sales-search',
+      content: 'Search for sale receipt by ID, amount, or payment method.',
+    },
+    {
+      target: '.sort-id',
+      content: 'Sort sale receipts by ID to organize your data.',
+    },
+    {
+      target: filteredReceipts.length > 0 ? '.edit-receipt-0' : '.sales-search',
+      content: filteredReceipts.length > 0 ? 'Edit receipt details like customer name or warranty.' : 'Select a sale details to view and edit receipts save it, print or download.',
+    },
+   
+  ];
+
+  // Check if onboarding has been completed
+  useEffect(() => {
+    if (!localStorage.getItem('receiptManagerOnboardingCompleted')) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 3000); // 3-second delay
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Fetch store details
   useEffect(() => {
@@ -90,7 +125,7 @@ export default function ReceiptManager() {
           sales_amount: selectedSaleGroup.total_amount,
           sales_qty: totalQuantity,
           product_name: firstSale.dynamic_product.name, // Representative product name
-          device_id: firstSale.device_id || null, // Corrected to use firstSale.device_id
+          device_id: firstSale.device_id || null,
           customer_name: "",
           customer_address: "",
           phone_number: "",
@@ -152,6 +187,32 @@ export default function ReceiptManager() {
       receiptsRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [receipts]);
+
+  // Onboarding handlers
+  const handleNextStep = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      setShowOnboarding(false);
+      localStorage.setItem('receiptManagerOnboardingCompleted', 'true');
+    }
+  };
+
+  const handleSkipOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('receiptManagerOnboardingCompleted', 'true');
+  };
+
+  // Tooltip positioning
+  const getTooltipPosition = (target) => {
+    const element = document.querySelector(target);
+    if (!element) return { top: 0, left: 0 };
+    const rect = element.getBoundingClientRect();
+    return {
+      top: rect.bottom + window.scrollY + 10,
+      left: rect.left + window.scrollX,
+    };
+  };
 
   const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
   const openEdit = r => {
@@ -216,7 +277,7 @@ export default function ReceiptManager() {
                 value={salesSearch}
                 onChange={e => setSalesSearch(e.target.value)}
                 placeholder="Search by Sale Group ID, Amount, or Payment Method"
-                className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white w-full"
+                className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white sales-search"
               />
 
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -225,7 +286,7 @@ export default function ReceiptManager() {
                     setSortKey('id');
                     setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'));
                   }}
-                  className="border px-4 py-2 rounded text-sm w-full sm:w-auto dark:bg-gray-800 dark:text-white"
+                  className="border px-4 py-2 rounded text-sm w-full sm:w-auto dark:bg-gray-800 dark:text-white sort-id"
                 >
                   Sort by ID {sortKey === 'id' && (sortOrder === 'asc' ? '⬆️' : '⬇️')}
                 </button>
@@ -299,7 +360,7 @@ export default function ReceiptManager() {
                 </tr>
               </thead>
               <tbody>
-                {filteredReceipts.map(r => (
+                {filteredReceipts.map((r, index) => (
                   <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
                     <td className="px-4 py-2 border-b truncate">{r.receipt_id}</td>
                     <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
@@ -307,9 +368,10 @@ export default function ReceiptManager() {
                     <td className="px-4 py-2 border-b truncate">{r.warranty || '-'}</td>
                     <td className="px-4 py-2 border-b">
                       <div className="flex gap-3">
-                        <button onClick={() => openEdit(r)} className="hover:text-indigo-600 dark:bg-gray-900 dark:text-white">
+                        <button onClick={() => openEdit(r)} className={`hover:text-indigo-600 dark:bg-gray-900 dark:text-white edit-receipt-${index}`}>
                           <FaEdit />
                         </button>
+                       
                         <button
                           onClick={async () => {
                             await supabase.from("receipts").delete().eq("id", r.id);
@@ -512,12 +574,46 @@ export default function ReceiptManager() {
           <div className="flex justify-end space-x-3 mt-4 print:hidden">
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2 print-receipt"
             >
               <FaPrint /> Print
             </button>
           </div>
         </div>
+      )}
+
+      {/* Onboarding Tooltip */}
+      {showOnboarding && onboardingStep < onboardingSteps.length && (
+        <motion.div
+          className="fixed z-50  bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 max-w-xs"
+          style={getTooltipPosition(onboardingSteps[onboardingStep].target)}
+          variants={tooltipVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <p className="text-sm text-gray-200 dark:text-gray-300 mb-2">
+            {onboardingSteps[onboardingStep].content}
+          </p>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-200">
+              Step {onboardingStep + 1} of {onboardingSteps.length}
+            </span>
+            <div className="space-x-2">
+              <button
+                onClick={handleSkipOnboarding}
+                className="text-sm text-gray-300 hover:text-gray-800 dark:text-gray-300"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleNextStep}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
+              >
+                {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </motion.div>
       )}
     </>
   );

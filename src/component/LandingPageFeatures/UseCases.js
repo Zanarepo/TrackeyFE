@@ -26,17 +26,17 @@ export default function PricingUseCases() {
   const cases = [
     {
       icon: <FiTag size={40} />,
-      title: 'Simplex (Fixed Pricing)',
+      title: 'Fixed Pricing',
       desc: 'Ideal for shops with fixed prices, like supermarkets or online stores, where rates remain consistent.',
       example: 'A supermarket selling a 50kg bag of rice at ₦5,000 daily with no price changes.',
-      badge: 'Simplex',
+      badge: 'Fixed Pricing',
     },
     {
       icon: <FiShuffle size={40} />,
-      title: 'Variex (Negotiable Pricing)',
+      title: 'Negotiable Pricing',
       desc: 'Perfect for open-market vendors where prices vary based on demand, supply, or customer negotiations.',
       example: 'A Lagos phone vendor negotiating smartphone prices between ₦60,000–₦65,000 per customer.',
-      badge: 'Variex',
+      badge: 'Dynamic Pricing',
     },
   ];
 

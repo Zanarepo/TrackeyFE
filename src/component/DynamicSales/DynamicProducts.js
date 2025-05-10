@@ -6,9 +6,16 @@ import {
   FaFileCsv,
   FaFilePdf,
   FaPlus,
+ 
 } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { motion } from 'framer-motion';
+
+const tooltipVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function DynamicProducts() {
   const storeId = localStorage.getItem('store_id');
@@ -30,6 +37,8 @@ export default function DynamicProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
   const itemsPerPage = 5;
   const paginatedProducts = useMemo(() => {
@@ -37,6 +46,32 @@ export default function DynamicProducts() {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage]);
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  // Onboarding steps
+  const onboardingSteps = [
+    {
+      target: '.add-product-button',
+      content: 'Click to add a new product to your catalog.',
+    },
+    {
+      target: '.search-input',
+      content: 'Search by product name to filter the catalog.',
+    },
+    {
+      target: products.length > 0 ? '.edit-button-0' : '.add-product-button',
+      content: products.length > 0 ? 'Click to edit product details.' : 'Start by adding your first product!',
+    },
+  ];
+
+  // Check if onboarding has been completed
+  useEffect(() => {
+    if (!localStorage.getItem('productCatalogOnboardingCompleted')) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 3000); // 3-second delay
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Fetch products
   const fetchProducts = useCallback(async () => {
@@ -284,6 +319,32 @@ export default function DynamicProducts() {
     });
   };
 
+  // Onboarding handlers
+  const handleNextStep = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      setShowOnboarding(false);
+      localStorage.setItem('productCatalogOnboardingCompleted', 'true');
+    }
+  };
+
+  const handleSkipOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('productCatalogOnboardingCompleted', 'true');
+  };
+
+  // Tooltip positioning
+  const getTooltipPosition = (target) => {
+    const element = document.querySelector(target);
+    if (!element) return { top: 0, left: 0 };
+    const rect = element.getBoundingClientRect();
+    return {
+      top: rect.bottom + window.scrollY + 10,
+      left: rect.left + window.scrollX,
+    };
+  };
+
   return (
     <div className="p-0">
       <ToastContainer position="top-right" autoClose={3000} />
@@ -295,11 +356,11 @@ export default function DynamicProducts() {
           placeholder="Search products..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
+          className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white search-input"
         />
         <button
           onClick={() => setShowAdd(true)}
-          className="w-full sm:w-auto flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          className="w-full sm:w-auto flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 add-product-button"
         >
           <FaPlus /> Products
         </button>
@@ -386,8 +447,8 @@ export default function DynamicProducts() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {paginatedProducts.map(p => (
-              <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+            {paginatedProducts.map((p, index) => (
+              <tr key={p.id}>
                 <td className="px-4 py-2 text-sm">{p.name}</td>
                 <td className="px-4 py-2 text-sm">{p.description}</td>
                 <td className="px-4 py-2 text-sm">
@@ -407,7 +468,7 @@ export default function DynamicProducts() {
                   {new Date(p.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-2 flex gap-2">
-                  <button onClick={() => startEdit(p)} className="text-indigo-600 hover:text-indigo-800">
+                  <button onClick={() => startEdit(p)} className={`text-indigo-600 hover:text-indigo-800 edit-button-${index}`}>
                     <FaEdit />
                   </button>
                   <button onClick={() => deleteProduct(p)} className="text-red-600 hover:text-red-800">
@@ -496,6 +557,40 @@ export default function DynamicProducts() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Onboarding Tooltip */}
+      {showOnboarding && onboardingStep < onboardingSteps.length && (
+        <motion.div
+          className="fixed z-50  bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 max-w-xs"
+          style={getTooltipPosition(onboardingSteps[onboardingStep].target)}
+          variants={tooltipVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <p className="text-sm text-white dark:text-gray-300 mb-2">
+            {onboardingSteps[onboardingStep].content}
+          </p>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-200">
+              Step {onboardingStep + 1} of {onboardingSteps.length}
+            </span>
+            <div className="space-x-2">
+              <button
+                onClick={handleSkipOnboarding}
+                className="text-sm text-gray-300 hover:text-gray-800 dark:text-gray-300"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleNextStep}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
+              >
+                {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </motion.div>
       )}
     </div>
   );

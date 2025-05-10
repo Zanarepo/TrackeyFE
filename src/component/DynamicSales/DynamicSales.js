@@ -5,11 +5,18 @@ import {
   FaFileCsv,
   FaFilePdf,
   FaEdit,
+ 
 } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 import { ToastContainer, toast } from 'react-toastify';
-import DynamiclowStockAlert from './DynamiclowStockAlert'
+import DynamiclowStockAlert from './DynamiclowStockAlert';
 import 'react-toastify/dist/ReactToastify.css';
+import { motion } from 'framer-motion';
+
+const tooltipVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function SalesTracker() {
   const storeId = localStorage.getItem('store_id');
@@ -30,6 +37,8 @@ export default function SalesTracker() {
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [editing, setEditing] = useState(null);
   const [saleForm, setSaleForm] = useState({});
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
   // Computed Values
   const paginatedSales = useMemo(() => {
@@ -83,6 +92,33 @@ export default function SalesTracker() {
   }, [viewMode, filtered, totalsData]);
 
   const totalAmount = useMemo(() => lines.reduce((sum, l) => sum + l.quantity * l.unit_price, 0), [lines]);
+
+  // Onboarding steps
+  const onboardingSteps = [
+    {
+      target: '.new-sale-button',
+      content: 'Click to record a new sale.',
+    },
+    {
+      target: '.search-input',
+      content: 'Search by product name, payment method, or device ID to filter sales.',
+    },
+    {
+      target: '.view-mode-selector',
+      content: 'Switch to Daily or Weekly Totals to view sales summaries.',
+    },
+    
+  ];
+
+  // Check if onboarding has been completed
+  useEffect(() => {
+    if (!localStorage.getItem('salesTrackerOnboardingCompleted')) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 3000); // 3-second delay
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Data Fetching
   const fetchProducts = useCallback(async () => {
@@ -237,7 +273,7 @@ export default function SalesTracker() {
         quantity: l.quantity,
         unit_price: l.unit_price,
         amount: l.quantity * l.unit_price,
-        device_id: l.device_id || null,  // Allow device_id to be optional
+        device_id: l.device_id || null,
         payment_method: paymentMethod,
       }));
       const { error: insErr } = await supabase.from('dynamic_sales').insert(inserts);
@@ -291,7 +327,7 @@ export default function SalesTracker() {
         .update({
           quantity: saleForm.quantity,
           unit_price: saleForm.unit_price,
-          device_id: saleForm.device_id || null,  // Allow device_id to be optional
+          device_id: saleForm.device_id || null,
           payment_method: saleForm.payment_method || originalSale.payment_method,
         })
         .eq('id', editing);
@@ -407,6 +443,32 @@ export default function SalesTracker() {
     });
   };
 
+  // Onboarding handlers
+  const handleNextStep = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      setShowOnboarding(false);
+      localStorage.setItem('salesTrackerOnboardingCompleted', 'true');
+    }
+  };
+
+  const handleSkipOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('salesTrackerOnboardingCompleted', 'true');
+  };
+
+  // Tooltip positioning
+  const getTooltipPosition = (target) => {
+    const element = document.querySelector(target);
+    if (!element) return { top: 0, left: 0 };
+    const rect = element.getBoundingClientRect();
+    return {
+      top: rect.bottom + window.scrollY + 10,
+      left: rect.left + window.scrollX,
+    };
+  };
+
   // Render
   return (
     <div className="p-0 max-w-7xl mx-auto">
@@ -419,7 +481,7 @@ export default function SalesTracker() {
             <select
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value)}
-              className="p-2 border rounded dark:bg-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="p-2 border rounded dark:bg-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 view-mode-selector"
             >
               <option value="list">Individual Sales</option>
               <option value="daily">Daily Totals</option>
@@ -432,13 +494,13 @@ export default function SalesTracker() {
               placeholder="Search sales by product, payment, or device…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="p-2 border rounded w-full sm:w-64 dark:bg-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="p-2 border rounded w-full sm:w-64 dark:bg-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 search-input"
             />
           )}
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 w-full sm:w-auto"
+          className="flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 w-full sm:w-auto new-sale-button"
         >
           <FaPlus /> New Sale
         </button>
@@ -593,7 +655,7 @@ export default function SalesTracker() {
                     value={saleForm[field] || ''}
                     onChange={handleEditChange}
                     className="w-full p-2 border rounded dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required={field !== 'device_id'}  // Make Device ID optional
+                    required={field !== 'device_id'}
                   />
                 )}
               </div>
@@ -634,10 +696,9 @@ export default function SalesTracker() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {paginatedSales.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              {paginatedSales.map((s, index) => (
+                <tr key={s.id}>
                   <td className="px-4 py-2 text-sm">{s.dynamic_product.name}</td>
-                  
                   <td className="px-4 py-2 text-sm">{s.quantity}</td>
                   <td className="px-4 py-2 text-sm">{s.unit_price.toFixed(2)}</td>
                   <td className="px-4 py-2 text-sm">{s.amount.toFixed(2)}</td>
@@ -655,7 +716,7 @@ export default function SalesTracker() {
                           payment_method: s.payment_method,
                         });
                       }}
-                      className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                      className={`p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 edit-button-${index}`}
                       title="Edit sale"
                     >
                       <FaEdit />
@@ -683,7 +744,7 @@ export default function SalesTracker() {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {paginatedTotals.map((t, index) => (
-                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={index}>
                   <td className="px-4 py-2 text-sm">{t.period}</td>
                   <td className="px-4 py-2 text-sm">{t.total.toFixed(2)}</td>
                   <td className="px-4 py-2 text-sm">{t.count}</td>
@@ -729,7 +790,7 @@ export default function SalesTracker() {
       <div className="flex flex-wrap justify-center items-center gap-3 mt-4">
         <button
           onClick={exportCSV}
-          className="flex items-center justify-center gap-1 w-full sm:w-32 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+          className="flex items-center justify-center gap-1 w-full sm:w-32 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition export-csv-button"
           title="Export to CSV"
         >
           <FaFileCsv className="w-4 h-4" />
@@ -737,13 +798,53 @@ export default function SalesTracker() {
         </button>
         <button
           onClick={exportPDF}
-          className="flex items-center justify-center gap-1 w-full sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+          className="flex items-center justify-center gap-1 w-full sm:w-32 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition export-pdf-button"
           title="Export to PDF"
         >
           <FaFilePdf className="w-4 h-4" />
           <span>PDF</span>
         </button>
       </div>
+
+      {/* Onboarding Tooltip */}
+      {showOnboarding && onboardingStep < onboardingSteps.length && (
+        <motion.div
+         className="fixed z-50  bg-indigo-600 dark:bg-gray-800 border border-indigo-300 dark:border-gray-600 rounded-lg shadow-lg p-2 sm:p-4 max-w-[260px] sm:max-w-xs"
+  style={getTooltipPosition(onboardingSteps[onboardingStep].target)}
+  variants={tooltipVariants}
+  initial="hidden"
+  animate="visible"
+>
+  <p className="text-xs sm:text-sm text-white dark:text-gray-200 mb-1 sm:mb-2">
+    {onboardingSteps[onboardingStep].content}
+  </p>
+  <div className="flex justify-between items-center">
+    <span className="text-xs sm:text-sm text-gray-200 dark:text-gray-400">
+      Step {onboardingStep + 1} of {onboardingSteps.length}
+    </span>
+    <div className="space-x-1 sm:space-x-3">
+      <button
+        onClick={handleSkipOnboarding}
+        className="text-xs sm:text-sm text-white hover:text-gray-800 dark:text-gray-300 dark:hover:text-white px-1 sm:px-2 py-0.5 sm:py-1"
+      >
+        Skip
+      </button>
+      <button
+        onClick={handleNextStep}
+        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm px-1 sm:px-3 py-0.5 sm:py-1 rounded"
+      >
+        {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
+      </button>
+
+
+
+    </div>
+    </div>
+
+
+  
+        </motion.div>
+      )}
 
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
