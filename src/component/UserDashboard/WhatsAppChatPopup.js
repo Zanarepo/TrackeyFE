@@ -1,11 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageCircle } from 'lucide-react';
 
 export default function WhatsAppChatPopup() {
   const [open, setOpen] = useState(false);
+  const [showAutoMessage, setShowAutoMessage] = useState(false);
   const phone = '2349167690043';
   const message = encodeURIComponent('Welcome to Sellytics');
   const whatsappUrl = `https://wa.me/${phone}?text=${message}`;
+
+  // Auto-display welcome message on page load
+  useEffect(() => {
+    setShowAutoMessage(true);
+    // Clear the auto message after 10 seconds
+    const timer = setTimeout(() => {
+      setShowAutoMessage(false);
+    }, 10000);
+
+    // Cleanup timer on component unmount
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
@@ -16,15 +29,39 @@ export default function WhatsAppChatPopup() {
 
       {/* Chat head bubble */}
       <div
-        className="fixed bottom-4 right-4 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg cursor-pointer z-50"
+        className="fixed bottom-4 right-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full p-4 shadow-lg cursor-pointer z-50"
         onClick={() => setOpen(!open)}
         aria-label="Open WhatsApp chat"
       >
         <MessageCircle size={24} />
       </div>
 
-      {/* Popup window */}
-      {open && (
+      {/* Auto-display welcome message */}
+      {showAutoMessage && (
+        <div className="fixed bottom-20 right-4 bg-white border rounded-lg shadow-lg w-64 z-50">
+          <div className="p-4 flex flex-col">
+            <h3 className="text-lg font-semibold mb-2">Welcome to Sellytics!</h3>
+            <p className="text-sm mb-4">How can we help you today?</p>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-center bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded"
+            >
+              Start Chat
+            </a>
+            <button
+              onClick={() => setShowAutoMessage(false)}
+              className="mt-2 text-sm text-gray-600 hover:text-gray-800"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Manual popup window */}
+      {open && !showAutoMessage && (
         <div className="fixed bottom-20 right-4 bg-white border rounded-lg shadow-lg w-64 z-50">
           <div className="p-4 flex flex-col">
             <h3 className="text-lg font-semibold mb-2">Chat with us!</h3>
@@ -33,7 +70,7 @@ export default function WhatsAppChatPopup() {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-center bg-green-500 hover:bg-green-600 text-white py-2 rounded"
+              className="text-center bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded"
             >
               Start Chat
             </a>
