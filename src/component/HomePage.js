@@ -6,10 +6,11 @@ import UseCases from './LandingPageFeatures/UseCases';
 import Reviews from './LandingPageFeatures/Reviews';
 import WhosIsSellyticsFor from './LandingPageFeatures/WhosIsSellyticsFor';
 import CAQ from './LandingPageFeatures/CAQ';
-import PricingPlans from './Payments/PricingPlans';
+import PricingPlanLandingPage from './Payments/PricingPlanLandingPage';
 import { motion } from 'framer-motion';
 import WhatsAppChatPopup from './UserDashboard/WhatsAppChatPopup'
 import Partners from './LandingPageFeatures/Partners';
+import HappyCustomer  from './LandingPageFeatures/HappyCustomer';
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 40 },
@@ -106,8 +107,12 @@ export default function LandingPage() {
         <HowItWorks />
       </motion.section>
 
+
+
+
+
       <motion.section id="pricing" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="py-16 px-6 md:px-20 bg-gray-50 dark:bg-gray-800">
-        <PricingPlans />
+        <PricingPlanLandingPage />
       </motion.section>
 
       <motion.section id="use-cases" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="py-16 px-6 md:px-20">
@@ -125,6 +130,10 @@ export default function LandingPage() {
 
 
      
+      <motion.section id="" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="py-16 px-6 md:px-20">
+        <HappyCustomer />
+      </motion.section>
+
 
 
        <motion.section id="faq" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants} className="py-16 px-6 md:px-20">

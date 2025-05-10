@@ -38,7 +38,7 @@ const Navbar = () => {
     { id: 'pricing', label: 'Pricing' },
     { id: 'use-cases', label: 'Use Cases' },
     { id: 'who-is-it-for', label: 'Who It’s For' },
-    { id: 'faq', label: 'FAQ' },
+    { id: 'faq', label: 'CAQ' },
     // { id: 'reviews', label: 'Reviews' },
   ];
 

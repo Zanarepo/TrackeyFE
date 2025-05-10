@@ -29,7 +29,7 @@ import MultiDebt from './MultiDebt'
 import PricingFeatures from '../Payments/PricingFeatures'
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('MyStores');
+  const [activeTab, setActiveTab] = useState('My Stores');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -43,7 +43,7 @@ const Dashboard = () => {
     switch (activeTab) {
      
 
-      case 'MyStores':
+      case 'My Stores':
         return (
           <div className="w-full bg-white dark:bg-gray-800  p-4">
            <MyStores/>
@@ -199,8 +199,8 @@ const Dashboard = () => {
            
 
                 <li 
-                  onClick={() => handleNavClick('MyStores')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'MyStores' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                  onClick={() => handleNavClick('My Stores')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'My Stores' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
                 >
                   <FaStore  className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200"> Stores Dashboard</span>

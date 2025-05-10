@@ -280,7 +280,7 @@ export default function Login() {
           />
         </svg>
 
-        <div className="container mx-auto max-w-md relative z-10">
+        <div className="container mx-auto max-w-md relative z-10 mt-10">
           <motion.div
             className="bg-white/70 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-8 shadow-lg hover:shadow-xl hover:shadow-indigo-500/20 transition-all duration-300 border-l-4 border-transparent hover:border-indigo-500 dark:hover:border-indigo-300"
             variants={cardVariants}
@@ -336,7 +336,7 @@ export default function Login() {
 
   return (
     <motion.section
-      className="py-20 md:py-24 px-6 bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden"
+      className="py-20 md:py-24 px-6 bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden mt-10"
       initial="hidden"
       animate="visible"
       variants={sectionVariants}

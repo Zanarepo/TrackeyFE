@@ -9,7 +9,8 @@ import {
   FaStore,
   FaConciergeBell,
   FaIdBadge,
-  FaBell
+  FaBell,
+  FaCrown
   
 } from 'react-icons/fa';
 
@@ -24,6 +25,7 @@ import VsalesSummary from '../Ops/VsalesSummary'
 import Test from './Test';
 import WhatsAppChatPopup from './WhatsAppChatPopup';
 import  Notifications from './Notifications'
+import PricingFeatures from '../Payments/PricingFeatures'
 
 
 
@@ -94,22 +96,27 @@ case 'Sales Summary':
           <div className="w-full bg-white dark:bg-gray-800 p-4">
             <Employees />
           </div>
-
-
       );
+
+
+ case 'Upgrade':
+              return (
+                <div className="w-full bg-white dark:bg-gray-800  p-4">
+                  <PricingFeatures />
+                </div>
+      
+      
+              );
+  
+    
+
+
+
       case 'Profile':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
             <Profile/>
           </div>
-
-
-
-
-
-
-
-
         );
       default:
         return (
@@ -200,6 +207,15 @@ case 'Sales Summary':
                 >
                   <FaIdBadge  className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Employees</span>
+                </li>
+
+
+              <li 
+                  onClick={() => handleNavClick('Upgrade')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${activeTab === 'Upgrade' ? 'bg-indigo-200 dark:bg-indigo-600' : ''}`}
+                >
+                  <FaCrown  className="text-yellow-800 dark:text-yellow-800 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Upgrade</span>
                 </li>
 
              
