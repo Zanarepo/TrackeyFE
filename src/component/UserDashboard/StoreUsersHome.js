@@ -99,7 +99,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-200 dark:bg-gray-700 mt-20">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-700 mt-20">
       <WhatsapUsers />
       <StoreUsersTour
         isOpen={isTourOpen}
@@ -130,8 +130,8 @@ const Dashboard = () => {
                 <li
                   data-tour="toolkits"
                   onClick={() => handleNavClick('Toolkits')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${
-                    activeTab === 'Toolkits' ? 'bg-gray-400 dark:bg-indigo-600' : ''
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Toolkits' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
                   }`}
                   aria-label="Toolkits: Access your store management tools"
                 >
@@ -141,8 +141,8 @@ const Dashboard = () => {
                 <li
                   data-tour="sales-summary"
                   onClick={() => handleNavClick('Sales Summary')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${
-                    activeTab === 'Sales Summary' ? 'bg-gray-400 dark:bg-indigo-600' : ''
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Sales Summary' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
                   }`}
                   aria-label="Sales Dashboard: View and analyze sales data"
                 >
@@ -152,8 +152,8 @@ const Dashboard = () => {
                 <li
                   data-tour="notifications"
                   onClick={() => handleNavClick('Notifications')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${
-                    activeTab === 'Notifications' ? 'bg-gray-400 dark:bg-indigo-600' : ''
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Notifications' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
                   }`}
                   aria-label="Notifications: Stay updated with store-related notifications"
                 >
@@ -163,8 +163,8 @@ const Dashboard = () => {
                 <li
                   data-tour="colleagues"
                   onClick={() => handleNavClick('Colleagues')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${
-                    activeTab === 'Colleagues' ? 'bg-gray-400 dark:bg-indigo-600' : ''
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Colleagues' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
                   }`}
                   aria-label="Colleagues: Manage your colleagues"
                 >
@@ -174,8 +174,8 @@ const Dashboard = () => {
                 <li
                   data-tour="profile"
                   onClick={() => handleNavClick('Profile')}
-                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-300 dark:hover:bg-indigo-600 transition ${
-                    activeTab === 'Profile' ? 'bg-gray-400 dark:bg-indigo-600' : ''
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Profile' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
                   }`}
                   aria-label="Profile: View and edit your profile"
                 >

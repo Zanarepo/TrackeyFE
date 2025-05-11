@@ -3,8 +3,7 @@ import React from 'react';
 const Partners = () => {
   // Sample partner data (replace with actual data)
   const partners = [
-    { name: 'Sellytics', logo: '/Sellytics.jpg' },
-    { name: 'Sprintifyhq', logo: 'Sprintify (3).png' },
+    { name: 'Sellytics', logo: '/Sellytics.jpg' }, 
     { name: 'Sprintify', logo: 'Sprintify2.png' },
   
   ];

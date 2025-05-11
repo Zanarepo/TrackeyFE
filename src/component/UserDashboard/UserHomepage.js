@@ -4,7 +4,7 @@ import {
   FaUser,
   FaBars,
   FaTimes,
-  FaStore,
+  //FaStore,
   FaConciergeBell,
   FaIdBadge,
   FaBell,
@@ -239,6 +239,8 @@ const Dashboard = () => {
                   </span>
                 </li>
 
+              
+              {/* 
                 <li
                   onClick={() => handleNavClick('Test')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${
@@ -251,9 +253,13 @@ const Dashboard = () => {
                     TESTING
                   </span>
                 </li>
+                */}
               </ul>
             </nav>
           </div>
+
+
+
           {/* Dark/Light Mode Toggle */}
           <div
             data-tour="dark-mode"

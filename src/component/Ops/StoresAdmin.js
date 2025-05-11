@@ -240,6 +240,9 @@ const Dashboard = () => {
                   <span className="text-indigo-800 dark:text-indigo-200">Upgrade</span>
                 </li>
 
+
+                  {/* 
+
                 <li
                   onClick={() => handleNavClick('Test')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${
@@ -250,7 +253,8 @@ const Dashboard = () => {
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">TESTING</span>
                 </li>
-
+                */}
+                
                 <li
                   data-tour="employees"
                   onClick={() => handleNavClick('Employees')}
