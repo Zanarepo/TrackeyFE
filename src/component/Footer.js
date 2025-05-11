@@ -39,7 +39,7 @@ const Footer = () => {
           </div>*/}
           {/* Contact details */}
           <div className="mt-4 md:mt-0 md:ml-8 text-left">
-            <p className="text-sm">hello@sellytics.com</p>
+            <p className="text-sm">sellytics@sprintifyhq.com</p>
             <p className="text-sm">+234 7088 34 7620</p>
           </div>
         </div>

@@ -32,7 +32,7 @@ export default function LandingPage() {
     <>
       {/* Hero Section */}
       <WhatsAppChatPopup/>
-      <section className="min-h-screen flex flex-col-reverse md:flex-row items-center justify-between bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-6 md:px-24 py-20 md:py-24 gap-12 relative overflow-hidden">
+      <section className="min-h-screen flex flex-col-reverse md:flex-row items-center justify-between bg-gradient-to-b from-indigo-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-6 md:px-24 py-20 md:py-24 gap-12 relative overflow-hidden mt-10">
         {/* Wavy Bottom Border */}
         <svg className="absolute bottom-0 w-full" viewBox="0 0 1440 100" preserveAspectRatio="none">
           <path
@@ -49,7 +49,7 @@ export default function LandingPage() {
         </svg>
 
         <motion.div
-          className="max-w-2xl bg-white/70 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-8 shadow-lg"
+          className="max-w-2xl bg-white/70 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl p-6 shadow-lg"
           initial="hidden"
           animate="visible"
           variants={{
