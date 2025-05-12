@@ -1,17 +1,38 @@
-// InviteGenerator.js
 import React, { useState } from 'react';
 import { FaWhatsapp, FaCopy } from 'react-icons/fa';
+import { supabase } from '../../supabaseClient'; // adjust the path based on your setup
 
 const InviteGenerator = () => {
   const [inviteLink, setInviteLink] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const storeId = localStorage.getItem('store_id');
 
-  const generateInvite = () => {
+  const generateInvite = async () => {
     if (!storeId) {
       alert('Store ID not found. Please login.');
       return;
     }
-    const link = `${window.location.origin}/team-signup?store_id=${storeId}`;
+
+    setLoading(true);
+
+    // Fetch shop_name from Supabase
+    const { data, error } = await supabase
+      .from('stores')
+      .select('shop_name')
+      .eq('id', storeId)
+      .single();
+
+    setLoading(false);
+
+    if (error || !data) {
+      console.error('Error fetching shop name:', error);
+      alert('Unable to fetch shop name.');
+      return;
+    }
+
+    const encodedShopName = encodeURIComponent(data.shop_name);
+    const link = `${window.location.origin}/team-signup?store_id=${storeId}&shop_name=${encodedShopName}`;
     setInviteLink(link);
   };
 
@@ -28,15 +49,16 @@ const InviteGenerator = () => {
   };
 
   return (
-    <div className="p-4 dark:bg-gray-800 dark:text-white rounded shadow max-w-xl mx-auto dark:bg-gray-900 dark:text-indigo-600">
-      <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mb-4 dark:bg-gray-800 dark:text-white dark:bg-gray-900 dark:text-indigo-600">
+    <div className="p-4 dark:bg-gray-800 dark:text-white rounded shadow max-w-xl mx-auto">
+      <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mb-4">
         Create Invite
       </h2>
       <button
         onClick={generateInvite}
-        className="px-4 py-2 bg-indigo-800 text-white rounded hover:bg-indigo-700 mb-4 "
+        disabled={loading}
+        className="px-4 py-2 bg-indigo-800 text-white rounded hover:bg-indigo-700 mb-4"
       >
-        Generate Invite Link
+        {loading ? 'Generating...' : 'Generate Invite Link'}
       </button>
 
       {inviteLink && (
@@ -44,7 +66,7 @@ const InviteGenerator = () => {
           <label className="block text-indigo-800 dark:text-indigo-200">
             Share this Invite Link with your team:
           </label>
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch ">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch">
             <input
               type="text"
               readOnly
@@ -68,7 +90,6 @@ const InviteGenerator = () => {
         </div>
       )}
     </div>
- 
   );
 };
 
