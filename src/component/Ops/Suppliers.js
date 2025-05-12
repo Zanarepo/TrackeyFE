@@ -1,327 +1,237 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase } from '../../supabaseClient';
+import { FaFileCsv, FaFilePdf } from 'react-icons/fa';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-export default function SuppliersManager() {
-  const [showForm, setShowForm] = useState(false);
-  const [showTable, setShowTable] = useState(false);
-  const [supplierRows, setSupplierRows] = useState([{ device_name: "", device_id: "" }]);
+export default function SuppliersInventory() {
+  const storeId = localStorage.getItem('store_id');
+
+  // State
+  const [inventory, setInventory] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [suppliers, setSuppliers] = useState([]);
-  const [uniqueSupplierNames, setUniqueSupplierNames] = useState([]);
-  const [searchId, setSearchId] = useState("");
-  const [searchResult, setSearchResult] = useState(null);
-  const [selectedSupplier, setSelectedSupplier] = useState("");
-  const [newSupplierName, setNewSupplierName] = useState("");
+  const itemsPerPage = 5;
 
-  // Fetch suppliers and derive unique supplier names
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
+  const paginatedInventory = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage]);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
-  const fetchSuppliers = async () => {
-    const storeId = localStorage.getItem("store_id");
+  // Fetch inventory
+  const fetchInventory = useCallback(async () => {
     if (!storeId) {
-      toast.error("Store ID not found in localStorage.");
+      toast.error('No store ID found. Please log in.');
       return;
     }
-
-    // Fetch all supplier records for the store
-    const { data: supplierData, error: supplierError } = await supabase
-      .from("suppliers")
-      .select("*")
-      .eq("store_id", storeId);
-
-    if (supplierError) {
-      toast.error("Failed to load suppliers: " + supplierError.message);
-    } else {
-      // Set all supplier records for the table
-      setSuppliers(supplierData);
-
-      // Extract unique supplier names for the dropdown
-      const uniqueNames = [...new Set(supplierData.map(item => item.supplier_name))];
-      setUniqueSupplierNames(uniqueNames);
-    }
-  };
-
-  // Add a new device row
-  const handleAddRow = () => {
-    setSupplierRows([...supplierRows, { device_name: "", device_id: "" }]);
-  };
-
-  // Remove a device row
-  const handleRemoveRow = (index) => {
-    const updatedRows = supplierRows.filter((_, idx) => idx !== index);
-    setSupplierRows(updatedRows);
-  };
-
-  // Update device row fields
-  const handleChange = (index, field, value) => {
-    const updatedRows = [...supplierRows];
-    updatedRows[index][field] = value;
-    setSupplierRows(updatedRows);
-  };
-
-  // Save supplier entries
-  const handleSave = async () => {
-    const storeId = localStorage.getItem("store_id");
-    if (!storeId) {
-      toast.error("Store ID not found in localStorage.");
-      return;
-    }
-
-    const supplierName = selectedSupplier === "new" ? newSupplierName : selectedSupplier;
-    if (!supplierName) {
-      toast.error("Please select a supplier or enter a new supplier name");
-      return;
-    }
-
-    const invalidRows = supplierRows.filter(row => !row.device_name || !row.device_id);
-    if (invalidRows.length > 0) {
-      toast.error("Please fill in all device name and device ID fields");
-      return;
-    }
-
-    const entries = supplierRows.map(row => ({
-      supplier_name: supplierName,
-      device_name: row.device_name,
-      device_id: row.device_id,
-      store_id: parseInt(storeId),
-    }));
-
-    // Check for duplicate device IDs
-    const { data: existingDevices, error: fetchError } = await supabase
-      .from("suppliers")
-      .select("device_id");
-
-    if (fetchError) {
-      toast.error("Failed to validate device IDs");
-      return;
-    }
-
-    const existingDeviceIds = new Set(existingDevices.map(d => d.device_id));
-    const duplicateEntries = entries.filter(entry => existingDeviceIds.has(entry.device_id));
-
-    if (duplicateEntries.length > 0) {
-      const duplicateIds = duplicateEntries.map(entry => entry.device_id).join(", ");
-      toast.error(`The following device ID(s) already exist: ${duplicateIds}. Please use unique device IDs.`);
-      return;
-    }
-
-    const { error: insertError } = await supabase
-      .from("suppliers")
-      .insert(entries);
-
-    if (insertError) {
-      toast.error("Error saving suppliers: " + insertError.message);
-    } else {
-      toast.success("Suppliers saved successfully!");
-      setSupplierRows([{ device_name: "", device_id: "" }]);
-      setSelectedSupplier("");
-      setNewSupplierName("");
-      fetchSuppliers();
-    }
-  };
-
-  // Delete a supplier
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this supplier?")) {
-      const { error } = await supabase.from("suppliers").delete().eq("id", id);
-      if (error) {
-        toast.error("Delete failed");
-      } else {
-        toast.success("Supplier deleted");
-        fetchSuppliers();
-      }
-    }
-  };
-
-  // Search for a supplier by device ID
-  const handleSearch = async () => {
     const { data, error } = await supabase
-      .from("suppliers")
-      .select("*")
-      .eq("device_id", searchId)
-      .single();
-
-    if (error || !data) {
-      toast.error("Device not found");
-      setSearchResult(null);
-      localStorage.removeItem("deviceSearch");
+      .from('suppliers_inventory')
+      .select('id, supplier_name, device_name, device_id, qty, created_at')
+      .eq('store_id', storeId)
+      .order('id', { ascending: true });
+    if (error) {
+      console.error('Error fetching suppliers inventory:', error.message);
+      toast.error('Failed to fetch inventory');
     } else {
-      setSearchResult(data);
-      localStorage.setItem("deviceSearch", JSON.stringify(data));
+      setInventory(data);
+      setFiltered(data);
     }
+  }, [storeId]);
+
+  // Fetch suppliers
+  const fetchSuppliers = useCallback(async () => {
+    if (!storeId) return;
+    const { data: productData, error } = await supabase
+      .from('dynamic_product')
+      .select('suppliers_name')
+      .eq('store_id', storeId);
+    if (error) {
+      toast.error('Failed to fetch suppliers');
+      return;
+    }
+    // Extract unique suppliers_name, including null as 'None'
+    const uniqueSuppliers = [...new Set(productData
+      .map(p => p.suppliers_name || 'None'))]
+      .map(name => ({ value: name === 'None' ? '' : name, label: name }));
+    setSuppliers(uniqueSuppliers);
+  }, [storeId]);
+
+  useEffect(() => {
+    fetchInventory();
+    fetchSuppliers();
+  }, [fetchInventory, fetchSuppliers]);
+
+  // Search filter
+  useEffect(() => {
+    if (!search) setFiltered(inventory);
+    else {
+      const q = search.toLowerCase();
+      setFiltered(
+        inventory.filter(item => item.device_id.toLowerCase().includes(q))
+      );
+    }
+    setCurrentPage(1);
+  }, [search, inventory]);
+
+  // Update supplier_name
+  const updateSupplier = async (inventoryId, newSupplierName) => {
+    const supplierValue = newSupplierName === '' ? null : newSupplierName;
+    const { error } = await supabase
+      .from('suppliers_inventory')
+      .update({ supplier_name: supplierValue })
+      .eq('id', inventoryId);
+    if (error) {
+      toast.error(`Failed to update supplier: ${error.message}`);
+    } else {
+      toast.success('Supplier updated successfully');
+      fetchInventory();
+    }
+  };
+
+  // Export CSV
+  const exportCSV = () => {
+    let csv = "data:text/csv;charset=utf-8,";
+    csv += "Supplier,ProductName,ProductID,Qty,CreatedAt\n";
+    filtered.forEach(item => {
+      const row = [
+        item.supplier_name || 'None',
+        item.device_name,
+        item.device_id,
+        item.qty,
+        item.created_at
+      ].join(',');
+      csv += row + '\n';
+    });
+    const link = document.createElement('a');
+    link.href = encodeURI(csv);
+    link.download = 'suppliers_inventory.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export PDF
+  const exportPDF = () => {
+    import('jspdf').then(({ jsPDF }) => {
+      const doc = new jsPDF();
+      let y = 10;
+      doc.text('Suppliers Inventory', 10, y);
+      y += 10;
+      filtered.forEach(item => {
+        const line = `Supplier: ${item.supplier_name || 'None'}, Product: ${item.device_name}, ID: ${item.device_id}, Qty: ${item.qty}`;
+        doc.text(line, 10, y);
+        y += 10;
+      });
+      doc.save('suppliers_inventory.pdf');
+    });
   };
 
   return (
-    <div className="p-0 sm:p-0 max-w-7xl mx-auto dark:bg-gray-900 dark:text-white">
-      <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 mb-6 dark:text-white">Suppliers Manager</h1>
-      <ToastContainer />
+    <div className="p-4">
+      <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* Toggle Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <button
-          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-600"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? "Hide Add Form" : "Add Supplier"}
-        </button>
-        <button
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600"
-          onClick={() => setShowTable(!showTable)}
-        >
-          {showTable ? "Hide Table" : "View Table"}
-        </button>
+      {/* Search */}
+      <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Search by Product ID..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
+        />
       </div>
 
-      {/* Search Section */}
-      <div className="mb-6 ">
-        <div className="flex flex-col sm:flex-row gap-2 mb-2 ">
-          <input
-            type="text"
-            placeholder="Search by Device ID"
-            value={searchId}
-            onChange={(e) => setSearchId(e.target.value)}
-            className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
-          />
-          <button
-            className="bg-indigo-700 text-white px-4 py-2 rounded-md hover:bg-indigo-800 w-full sm:w-auto"
-            onClick={handleSearch}
-          >
-            Search
-          </button>
-        </div>
-        {searchResult && (
-          <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-900 rounded text-sm">
-            <p className="mb-1">
-              <strong>Supplier:</strong> {searchResult.supplier_name}
-            </p>
-            <p>
-              <strong>Device:</strong> {searchResult.device_name} ({searchResult.device_id})
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Supplier Form */}
-      {showForm && (
-        <div className="mb-6 bg-white p-0 rounded-md shadow-md dark:bg-gray-900">
-          <h2 className="text-xl font-semibold mb-4 dark:text-white dark:bg-gray-900">Add Supplier</h2>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-white dark:bg-gray-900">Supplier</label>
-            <select
-              value={selectedSupplier}
-              onChange={(e) => setSelectedSupplier(e.target.value)}
-              className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
-            >
-              <option value="">Select Supplier</option>
-              {uniqueSupplierNames.map((name, index) => (
-                <option key={index} value={name}>
-                  {name}
-                </option>
-              ))}
-              <option value="new">+ Add New Supplier</option>
-            </select>
-            {selectedSupplier === "new" && (
-              <div className="mt-2">
-                <input
-                  type="text"
-                  value={newSupplierName}
-                  onChange={(e) => setNewSupplierName(e.target.value)}
-                  placeholder="Enter new supplier name"
-                  className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
-                />
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold mb-2 dark:text-white">Devices</h3>
-            {supplierRows.map((row, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row gap-2 mb-2">
-                <input
-                  type="text"
-                  placeholder="Device Name"
-                  value={row.device_name}
-                  onChange={(e) => handleChange(idx, "device_name", e.target.value)}
-                  className="flex-1 p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Device ID"
-                  value={row.device_id}
-                  onChange={(e) => handleChange(idx, "device_id", e.target.value)}
-                  className="flex-1 p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
-                />
-                <button
-                  onClick={() => handleRemoveRow(idx)}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 w-full sm:w-auto"
+      {/* Table */}
+      <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow dark:text-white">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-200 dark:bg-gray-700">
+            <tr>
+              {['Supplier', 'Product Name', 'Product ID', 'Qty', 'Created At'].map(h => (
+                <th
+                  key={h}
+                  className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-600"
                 >
-                  Remove
-                </button>
-              </div>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            {paginatedInventory.map(item => (
+              <tr key={item.id}>
+                <td className="px-4 py-2 text-sm">
+                  <select
+                    value={item.supplier_name || ''}
+                    onChange={e => updateSupplier(item.id, e.target.value)}
+                    className="p-1 border rounded dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="">None</option>
+                    {suppliers.map(supplier => (
+                      <option key={supplier.value} value={supplier.value}>
+                        {supplier.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-4 py-2 text-sm">{item.device_name}</td>
+                <td className="px-4 py-2 text-sm">{item.device_id}</td>
+                <td className="px-4 py-2 text-sm">{item.qty}</td>
+                <td className="px-4 py-2 text-sm">
+                  {new Date(item.created_at).toLocaleDateString()}
+                </td>
+              </tr>
             ))}
-            <div className="flex flex-col sm:flex-row gap-2 mt-2">
-              <button
-                onClick={handleAddRow}
-                className="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 w-full sm:w-auto"
-              >
-                + Add Device
-              </button>
-              <button
-                onClick={handleSave}
-                className="bg-indigo-700 text-white px-4 py-2 rounded-md hover:bg-indigo-800 w-full sm:w-auto"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </tbody>
+        </table>
+      </div>
 
-      {/* Suppliers Table */}
-      {showTable && (
-        <div className="bg-white p-0 rounded-md shadow-md dark:bg-gray-800">
-          <h2 className="text-xl font-semibold mb-4 dark:text-white">Suppliers List</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-700">
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700 border-b dark:text-indigo-300">Supplier Name</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700 border-b dark:text-indigo-300">Device Name</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700 border-b dark:text-indigo-300">Device ID</th>
-                  <th className="p-3 text-left text-sm font-semibold text-gray-700 border-b dark:text-indigo-300">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {suppliers.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-600">
-                    <td className="p-3 border-b dark:text-white">{s.supplier_name}</td>
-                    <td className="p-3 border-b dark:text-white">{s.device_name}</td>
-                    <td className="p-3 border-b dark:text-white">{s.device_id}</td>
-                    <td className="p-3 border-b">
-                      <button
-                        onClick={() => handleDelete(s.id)}
-                        className="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {suppliers.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="text-center p-0 text-gray-500 dark:text-gray-400">
-                      No suppliers found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Pagination */}
+      <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+        >
+          Prev
+        </button>
+        {[...Array(totalPages)].map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentPage(i + 1)}
+            className={`px-3 py-1 rounded ${
+              currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+
+      {/* Exports */}
+      <div className="flex justify-center gap-4 mt-4">
+        <button
+          onClick={exportCSV}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          <FaFileCsv /> CSV
+        </button>
+        <button
+          onClick={exportPDF}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          <FaFilePdf /> PDF
+        </button>
+      </div>
     </div>
   );
 }

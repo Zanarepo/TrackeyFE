@@ -105,7 +105,7 @@ const tools = [
 
   {
     key: 'Suppliers',
-    label: 'Product Search',
+    label: 'Suppliers & Product Tracker',
     icon: <FaSearch className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track product & suppliers.',
     component: <Suppliers/>,
