@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../supabaseClient';
-import { FaPlus, FaTimes, FaCheckCircle } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaCheckCircle, FaHistory } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -18,17 +18,15 @@ export default function DebtPaymentManager() {
   const [payAmount, setPayAmount] = useState('');
   const [paidTo, setPaidTo] = useState('');
   const [showManager, setShowManager] = useState(false);
-  //const [, setShowReminderForm] = useState(false);
-  //const [reminderType,] = useState('one-time');
- // const [reminderTime,] = useState('');
-  //const reminderIntervalRef = useRef(null);
+  // New states for payment history
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState([]);
 
   // Fetch debts
   const fetchDebts = useCallback(async () => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    // Fetch the latest debt record for each customer_id and dynamic_product_id
     const { data, count, error } = await supabase
       .from('debts')
       .select(
@@ -45,7 +43,6 @@ export default function DebtPaymentManager() {
       return;
     }
 
-    // Group debts by customer_id and dynamic_product_id, taking the latest record
     const latestDebts = [];
     const seen = new Set();
     for (const d of data) {
@@ -56,7 +53,7 @@ export default function DebtPaymentManager() {
         latestDebts.push({
           ...d,
           status,
-          last_payment_date: d.date // Latest payment date is the record's date
+          last_payment_date: d.date
         });
       }
     }
@@ -86,10 +83,30 @@ export default function DebtPaymentManager() {
     setFilteredDebts(filtered);
   }, [debts, search]);
 
-  // Handle reminder notifications
+  // Fetch payment history for a debt
+  const fetchPaymentHistory = async (customerId, dynamicProductId) => {
+    const { data, error } = await supabase
+      .from('debt_payments')
+      .select('payment_amount, paid_to, payment_date, created_at')
+      .eq('store_id', storeId)
+      .eq('customer_id', customerId)
+      .eq('dynamic_product_id', dynamicProductId)
+      .order('payment_date', { ascending: false });
 
+    if (error) {
+      console.error(error);
+      toast.error('Failed to fetch payment history.');
+      return;
+    }
 
-  /**/
+    setPaymentHistory(data || []);
+  };
+
+  const openHistoryModal = async debt => {
+    setSelectedDebt(debt);
+    await fetchPaymentHistory(debt.customer_id, debt.dynamic_product_id);
+    setShowHistoryModal(true);
+  };
 
   const openModal = debt => {
     setSelectedDebt(debt);
@@ -134,8 +151,26 @@ export default function DebtPaymentManager() {
     };
 
     try {
-      const { error } = await supabase.from('debts').insert([paymentData]);
-      if (error) throw error;
+      // Insert into debts table
+      const { data: newDebt, error: debtError } = await supabase
+        .from('debts')
+        .insert([paymentData])
+        .select('id')
+        .single();
+      if (debtError) throw debtError;
+
+      // Insert into debt_payments table
+      const paymentRecord = {
+        store_id: storeId,
+        customer_id: selectedDebt.customer_id,
+        dynamic_product_id: selectedDebt.dynamic_product_id,
+        debt_id: newDebt.id,
+        payment_amount: payment,
+        paid_to: paidTo || null,
+        payment_date: new Date().toISOString().split('T')[0]
+      };
+      const { error: paymentError } = await supabase.from('debt_payments').insert([paymentRecord]);
+      if (paymentError) throw paymentError;
 
       toast.success(`Payment of ₦${payment.toFixed(2)} recorded successfully${paidTo ? ` via ${paidTo}` : ''}!`);
       setShowModal(false);
@@ -174,9 +209,9 @@ export default function DebtPaymentManager() {
         <>
           <h1 className="text-3xl font-bold text-center text-indigo-700 mb-4 dark:text-indigo-300">Debt Payments</h1>
 
-          {/* Search and Reminders */}
+          {/* Search */}
           <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-          <div className="w-full mb-4">
+            <div className="w-full mb-4">
               <input
                 type="text"
                 placeholder="Search by customer, product, product ID, or payment type..."
@@ -185,7 +220,6 @@ export default function DebtPaymentManager() {
                 className="w-full pl-4 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
               />
             </div>
-            
           </div>
 
           {/* Table */}
@@ -226,7 +260,7 @@ export default function DebtPaymentManager() {
                     <td className="px-4 py-3 text-sm">
                       {d.last_payment_date ? new Date(d.last_payment_date).toLocaleDateString() : '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-center">
+                    <td className="px-4 py-3 text-sm text-center space-x-2">
                       {d.status === 'paid' ? (
                         <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-300">
                           <FaCheckCircle /> Paid
@@ -239,6 +273,13 @@ export default function DebtPaymentManager() {
                           <FaPlus className="mr-1" /> Pay
                         </button>
                       )}
+                      <button
+                        onClick={() => openHistoryModal(d)}
+                        className="inline-flex items-center px-3 py-1 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition"
+                        title="View Payment History"
+                      >
+                        <FaHistory className="mr-1" /> History
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -333,52 +374,55 @@ export default function DebtPaymentManager() {
         </div>
       )}
 
-      {/*   {showReminderForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 space-y-4 dark:bg-gray-900 dark:text-white">
-            <h2 className="text-xl font-bold text-center">Set Debt Reminders</h2>
-            <div className="space-y-4">
-              <label className="block">
-                <span className="font-semibold block mb-1">Reminder Type</span>
-                <select
-                  value={reminderType}
-                  onChange={e => setReminderType(e.target.value)}
-                  className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                >
-                  <option value="one-time">One-Time</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="font-semibold block mb-1">Reminder Time</span>
-                <input
-                  type="time"
-                  value={reminderTime}
-                  onChange={e => setReminderTime(e.target.value)}
-                  className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
-                  required
-                />
-              </label>
+      {/* Payment History Modal */}
+      {showHistoryModal && selectedDebt && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md space-y-4 dark:bg-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold">Payment History for {selectedDebt.customer_name}</h2>
+            <p>
+              <span className="font-medium">Product:</span> {selectedDebt.product_name}
+            </p>
+            <p>
+              <span className="font-medium">Product ID:</span> {selectedDebt.device_id || '-'}
+            </p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white dark:bg-gray-900">
+                <thead>
+                  <tr className="bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-indigo-600">
+                    <th className="px-4 py-2 text-left text-sm font-bold">Payment Amount</th>
+                    <th className="px-4 py-2 text-left text-sm font-bold">Paid To</th>
+                    <th className="px-4 py-2 text-left text-sm font-bold">Payment Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentHistory.map((p, index) => (
+                    <tr key={index} className="border-b dark:border-gray-700">
+                      <td className="px-4 py-2 text-sm">₦{(p.payment_amount || 0).toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm">{p.paid_to || '-'}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(p.payment_date).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                  {paymentHistory.length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="text-center text-gray-500 py-4 dark:text-gray-400">
+                        No payment history found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end">
               <button
-                onClick={() => setShowReminderForm(false)}
-                className="px-4 py-2 bg-gray-200 rounded dark:bg-gray-700 dark:text-white"
+                onClick={() => setShowHistoryModal(false)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition dark:bg-gray-700 dark:text-white"
               >
-                Cancel
-              </button>
-              <button
-                onClick={scheduleReminders}
-                className="px-4 py-2 bg-indigo-600 text-white rounded"
-              >
-                Set Reminder
+                Close
               </button>
             </div>
           </div>
-        </div> */}
-    
-      
+        </div>
+      )}
     </div>
   );
 }

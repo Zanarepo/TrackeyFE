@@ -48,14 +48,14 @@ const Dashboard = () => {
     switch (activeTab) {
       case 'Sales Summary':
         return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+          <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             <StoresSalesSummary />
           </div>
         );
 
       case 'Toolkits':
         return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+          <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             <VariexDB />
           </div>
         );
@@ -78,14 +78,14 @@ const Dashboard = () => {
 
       case 'Notifications':
         return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+          <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             <Notifications />
           </div>
         );
 
       default:
         return (
-          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+          <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             Dashboard Content
           </div>
         );
@@ -99,7 +99,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-700 mt-20">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 mt-20">
       <WhatsapUsers />
       <StoreUsersTour
         isOpen={isTourOpen}

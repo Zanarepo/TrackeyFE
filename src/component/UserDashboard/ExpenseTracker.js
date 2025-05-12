@@ -164,13 +164,13 @@ const ExpenseManager = () => {
         placeholder="Search by type or description"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="mb-4 w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
+        className="mb-4 w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
       />
 
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white p-4 rounded shadow mb-4 space-y-4 dark:bg-gray-800 dark:text-white"
+          className="bg-white p-4 rounded shadow mb-4 space-y-4 dark:bg-gray-900 dark:text-white"
         >
           <div>
             <label className="block font-medium">Date</label>
@@ -179,7 +179,7 @@ const ExpenseManager = () => {
               name="expense_date"
               value={form.expense_date}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-900 dark:text-white"
               required
             />
           </div>
@@ -191,7 +191,7 @@ const ExpenseManager = () => {
               placeholder="e.g., Rent, Utilities"
               value={form.expense_type}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-900 dark:text-white"
               required
             />
           </div>
@@ -203,7 +203,7 @@ const ExpenseManager = () => {
               placeholder="0.00"
               value={form.amount}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-900 dark:text-white"
               required
             />
           </div>
@@ -214,7 +214,7 @@ const ExpenseManager = () => {
               placeholder="Optional description"
               value={form.description}
               onChange={handleInputChange}
-              className="border rounded px-3 py-2 w-full dark:bg-gray-800 dark:text-white"
+              className="border rounded px-3 py-2 w-full dark:bg-gray-900 dark:text-white"
             />
           </div>
           <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded">
@@ -224,9 +224,9 @@ const ExpenseManager = () => {
       )}
 
 <div className="overflow-x-auto w-full">
-  <table className="min-w-full table-auto border-collapse dark:bg-gray-800 dark:text-white">
+  <table className="min-w-full table-auto border-collapse dark:bg-gray-900 dark:text-white">
     <thead>
-      <tr className="bg-gray-200 text-indigo-500 dark:bg-gray-800 dark:text-indigo-600 text-left text-sm sm:text-base">
+      <tr className="bg-gray-200 text-indigo-500 dark:bg-gray-900 dark:text-indigo-600 text-left text-sm sm:text-base">
         <th className="p-3 min-w-[120px]">Date</th>
         <th className="p-3 min-w-[100px]">Type</th>
         <th className="p-3 min-w-[100px]">Amount</th>

@@ -24,7 +24,7 @@ import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
 //import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
 import Customers        from './Customers';
-import VariexFeature  from '../DynamicSales/VariexFeature';
+//import VariexFeature  from '../DynamicSales/VariexFeature';
 import Receipts from '../VariexContents/Receipts'
 import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
@@ -156,7 +156,7 @@ export default function DynamicDashboard() {
 
             
 <div className="mb-6">
-      <VariexFeature />
+     {/* Back & Tool Info <VariexFeature /> */} 
       </div>
       
         {!activeTool && (

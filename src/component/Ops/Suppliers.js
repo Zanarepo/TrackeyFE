@@ -176,14 +176,14 @@ export default function SuppliersManager() {
       </div>
 
       {/* Search Section */}
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row gap-2 mb-2">
+      <div className="mb-6 ">
+        <div className="flex flex-col sm:flex-row gap-2 mb-2 ">
           <input
             type="text"
             placeholder="Search by Device ID"
             value={searchId}
             onChange={(e) => setSearchId(e.target.value)}
-            className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+            className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
           />
           <button
             className="bg-indigo-700 text-white px-4 py-2 rounded-md hover:bg-indigo-800 w-full sm:w-auto"
@@ -193,7 +193,7 @@ export default function SuppliersManager() {
           </button>
         </div>
         {searchResult && (
-          <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+          <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-900 rounded text-sm">
             <p className="mb-1">
               <strong>Supplier:</strong> {searchResult.supplier_name}
             </p>
@@ -206,14 +206,14 @@ export default function SuppliersManager() {
 
       {/* Supplier Form */}
       {showForm && (
-        <div className="mb-6 bg-white p-0 rounded-md shadow-md dark:bg-gray-800">
-          <h2 className="text-xl font-semibold mb-4 dark:text-white">Add Supplier</h2>
+        <div className="mb-6 bg-white p-0 rounded-md shadow-md dark:bg-gray-900">
+          <h2 className="text-xl font-semibold mb-4 dark:text-white dark:bg-gray-900">Add Supplier</h2>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-white">Supplier</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-white dark:bg-gray-900">Supplier</label>
             <select
               value={selectedSupplier}
               onChange={(e) => setSelectedSupplier(e.target.value)}
-              className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+              className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
             >
               <option value="">Select Supplier</option>
               {uniqueSupplierNames.map((name, index) => (
@@ -230,7 +230,7 @@ export default function SuppliersManager() {
                   value={newSupplierName}
                   onChange={(e) => setNewSupplierName(e.target.value)}
                   placeholder="Enter new supplier name"
-                  className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+                  className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
                 />
               </div>
             )}
@@ -245,14 +245,14 @@ export default function SuppliersManager() {
                   placeholder="Device Name"
                   value={row.device_name}
                   onChange={(e) => handleChange(idx, "device_name", e.target.value)}
-                  className="flex-1 p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+                  className="flex-1 p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
                 />
                 <input
                   type="text"
                   placeholder="Device ID"
                   value={row.device_id}
                   onChange={(e) => handleChange(idx, "device_id", e.target.value)}
-                  className="flex-1 p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white"
+                  className="flex-1 p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-900 dark:text-white"
                 />
                 <button
                   onClick={() => handleRemoveRow(idx)}

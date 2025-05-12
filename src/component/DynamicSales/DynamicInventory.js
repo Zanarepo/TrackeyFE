@@ -318,7 +318,7 @@ export default function InventoryManager() {
   const totalPages = Math.max(1, Math.ceil(filteredInv.length / pageSize));
 
   return (
-    <div className="p-0 space-y-6">
+    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white">
       <h1 className="text-2xl font-bold text-center">{storeName} Inventory</h1>
 
       {/* Search and Low Stock Controls */}
@@ -329,7 +329,7 @@ export default function InventoryManager() {
           placeholder="Search by product…"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 search-input"
+          className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-900 dark:text-white dark:border-gray-600 search-input"
         />
 
         {/* Controls Section */}
@@ -340,7 +340,7 @@ export default function InventoryManager() {
             min="0"
             value={lowStockThreshold}
             onChange={e => setLowStockThreshold(parseInt(e.target.value) || 5)}
-            className="p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 w-full sm:w-24"
+            className="p-2 border rounded dark:bg-gray-900 dark:text-white dark:border-gray-600 w-full sm:w-24"
             placeholder="Threshold"
           />
 
@@ -348,7 +348,7 @@ export default function InventoryManager() {
           <select
             value={lowStockSort}
             onChange={e => setLowStockSort(e.target.value)}
-            className="p-2 border rounded dark:bg-gray-800 dark:text-white dark:border-gray-600 w-full sm:w-auto"
+            className="p-2 border rounded dark:bg-gray-900 dark:text-white dark:border-gray-600 w-full sm:w-auto"
           >
             <option value="quantity">Sort by Quantity</option>
             <option value="name">Sort by Name</option>
@@ -402,7 +402,7 @@ export default function InventoryManager() {
       )}
 
       {/* Inventory Table */}
-      <div className="w-full overflow-x-auto dark:bg-gray-800 dark:text-white">
+      <div className="w-full overflow-x-auto dark:bg-gray-900 dark:text-white">
         <table className="min-w-full table-auto border-collapse">
           <thead className="bg-gray-200 text-indigo-500 dark:bg-gray-700 dark:text-indigo-400">
             <tr>

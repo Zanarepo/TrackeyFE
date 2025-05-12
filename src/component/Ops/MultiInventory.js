@@ -154,16 +154,16 @@ export default function InventorySummary() {
       <h1 className="text-3xl font-bold text-indigo-700 mb-8 dark:text-indigo-300">Inventory Dashboard</h1>
 
       {/* Filters and Store Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 ">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Select Store</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 dark:bg-gray-900 text-white">Select Store</label>
           <select
             value={selectedStore}
             onChange={e => {
               setSelectedStore(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white dark:border-gray-700"
           >
             <option value="all">All Stores</option>
             {stores.map(store => (
@@ -181,7 +181,7 @@ export default function InventorySummary() {
               setCurrentPage(1);
             }}
             placeholder="Filter by product name"
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white dark:border-gray-700"
           />
         </div>
         <div>
@@ -194,7 +194,7 @@ export default function InventorySummary() {
               setCurrentPage(1);
             }}
             placeholder="Min available qty"
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white dark:border-gray-700"
           />
         </div>
         <div>
@@ -207,13 +207,13 @@ export default function InventorySummary() {
               setCurrentPage(1);
             }}
             placeholder="Min sold qty"
-            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white dark:border-gray-700"
           />
         </div>
       </div>
 
       {/* Summary Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0 mb-8 dark:bg-gray-900 text-white">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Store Inventory Overview</h2>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -256,7 +256,7 @@ export default function InventorySummary() {
           {showCharts ? 'Hide Charts' : 'View Charts'}
         </button>
         {showCharts && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0 mt-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0 mt-4 dark:bg-gray-900 text-white">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Inventory Distribution</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData}>
@@ -273,7 +273,7 @@ export default function InventorySummary() {
       </div>
 
       {/* Detailed Inventory Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 dark:bg-gray-900 text-white" >
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Detailed Inventory Records</h2>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">

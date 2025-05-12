@@ -19,7 +19,7 @@ export default function ReturnsByDeviceIdManager() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     receipt_id: "",
-    customer_name: "",
+    customer_address: "",
     product_name: "",
     device_id: "",
     qty: "",
@@ -38,17 +38,16 @@ export default function ReturnsByDeviceIdManager() {
   const onboardingSteps = [
     {
       target: '.device-id-query',
-      content: 'Search for receipts by device ID to start a return.',
+      content: 'Search for sales by device ID to start a return.',
     },
     {
       target: '.add-return',
-      content: 'Add a new return after finding a matching receipt.',
+      content: 'Add a new return after finding a matching sale.',
     },
     {
       target: '.search-returns',
       content: 'Search existing returns by customer, product, or status.',
     },
-   
   ];
 
   // Check if onboarding has been completed
@@ -56,7 +55,7 @@ export default function ReturnsByDeviceIdManager() {
     if (!localStorage.getItem('returnsManagerOnboardingCompleted')) {
       const timer = setTimeout(() => {
         setShowOnboarding(true);
-      }, 3000); // 3-second delay
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -81,24 +80,75 @@ export default function ReturnsByDeviceIdManager() {
       });
   }, [storeId]);
 
-  // Query receipts by device_id
+  // Query dynamic_sales by device_id and fetch receipt_id from receipts
   useEffect(() => {
     if (!deviceIdQuery || !storeId) {
       setQueriedReceipts([]);
+      setError(null);
       return;
     }
-    supabase
-      .from('receipts')
-      .select('id, receipt_id, customer_name, product_name, device_id, sales_qty, sales_amount')
-      .eq('store_receipt_id', storeId)
-      .ilike('device_id', `%${deviceIdQuery}%`)
-      .then(({ data, error }) => {
-        if (error) {
-          setError("Failed to fetch receipts: " + error.message);
-        } else {
-          setQueriedReceipts(data || []);
+
+    const fetchSalesAndReceipts = async () => {
+      try {
+        // Step 1: Fetch dynamic_sales by device_id and store_id
+        const { data: salesData, error: salesError } = await supabase
+          .from('dynamic_sales')
+          .select('id, dynamic_product_id, store_id, quantity, device_id, unit_price, amount, payment_method, sale_group_id')
+          .eq('store_id', storeId)
+          .eq('device_id', deviceIdQuery);
+
+        if (salesError) {
+          throw new Error("Failed to fetch sales: " + salesError.message);
         }
-      });
+
+        if (!salesData || salesData.length === 0) {
+          setError(`No sales found for device ID: ${deviceIdQuery}`);
+          setQueriedReceipts([]);
+          return;
+        }
+
+        // Step 2: Fetch receipts by sale_group_id
+        const saleGroupIds = salesData.map(s => s.sale_group_id).filter(id => id != null);
+        const { data: receiptsData, error: receiptsError } = await supabase
+          .from('receipts')
+          .select('id, sale_group_id, receipt_id, customer_address, product_name, phone_number, sales_qty, sales_amount')
+          .eq('store_receipt_id', storeId)
+          .in('sale_group_id', saleGroupIds);
+
+        if (receiptsError) {
+          throw new Error("Failed to fetch receipts: " + receiptsError.message);
+        }
+
+        // Step 3: Combine sales and receipts data
+        const combinedData = salesData.map(sale => {
+          const receipt = receiptsData.find(r => r.sale_group_id === sale.sale_group_id);
+          return {
+            id: sale.id, // dynamic_sales.id
+            receipt_id: receipt ? receipt.id : null, // receipts.id for returns
+            receipt_code: receipt ? receipt.receipt_id : 'Unknown', // receipts.receipt_id for display
+            customer_address: receipt ? receipt.customer_address : null,
+            product_name: receipt ? receipt.product_name : 'Unknown',
+            device_id: sale.device_id,
+            phone_number: receipt ? receipt.phone_number : null,
+            quantity: sale.quantity,
+            unit_price: sale.unit_price,
+            amount: sale.amount,
+            payment_method: sale.payment_method,
+            sale_group_id: sale.sale_group_id,
+            dynamic_product_id: sale.dynamic_product_id
+          };
+        });
+
+        console.log('Queried Sales and Receipts:', combinedData);
+        setQueriedReceipts(combinedData);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        setQueriedReceipts([]);
+      }
+    };
+
+    fetchSalesAndReceipts();
   }, [deviceIdQuery, storeId]);
 
   // Fetch returns for the current store
@@ -107,19 +157,19 @@ export default function ReturnsByDeviceIdManager() {
 
     const fetchReturns = async () => {
       try {
-        // Step 1: Fetch receipt IDs for the current store
-        const { data: receipts, error: receiptError } = await supabase
+        // Step 1: Fetch receipts for the store
+        const { data: receiptsData, error: receiptsError } = await supabase
           .from('receipts')
-          .select('id')
+          .select('id, receipt_id, sale_group_id')
           .eq('store_receipt_id', storeId);
 
-        if (receiptError) {
-          throw new Error("Failed to fetch receipts: " + receiptError.message);
+        if (receiptsError) {
+          throw new Error("Failed to fetch receipts: " + receiptsError.message);
         }
 
-        const receiptIds = receipts.map(r => r.id);
+        const receiptIds = receiptsData.map(r => r.id);
 
-        // Step 2: Fetch returns linked to those receipt IDs
+        // Step 2: Fetch returns
         const { data: returnsData, error: returnsError } = await supabase
           .from('returns')
           .select('*')
@@ -129,8 +179,19 @@ export default function ReturnsByDeviceIdManager() {
           throw new Error("Failed to fetch returns: " + returnsError.message);
         }
 
-        setReturns(returnsData || []);
-        setFilteredReturns(returnsData || []);
+        // Step 3: Combine returns with receipt_id
+        const combinedReturns = returnsData.map(ret => {
+          const receipt = receiptsData.find(r => r.id === ret.receipt_id);
+          return {
+            ...ret,
+            receipt_code: receipt ? receipt.receipt_id : 'Unknown',
+            sale_group_id: receipt ? receipt.sale_group_id : null
+          };
+        });
+
+        console.log('Fetched Returns:', combinedReturns);
+        setReturns(combinedReturns || []);
+        setFilteredReturns(combinedReturns || []);
       } catch (err) {
         setError(err.message);
       }
@@ -145,14 +206,15 @@ export default function ReturnsByDeviceIdManager() {
     setFilteredReturns(
       returns.filter(r => {
         const fields = [
-          r.customer_name,
+          r.customer_address,
           r.product_name,
           r.device_id,
           String(r.qty),
           r.amount != null ? `₦${r.amount.toFixed(2)}` : '',
           r.remark,
           r.status,
-          r.returned_date
+          r.returned_date,
+          r.receipt_code
         ];
         return fields.some(f => f?.toString().toLowerCase().includes(term));
       })
@@ -196,18 +258,17 @@ export default function ReturnsByDeviceIdManager() {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
 
-    // Auto-populate fields when receipt_id changes
     if (name === 'receipt_id' && value) {
-      const selectedReceipt = queriedReceipts.find(r => r.id === parseInt(value));
+      const selectedReceipt = queriedReceipts.find(r => r.receipt_id === parseInt(value));
       if (selectedReceipt) {
         setForm(f => ({
           ...f,
           receipt_id: value,
-          customer_name: selectedReceipt.customer_name || "",
+          customer_address: selectedReceipt.customer_address || "",
           product_name: selectedReceipt.product_name,
           device_id: selectedReceipt.device_id || "",
-          qty: selectedReceipt.sales_qty || "",
-          amount: selectedReceipt.sales_amount || ""
+          qty: selectedReceipt.quantity || "",
+          amount: selectedReceipt.amount || ""
         }));
       }
     }
@@ -217,7 +278,7 @@ export default function ReturnsByDeviceIdManager() {
     setEditing(r);
     setForm({
       receipt_id: r.receipt_id.toString(),
-      customer_name: r.customer_name || "",
+      customer_address: r.customer_address || "",
       product_name: r.product_name,
       device_id: r.device_id || "",
       qty: r.qty || "",
@@ -229,7 +290,6 @@ export default function ReturnsByDeviceIdManager() {
   };
 
   const saveReturn = async () => {
-    // Validate receipt_id
     if (!form.receipt_id || isNaN(parseInt(form.receipt_id))) {
       setError("Please select a valid receipt.");
       return;
@@ -237,7 +297,7 @@ export default function ReturnsByDeviceIdManager() {
 
     const returnData = {
       receipt_id: parseInt(form.receipt_id),
-      customer_name: form.customer_name,
+      customer_address: form.customer_address,
       product_name: form.product_name,
       device_id: form.device_id,
       qty: parseInt(form.qty),
@@ -257,7 +317,7 @@ export default function ReturnsByDeviceIdManager() {
       setEditing(null);
       setForm({
         receipt_id: "",
-        customer_name: "",
+        customer_address: "",
         product_name: "",
         device_id: "",
         qty: "",
@@ -268,17 +328,17 @@ export default function ReturnsByDeviceIdManager() {
       });
       setError(null);
 
-      // Refetch returns for the current store
-      const { data: receipts, error: receiptError } = await supabase
+      // Refetch returns
+      const { data: receiptsData, error: receiptsError } = await supabase
         .from('receipts')
-        .select('id')
+        .select('id, receipt_id, sale_group_id')
         .eq('store_receipt_id', storeId);
 
-      if (receiptError) {
-        throw new Error("Failed to fetch receipts: " + receiptError.message);
+      if (receiptsError) {
+        throw new Error("Failed to fetch receipts: " + receiptsError.message);
       }
 
-      const receiptIds = receipts.map(r => r.id);
+      const receiptIds = receiptsData.map(r => r.id);
 
       const { data: returnsData, error: returnsError } = await supabase
         .from('returns')
@@ -289,8 +349,18 @@ export default function ReturnsByDeviceIdManager() {
         throw new Error("Failed to fetch updated returns: " + returnsError.message);
       }
 
-      setReturns(returnsData || []);
-      setFilteredReturns(returnsData || []);
+      const combinedReturns = returnsData.map(ret => {
+        const receipt = receiptsData.find(r => r.id === ret.receipt_id);
+        return {
+          ...ret,
+          receipt_code: receipt ? receipt.receipt_id : 'Unknown',
+          sale_group_id: receipt ? receipt.sale_group_id : null
+        };
+      });
+
+      console.log('Updated Returns:', combinedReturns);
+      setReturns(combinedReturns || []);
+      setFilteredReturns(combinedReturns || []);
     } catch (err) {
       setError("Failed to save return: " + err.message);
     }
@@ -300,17 +370,16 @@ export default function ReturnsByDeviceIdManager() {
     try {
       await supabase.from("returns").delete().eq("id", id);
 
-      // Refetch returns for the current store
-      const { data: receipts, error: receiptError } = await supabase
+      const { data: receiptsData, error: receiptsError } = await supabase
         .from('receipts')
-        .select('id')
+        .select('id, receipt_id, sale_group_id')
         .eq('store_receipt_id', storeId);
 
-      if (receiptError) {
-        throw new Error("Failed to fetch receipts: " + receiptError.message);
+      if (receiptsError) {
+        throw new Error("Failed to fetch receipts: " + receiptsError.message);
       }
 
-      const receiptIds = receipts.map(r => r.id);
+      const receiptIds = receiptsData.map(r => r.id);
 
       const { data: returnsData, error: returnsError } = await supabase
         .from('returns')
@@ -321,8 +390,18 @@ export default function ReturnsByDeviceIdManager() {
         throw new Error("Failed to fetch updated returns: " + returnsError.message);
       }
 
-      setReturns(returnsData || []);
-      setFilteredReturns(returnsData || []);
+      const combinedReturns = returnsData.map(ret => {
+        const receipt = receiptsData.find(r => r.id === ret.receipt_id);
+        return {
+          ...ret,
+          receipt_code: receipt ? receipt.receipt_id : 'Unknown',
+          sale_group_id: receipt ? receipt.sale_group_id : null
+        };
+      });
+
+      console.log('Updated Returns after Delete:', combinedReturns);
+      setReturns(combinedReturns || []);
+      setFilteredReturns(combinedReturns || []);
     } catch (err) {
       setError("Failed to delete return: " + err.message);
     }
@@ -351,36 +430,42 @@ export default function ReturnsByDeviceIdManager() {
             type="text"
             value={deviceIdQuery}
             onChange={e => setDeviceIdQuery(e.target.value)}
-            placeholder="Enter Device ID to search receipts"
+            placeholder="Enter Device ID to search sales"
             className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white device-id-query"
           />
         </div>
 
-        {/* Queried Receipts */}
+        {/* Queried Sales */}
         {queriedReceipts.length > 0 && (
           <div className="mb-4">
-            <h3 className="text-md font-semibold mb-2">Matching Receipts</h3>
+            <h3 className="text-md font-semibold mb-2">Matching Sales</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border rounded-lg">
                 <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
                   <tr>
                     <th className="text-left px-4 py-2 border-b">Receipt ID</th>
-                    <th className="text-left px-4 py-2 border-b">Customer Name</th>
+                    <th className="text-left px-4 py-2 border-b">Customer Address</th>
                     <th className="text-left px-4 py-2 border-b">Product</th>
                     <th className="text-left px-4 py-2 border-b">Device ID</th>
+                    <th className="text-left px-4 py-2 border-b">Phone Number</th>
                     <th className="text-left px-4 py-2 border-b">Qty</th>
+                    <th className="text-left px-4 py-2 border-b">Unit Price</th>
                     <th className="text-left px-4 py-2 border-b">Amount</th>
+                    <th className="text-left px-4 py-2 border-b">Payment Method</th>
                   </tr>
                 </thead>
                 <tbody>
                   {queriedReceipts.map(r => (
                     <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
-                      <td className="px-4 py-2 border-b truncate">{r.receipt_id}</td>
-                      <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.receipt_code}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.customer_address || '-'}</td>
                       <td className="px-4 py-2 border-b truncate">{r.product_name}</td>
                       <td className="px-4 py-2 border-b truncate">{r.device_id || '-'}</td>
-                      <td className="px-4 py-2 border-b">{r.sales_qty}</td>
-                      <td className="px-4 py-2 border-b">₦{r.sales_amount.toFixed(2)}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.phone_number || '-'}</td>
+                      <td className="px-4 py-2 border-b">{r.quantity}</td>
+                      <td className="px-4 py-2 border-b">₦{r.unit_price.toFixed(2)}</td>
+                      <td className="px-4 py-2 border-b">₦{r.amount.toFixed(2)}</td>
+                      <td className="px-4 py-2 border-b">{r.payment_method}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -416,21 +501,22 @@ export default function ReturnsByDeviceIdManager() {
           <table className="min-w-full text-sm border rounded-lg">
             <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
               <tr>
-                <th className="text-left px-4 py-2 border-b">Customer Name</th>
+                <th className="text-left px-4 py-2 border-b">Customer Address</th>
                 <th className="text-left px-4 py-2 border-b">Product</th>
-                <th className="text-left px-4 py-2 border-b">Product ID</th>
+                <th className="text-left px-4 py-2 border-b">Device ID</th>
                 <th className="text-left px-4 py-2 border-b">Qty</th>
                 <th className="text-left px-4 py-2 border-b">Amount</th>
                 <th className="text-left px-4 py-2 border-b">Remark</th>
                 <th className="text-left px-4 py-2 border-b">Status</th>
                 <th className="text-left px-4 py-2 border-b">Returned Date</th>
+                <th className="text-left px-4 py-2 border-b">Receipt ID</th>
                 <th className="text-left px-4 py-2 border-b">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredReturns.map((r, index) => (
                 <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
-                  <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.customer_address || '-'}</td>
                   <td className="px-4 py-2 border-b truncate">{r.product_name}</td>
                   <td className="px-4 py-2 border-b truncate">{r.device_id || '-'}</td>
                   <td className="px-4 py-2 border-b">{r.qty}</td>
@@ -438,6 +524,7 @@ export default function ReturnsByDeviceIdManager() {
                   <td className="px-4 py-2 border-b truncate">{r.remark || '-'}</td>
                   <td className="px-4 py-2 border-b">{r.status}</td>
                   <td className="px-4 py-2 border-b">{r.returned_date}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.receipt_code}</td>
                   <td className="px-4 py-2 border-b">
                     <div className="flex gap-3">
                       <button onClick={() => openEdit(r)} className={`hover:text-indigo-600 dark:bg-gray-900 dark:text-white edit-return-${index}`}>
@@ -455,7 +542,7 @@ export default function ReturnsByDeviceIdManager() {
               ))}
               {filteredReturns.length === 0 && (
                 <tr>
-                  <td colSpan="9" className="text-center text-gray-500 py-4 dark:bg-gray-900 dark:text-white">
+                  <td colSpan="10" className="text-center text-gray-500 py-4 dark:bg-gray-900 dark:text-white">
                     No returns found.
                   </td>
                 </tr>
@@ -484,18 +571,18 @@ export default function ReturnsByDeviceIdManager() {
                 >
                   <option value="">Select Receipt</option>
                   {queriedReceipts.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.receipt_id} - {r.product_name} ({r.customer_name || 'No Customer'})
+                    <option key={r.id} value={r.receipt_id}>
+                      {r.receipt_code} - {r.product_name} ({r.customer_address || 'No Address'})
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="block w-full">
-                <span className="font-semibold block mb-1">Customer Name</span>
+                <span className="font-semibold block mb-1">Customer Address</span>
                 <input
-                  name="customer_name"
-                  value={form.customer_name}
+                  name="customer_address"
+                  value={form.customer_address}
                   readOnly
                   className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
                 />
@@ -576,41 +663,39 @@ export default function ReturnsByDeviceIdManager() {
 
       {/* Onboarding Tooltip */}
       {showOnboarding && onboardingStep < onboardingSteps.length && (
-      <motion.div
-  className="fixed z-[9999] bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 w-[90vw] max-w-sm sm:max-w-xs overflow-auto"
-  style={{
-    ...getTooltipPosition(onboardingSteps[onboardingStep].target),
-    maxHeight: '90vh',
-  }}
-  variants={tooltipVariants}
-  initial="hidden"
-  animate="visible"
->
-  <p className="text-sm text-white dark:text-gray-300 mb-2">
-    {onboardingSteps[onboardingStep].content}
-  </p>
-  <div className="flex justify-between items-center flex-wrap gap-y-2">
-    <span className="text-sm text-gray-200">
-      Step {onboardingStep + 1} of {onboardingSteps.length}
-    </span>
-    
-    <div className="space-x-2">
-      <button
-        onClick={handleSkipOnboarding}
-        className="text-sm text-gray-300 hover:text-gray-800 dark:text-gray-300"
-      >
-        Skip
-      </button>
-      <button
-        onClick={handleNextStep}
-        className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
-      >
-        {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
-      </button>
-    </div>
-  </div>
-</motion.div>
-
+        <motion.div
+          className="fixed z-[9999] bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 w-[90vw] max-w-sm sm:max-w-xs overflow-auto"
+          style={{
+            ...getTooltipPosition(onboardingSteps[onboardingStep].target),
+            maxHeight: '90vh',
+          }}
+          variants={tooltipVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <p className="text-sm text-white dark:text-gray-300 mb-2">
+            {onboardingSteps[onboardingStep].content}
+          </p>
+          <div className="flex justify-between items-center flex-wrap gap-y-2">
+            <span className="text-sm text-gray-200">
+              Step {onboardingStep + 1} of {onboardingSteps.length}
+            </span>
+            <div className="space-x-2">
+              <button
+                onClick={handleSkipOnboarding}
+                className="text-sm text-gray-300 hover:text-gray-800 dark:text-gray-300"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleNextStep}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
+              >
+                {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </motion.div>
       )}
     </div>
   );

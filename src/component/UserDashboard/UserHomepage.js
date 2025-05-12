@@ -4,7 +4,7 @@ import {
   FaUser,
   FaBars,
   FaTimes,
-  //FaStore,
+  FaStore,
   FaConciergeBell,
   FaIdBadge,
   FaBell,
@@ -18,6 +18,7 @@ import VsalesSummary from '../Ops/VsalesSummary';
 import WhatsapUsers from './WhatsapUsers';
 import Notifications from './Notifications';
 import PricingFeatures from '../Payments/PricingFeatures';
+import Test from './Test'
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Toolkits');
@@ -92,7 +93,7 @@ const Dashboard = () => {
       case 'Test':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
-            {/* <Test /> */}
+            { <Test /> }
             <p>Test component not imported</p>
           </div>
         );
@@ -240,7 +241,7 @@ const Dashboard = () => {
                 </li>
 
               
-              {/* 
+              {/* */}
                 <li
                   onClick={() => handleNavClick('Test')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${
@@ -253,7 +254,7 @@ const Dashboard = () => {
                     TESTING
                   </span>
                 </li>
-                */}
+                
               </ul>
             </nav>
           </div>

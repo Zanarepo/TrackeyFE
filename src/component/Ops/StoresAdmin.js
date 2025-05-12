@@ -53,66 +53,66 @@ const Dashboard = () => {
     switch (activeTab) {
       case 'My Stores':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <MyStores />
           </div>
         );
 
       case 'Multi Sales':
         return (
-          <div className="w-full bg-white dark:bg-gray-700 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <MultiSales />
           </div>
         );
 
       case 'Multi Inventory':
         return (
-          <div className="w-full bg-white dark:bg-gray-700 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <MultiInventory />
           </div>
         );
 
       case 'Multi Debts':
         return (
-          <div className="w-full bg-white dark:bg-gray-700 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <MultiDebt />
           </div>
         );
 
       case 'VDashboard':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4"></div>
+          <div className="w-full bg-white dark:bg-gray-900 p-4"></div>
         );
 
       case 'Test':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Test />
           </div>
         );
 
       case 'Upgrade':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <PricingFeatures />
           </div>
         );
 
       case 'Variex':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4"></div>
+          <div className="w-full bg-white dark:bg-gray-900 p-4"></div>
         );
 
       case 'Employees':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <StoreOwnersEmployees />
           </div>
         );
 
       case 'Profile':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Profile />
           </div>
         );
@@ -126,7 +126,7 @@ const Dashboard = () => {
 
       default:
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             Dashboard Content
           </div>
         );
@@ -140,7 +140,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 mt-20">
+    <div className="flex h-screen bg-white dark:bg-gray-800 mt-20">
       <WhatsapUsers />
       {/* Onboarding Tour */}
       <OnboardingTour

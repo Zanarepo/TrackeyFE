@@ -476,8 +476,8 @@ export default function SalesTracker() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full sm:w-auto">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">View:</label>
+          <div className="flex items-center gap-2 dark:bg-gray-900  dark:text-white">
+            <label className="text-sm font-medium ">View:</label>
             <select
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value)}
@@ -508,7 +508,7 @@ export default function SalesTracker() {
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 dark:bg-gray-800  dark:text-white">
           <form
             onSubmit={createSale}
             className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto"
@@ -680,22 +680,22 @@ export default function SalesTracker() {
       )}
 
       {/* Sales Table */}
-      <div className="overflow-x-auto rounded-lg shadow">
+      <div className="overflow-x-auto rounded-lg shadow ">
         {viewMode === 'list' ? (
-          <table className="min-w-full bg-white dark:bg-gray-800 divide-y divide-gray-200">
-            <thead className="bg-gray-100 dark:bg-gray-700">
+          <table className="min-w-full bg-white dark:bg-gray-900  dark:text-white divide-y divide-gray-200">
+            <thead className="bg-gray-100 dark:bg-gray-700 dark:bg-gray-800  text-white">
               <tr>
                 {['Product', 'Quantity', 'Unit Price', 'Amount', 'Payment', 'Product ID', 'Sold At', 'Actions'].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200"
+                    className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 "
                   >
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 ">
               {paginatedSales.map((s, index) => (
                 <tr key={s.id}>
                   <td className="px-4 py-2 text-sm">{s.dynamic_product.name}</td>
@@ -734,10 +734,10 @@ export default function SalesTracker() {
             </tbody>
           </table>
         ) : (
-          <table className="min-w-full bg-white dark:bg-gray-800 divide-y divide-gray-200">
+          <table className="min-w-full bg-white dark:bg-gray-800 divide-y divide-gray-200 ">
             <thead className="bg-gray-100 dark:bg-gray-700">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">Period</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200 ">Period</th>
                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">Total Sales (₦)</th>
                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200">Number of Sales</th>
               </tr>

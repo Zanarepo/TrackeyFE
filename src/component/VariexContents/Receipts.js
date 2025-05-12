@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from "../../supabaseClient";
 import { FaEdit, FaTrashAlt, FaPrint, FaDownload } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const tooltipVariants = {
   hidden: { opacity: 0, y: 10 },
@@ -15,7 +15,7 @@ export default function ReceiptManager() {
   const [selectedSaleGroup, setSelectedSaleGroup] = useState(null);
   const [receipts, setReceipts] = useState([]);
   const [filteredReceipts, setFilteredReceipts] = useState([]);
-  const [searchTerm,] = useState('');
+  const [searchTerm] = useState('');
   const [editing, setEditing] = useState(null);
   const [salesSearch, setSalesSearch] = useState('');
   const [sortKey, setSortKey] = useState('created_at');
@@ -23,6 +23,13 @@ export default function ReceiptManager() {
   const [form, setForm] = useState({ customer_name: "", customer_address: "", phone_number: "", warranty: "" });
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  // States for toggle and pagination
+  const [showSaleGroups, setShowSaleGroups] = useState(true);
+  const [showReceipts, setShowReceipts] = useState(true);
+  const [currentSaleGroupsPage, setCurrentSaleGroupsPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const saleGroupsPerPage = 10;
+  const itemsPerPage = 10;
 
   // Dynamic style states
   const [headerBgColor, setHeaderBgColor] = useState('#1E3A8A');
@@ -33,6 +40,7 @@ export default function ReceiptManager() {
 
   const printRef = useRef();
   const receiptsRef = useRef();
+  const saleGroupsRef = useRef();
 
   // Onboarding steps
   const onboardingSteps = [
@@ -48,7 +56,6 @@ export default function ReceiptManager() {
       target: filteredReceipts.length > 0 ? '.edit-receipt-0' : '.sales-search',
       content: filteredReceipts.length > 0 ? 'Edit receipt details like customer name or warranty.' : 'Select a sale details to view and edit receipts save it, print or download.',
     },
-   
   ];
 
   // Check if onboarding has been completed
@@ -56,7 +63,7 @@ export default function ReceiptManager() {
     if (!localStorage.getItem('receiptManagerOnboardingCompleted')) {
       const timer = setTimeout(() => {
         setShowOnboarding(true);
-      }, 3000); // 3-second delay
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -116,15 +123,15 @@ export default function ReceiptManager() {
 
       // If no receipt exists, create one for the sale group
       if (receiptData.length === 0 && selectedSaleGroup.dynamic_sales?.length > 0) {
-        const firstSale = selectedSaleGroup.dynamic_sales[0]; // Use first sale for representative fields
+        const firstSale = selectedSaleGroup.dynamic_sales[0];
         const totalQuantity = selectedSaleGroup.dynamic_sales.reduce((sum, sale) => sum + sale.quantity, 0);
         const receiptInsert = {
           store_receipt_id: selectedSaleGroup.store_id,
           sale_group_id: selectedSaleGroup.id,
-          product_id: firstSale.dynamic_product.id, // Representative product_id
+          product_id: firstSale.dynamic_product.id,
           sales_amount: selectedSaleGroup.total_amount,
           sales_qty: totalQuantity,
-          product_name: firstSale.dynamic_product.name, // Representative product name
+          product_name: firstSale.dynamic_product.name,
           device_id: firstSale.device_id || null,
           customer_name: "",
           customer_address: "",
@@ -142,9 +149,9 @@ export default function ReceiptManager() {
         receiptData = [newReceipt];
       }
 
-      // Ensure only one receipt is kept (delete extras if any)
+      // Ensure only one receipt is kept
       if (receiptData.length > 1) {
-        const [latestReceipt] = receiptData; // Keep the latest
+        const [latestReceipt] = receiptData;
         await supabase
           .from("receipts")
           .delete()
@@ -179,14 +186,22 @@ export default function ReceiptManager() {
         return fields.some(f => f?.toString().toLowerCase().includes(term));
       })
     );
+    setCurrentPage(1); // Reset to first page on filter change
   }, [searchTerm, receipts, selectedSaleGroup]);
 
-  // Scroll receipts into view whenever receipts list changes
+  // Scroll receipts into view when receipts list changes
   useEffect(() => {
-    if (receiptsRef.current) {
+    if (receiptsRef.current && showReceipts) {
       receiptsRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [receipts]);
+  }, [receipts, showReceipts]);
+
+  // Scroll sale groups into view when sale groups list changes
+  useEffect(() => {
+    if (saleGroupsRef.current && showSaleGroups) {
+      saleGroupsRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [saleGroupsList, showSaleGroups]);
 
   // Onboarding handlers
   const handleNextStep = () => {
@@ -240,8 +255,7 @@ export default function ReceiptManager() {
     setTimeout(() => window.print(), 200);
   };
 
-  if (!storeId) return <div className="p-4 text-center">Select a store first.</div>;
-
+  // Define filteredSaleGroups before pagination logic
   const filteredSaleGroups = [...saleGroupsList]
     .filter(sg =>
       sg.id.toString().includes(salesSearch) ||
@@ -255,8 +269,51 @@ export default function ReceiptManager() {
       return valA < valB ? 1 : -1;
     });
 
+  // Reset Sale Groups pagination when filteredSaleGroups changes
+  useEffect(() => {
+    setCurrentSaleGroupsPage(1);
+  }, [filteredSaleGroups]);
+
+  // Pagination logic for Sale Groups
+  const totalSaleGroupsPages = Math.ceil(filteredSaleGroups.length / saleGroupsPerPage);
+  const saleGroupsStartIndex = (currentSaleGroupsPage - 1) * saleGroupsPerPage;
+  const saleGroupsEndIndex = saleGroupsStartIndex + saleGroupsPerPage;
+  const paginatedSaleGroups = filteredSaleGroups.slice(saleGroupsStartIndex, saleGroupsEndIndex);
+
+  const handleSaleGroupsPageChange = (page) => {
+    if (page >= 1 && page <= totalSaleGroupsPages) {
+      setCurrentSaleGroupsPage(page);
+      if (saleGroupsRef.current && showSaleGroups) {
+        saleGroupsRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
+  // Pagination logic for Receipts
+  const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedReceipts = filteredReceipts.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      if (receiptsRef.current && showReceipts) {
+        receiptsRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
+  if (!storeId) return <div className="p-4 text-center text-red-500">Select a store first.</div>;
+
   // Print CSS
-  const printStyles = `@media print { body * { visibility: hidden; } .printable-area, .printable-area * { visibility: visible; } .printable-area { position: absolute; top:0; left:0; width:100%; } }`;
+  const printStyles = `
+    @media print {
+      body * { visibility: hidden; }
+      .printable-area, .printable-area * { visibility: visible; }
+      .printable-area { position: absolute; top:0; left:0; width:100%; }
+    }
+  `;
   const headerStyle = { backgroundColor: headerBgColor, color: headerTextColor };
   const watermarkStyle = { color: watermarkColor, fontSize: '4rem', opacity: 1 };
 
@@ -264,29 +321,37 @@ export default function ReceiptManager() {
     <>
       <style>{printStyles}</style>
 
-      <div className="print:hidden p-0 space-y-6">
+      <div className="print:hidden p-4 space-y-8 dark:bg-gray-900 dark:text-white">
         {/* Management UI */}
-        <div className="p-0 dark:bg-gray-900 dark:text-white">
-          <h2 className="text-lg font-semibold mb-4">Receipts</h2>
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Receipt List</h2>
+            <button
+              onClick={() => setShowSaleGroups(!showSaleGroups)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              {showSaleGroups ? 'Hide Receipt List' : 'Show Receipt List'}
+            </button>
+          </div>
 
           {/* Search & Sort Controls */}
-          <div className="w-full mb-4">
-            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+          <div className="mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <input
                 type="text"
                 value={salesSearch}
                 onChange={e => setSalesSearch(e.target.value)}
                 placeholder="Search by Sale Group ID, Amount, or Payment Method"
-                className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white sales-search"
+                className="flex-1 border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-800 dark:text-white sales-search"
               />
 
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => {
                     setSortKey('id');
                     setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'));
                   }}
-                  className="border px-4 py-2 rounded text-sm w-full sm:w-auto dark:bg-gray-800 dark:text-white sort-id"
+                  className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors sort-id dark:bg-gray-800 dark:text-white"
                 >
                   Sort by ID {sortKey === 'id' && (sortOrder === 'asc' ? '⬆️' : '⬇️')}
                 </button>
@@ -296,7 +361,7 @@ export default function ReceiptManager() {
                     setSortKey('total_amount');
                     setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'));
                   }}
-                  className="border px-4 py-2 rounded text-sm w-full sm:w-auto dark:bg-gray-800 dark:text-white"
+                  className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors dark:bg-gray-800 dark:text-white"
                 >
                   Sort by Amount {sortKey === 'total_amount' && (sortOrder === 'asc' ? '⬆️' : '⬇️')}
                 </button>
@@ -304,161 +369,262 @@ export default function ReceiptManager() {
             </div>
           </div>
 
-          {/* Sale Groups Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full border rounded-lg text-sm dark:bg-gray-900 dark:text-white">
-              <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
-                <tr>
-                  <th className="text-left px-4 py-2 border-b">Sale Group ID</th>
-                  <th className="text-left px-4 py-2 border-b">Total Amount</th>
-                  <th className="text-left px-4 py-2 border-b">Payment Method</th>
-                  <th className="text-left px-4 py-2 border-b">Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSaleGroups.map(sg => (
-                  <tr
-                    key={sg.id}
-                    onClick={() => setSelectedSaleGroup(sg)}
-                    className={`cursor-pointer hover:bg-gray-100 dark:bg-gray-900 dark:text-white hover:bg-gray-100 ${
-                      selectedSaleGroup?.id === sg.id ? 'bg-gray-200' : ''
-                    }`}
-                  >
-                    <td className="px-4 py-2 border-b">#{sg.id}</td>
-                    <td className="px-4 py-2 border-b">₦{sg.total_amount.toFixed(2)}</td>
-                    <td className="px-4 py-2 border-b">{sg.payment_method}</td>
-                    <td className="px-4 py-2 border-b">{new Date(sg.created_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {filteredSaleGroups.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="text-center text-gray-500 py-4">
-                      No sale groups found.
-                    </td>
-                  </tr>
+          {/* Sale Groups Table (Receipt List) */}
+          <AnimatePresence>
+            {showSaleGroups && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div ref={saleGroupsRef} className="overflow-x-auto rounded-lg shadow">
+                  <table className="min-w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <thead className="bg-gray-100 dark:bg-gray-700">
+                      <tr>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Sale Group ID</th>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Total Amount</th>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Payment Method</th>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedSaleGroups.map(sg => (
+                        <tr
+                          key={sg.id}
+                          onClick={() => setSelectedSaleGroup(sg)}
+                          className={`cursor-pointer transition-colors ${
+                            selectedSaleGroup?.id === sg.id ? 'bg-indigo-50 dark:bg-gray-600' : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                          } even:bg-gray-50 dark:even:bg-gray-800`}
+                        >
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">#{sg.id}</td>
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">₦{sg.total_amount.toFixed(2)}</td>
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">{sg.payment_method}</td>
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">{new Date(sg.created_at).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {paginatedSaleGroups.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="text-center text-gray-500 dark:text-gray-400 py-6">
+                            No sale groups found.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls for Sale Groups */}
+                {filteredSaleGroups.length > saleGroupsPerPage && (
+                  <div className="flex items-center justify-between mt-4">
+                    <button
+                      onClick={() => handleSaleGroupsPageChange(currentSaleGroupsPage - 1)}
+                      disabled={currentSaleGroupsPage === 1}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      Previous
+                    </button>
+                    <div className="flex gap-2">
+                      {Array.from({ length: totalSaleGroupsPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => handleSaleGroupsPageChange(page)}
+                          className={`px-3 py-1 rounded-lg ${
+                            currentSaleGroupsPage === page
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handleSaleGroupsPageChange(currentSaleGroupsPage + 1)}
+                      disabled={currentSaleGroupsPage === totalSaleGroupsPages}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      Next
+                    </button>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Receipts Section */}
-        <div ref={receiptsRef} className="space-y-4 p-0 dark:bg-gray-900 dark:text-white">
-          <h3 className="text-xl font-semibold">
-            Receipts {selectedSaleGroup ? `for Sale Group #${selectedSaleGroup.id}` : ''}
-          </h3>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm border rounded-lg">
-              <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
-                <tr>
-                  <th className="text-left px-4 py-2 border-b">Receipt ID</th>
-                  <th className="text-left px-4 py-2 border-b">Customer</th>
-                  <th className="text-left px-4 py-2 border-b">Phone</th>
-                  <th className="text-left px-4 py-2 border-b">Warranty</th>
-                  <th className="text-left px-4 py-2 border-b">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReceipts.map((r, index) => (
-                  <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
-                    <td className="px-4 py-2 border-b truncate">{r.receipt_id}</td>
-                    <td className="px-4 py-2 border-b truncate">{r.customer_name || '-'}</td>
-                    <td className="px-4 py-2 border-b truncate">{r.phone_number || '-'}</td>
-                    <td className="px-4 py-2 border-b truncate">{r.warranty || '-'}</td>
-                    <td className="px-4 py-2 border-b">
-                      <div className="flex gap-3">
-                        <button onClick={() => openEdit(r)} className={`hover:text-indigo-600 dark:bg-gray-900 dark:text-white edit-receipt-${index}`}>
-                          <FaEdit />
-                        </button>
-                       
-                        <button
-                          onClick={async () => {
-                            await supabase.from("receipts").delete().eq("id", r.id);
-                            const { data } = await supabase
-                              .from("receipts")
-                              .select("*")
-                              .eq("sale_group_id", selectedSaleGroup.id);
-                            setReceipts(data);
-                          }}
-                          className="hover:text-red-600 dark:bg-gray-900 dark:text-white"
-                        >
-                          <FaTrashAlt />
-                        </button>
-                        <button onClick={() => handlePrint(r)} className="hover:text-green-600">
-                          <FaPrint />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredReceipts.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="text-center text-gray-500 py-4 dark:bg-gray-900 dark:text-white">
-                      No receipts found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        <div ref={receiptsRef} className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-white">
+              Receipts {selectedSaleGroup ? `for Sale Group #${selectedSaleGroup.id}` : ''}
+            </h3>
+            <button
+              onClick={() => setShowReceipts(!showReceipts)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              {showReceipts ? 'Hide Receipts' : 'Show Receipts'}
+            </button>
           </div>
+
+          <AnimatePresence>
+            {showReceipts && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div className="overflow-x-auto rounded-lg shadow">
+                  <table className="min-w-full text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <thead className="bg-gray-100 dark:bg-gray-700">
+                      <tr>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Receipt ID</th>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Customer</th>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Phone</th>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Warranty</th>
+                        <th className="text-left px-6 py-3 font-semibold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedReceipts.map((r, index) => (
+                        <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 even:bg-gray-50 dark:even:bg-gray-800 transition-colors">
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 truncate">{r.receipt_id}</td>
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 truncate">{r.customer_name || '-'}</td>
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 truncate">{r.phone_number || '-'}</td>
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 truncate">{r.warranty || '-'}</td>
+                          <td className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex gap-4">
+                              <button onClick={() => openEdit(r)} className={`text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 edit-receipt-${index}`}>
+                                <FaEdit />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  await supabase.from("receipts").delete().eq("id", r.id);
+                                  const { data } = await supabase
+                                    .from("receipts")
+                                    .select("*")
+                                    .eq("sale_group_id", selectedSaleGroup.id);
+                                  setReceipts(data);
+                                }}
+                                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                              >
+                                <FaTrashAlt />
+                              </button>
+                              <button onClick={() => handlePrint(r)} className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300">
+                                <FaPrint />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {paginatedReceipts.length === 0 && (
+                        <tr>
+                          <td colSpan="5" className="text-center text-gray-500 dark:text-gray-400 py-6">
+                            No receipts found.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Controls for Receipts */}
+                {filteredReceipts.length > itemsPerPage && (
+                  <div className="flex items-center justify-between mt-4">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      Previous
+                    </button>
+                    <div className="flex gap-2">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-1 rounded-lg ${
+                            currentPage === page
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       {/* Edit Modal */}
       {editing && (
         <div className="print:hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-auto mt-24">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-full sm:max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6 dark:bg-gray-900 dark:text-white">
-            <h2 className="text-xl font-bold text-center">Edit Receipt {editing.receipt_id}</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-8 space-y-6">
+            <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white">Edit Receipt {editing.receipt_id}</h2>
 
             {/* Receipt Fields */}
             <div className="space-y-4">
               {['customer_name', 'customer_address', 'phone_number', 'warranty'].map(field => (
-                <label key={field} className="block w-full">
-                  <span className="font-semibold capitalize block mb-1">
+                <label key={field} className="block">
+                  <span className="font-semibold text-gray-700 dark:text-gray-200 capitalize block mb-1">
                     {field.replace('_', ' ')}
                   </span>
                   <input
                     name={field}
                     value={form[field]}
                     onChange={handleChange}
-                    className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
+                    className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
                   />
                 </label>
               ))}
             </div>
 
             {/* Style Controls in Modal */}
-            <div className="border-t pt-4 space-y-4">
-              <h3 className="text-lg font-semibold">Customize Receipt Style</h3>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Customize Receipt Style</h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium mb-1">Header Background</label>
+                  <label className="block font-medium text-gray-700 dark:text-gray-200 mb-1">Header Background</label>
                   <input
                     type="color"
                     value={headerBgColor}
                     onChange={e => setHeaderBgColor(e.target.value)}
-                    className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
+                    className="w-full h-10 p-0 border border-gray-300 dark:border-gray-600 rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-medium mb-1">Header Text Color</label>
+                  <label className="block font-medium text-gray-700 dark:text-gray-200 mb-1">Header Text Color</label>
                   <input
                     type="color"
                     value={headerTextColor}
                     onChange={e => setHeaderTextColor(e.target.value)}
-                    className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
+                    className="w-full h-10 p-0 border border-gray-300 dark:border-gray-600 rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-medium mb-1">Header Font</label>
+                  <label className="block font-medium text-gray-700 dark:text-gray-200 mb-1">Header Font</label>
                   <select
                     value={headerFont}
                     onChange={e => setHeaderFont(e.target.value)}
-                    className="border p-2 rounded w-full dark:bg-gray-900 dark:text-white"
+                    className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg w-full dark:bg-gray-900 dark:text-white"
                   >
                     <option value="font-sans">Sans</option>
                     <option value="font-serif">Serif</option>
@@ -467,11 +633,11 @@ export default function ReceiptManager() {
                 </div>
 
                 <div>
-                  <label className="block font-medium mb-1">Body Font</label>
+                  <label className="block font-medium text-gray-700 dark:text-gray-200 mb-1">Body Font</label>
                   <select
                     value={bodyFont}
                     onChange={e => setBodyFont(e.target.value)}
-                    className="border p-2 rounded w-full dark:bg-gray-900 dark:text-white"
+                    className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg w-full dark:bg-gray-900 dark:text-white"
                   >
                     <option value="font-sans">Sans</option>
                     <option value="font-serif">Serif</option>
@@ -480,27 +646,27 @@ export default function ReceiptManager() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block font-medium mb-1">Watermark Color</label>
+                  <label className="block font-medium text-gray-700 dark:text-gray-200 mb-1">Watermark Color</label>
                   <input
                     type="color"
                     value={watermarkColor}
                     onChange={e => setWatermarkColor(e.target.value)}
-                    className="w-full h-10 p-0 border border-gray-300 rounded dark:bg-gray-900 dark:text-white"
+                    className="w-full h-10 p-0 border border-gray-300 dark:border-gray-600 rounded-lg"
                   />
                 </div>
               </div>
             </div>
 
             {/* Preview Header */}
-            <div className="mt-6 p-4 rounded" style={headerStyle}>
-              <h3 className={`${headerFont} text-lg font-semibold`}>{store?.shop_name}</h3>
-              <p className={`${headerFont} text-sm`}>{store?.business_address}</p>
-              <p className={`${headerFont} text-sm`}>Phone: {store?.phone_number}</p>
+            <div className="mt-6 p-4 rounded-lg" style={headerStyle}>
+              <h3 className={`${headerFont} text-lg font-semibold text-gray-800 dark:text-white`}>{store?.shop_name}</h3>
+              <p className={`${headerFont} text-sm text-gray-600 dark:text-gray-300`}>{store?.business_address}</p>
+              <p className={`${headerFont} text-sm text-gray-600 dark:text-gray-300`}>Phone: {store?.phone_number}</p>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded">Cancel</button>
-              <button onClick={saveReceipt} className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center gap-1">
+              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">Cancel</button>
+              <button onClick={saveReceipt} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1">
                 <FaDownload /> Save & Print
               </button>
             </div>
@@ -510,7 +676,7 @@ export default function ReceiptManager() {
 
       {/* Printable Receipt */}
       {editing && selectedSaleGroup && (
-        <div ref={printRef} className="printable-area relative bg-white p-6 mt-6 shadow-lg rounded overflow-x-auto">
+        <div ref={printRef} className="printable-area relative bg-white p-6 mt-6 shadow-lg rounded-lg overflow-x-auto">
           {/* Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={watermarkStyle}>
             <span className={`${bodyFont}`} style={{ opacity: 0.1 }}>{store?.shop_name}</span>
@@ -554,7 +720,7 @@ export default function ReceiptManager() {
           </table>
 
           {/* Additional Details */}
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
             <p><strong>Receipt ID:</strong> {editing.receipt_id}</p>
             <p><strong>Date:</strong> {new Date(selectedSaleGroup.created_at).toLocaleString()}</p>
             <p><strong>Payment Method:</strong> {selectedSaleGroup.payment_method}</p>
@@ -574,7 +740,7 @@ export default function ReceiptManager() {
           <div className="flex justify-end space-x-3 mt-4 print:hidden">
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-blue-600 text-white rounded flex items-center gap-2 print-receipt"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 print-receipt"
             >
               <FaPrint /> Print
             </button>
@@ -585,7 +751,7 @@ export default function ReceiptManager() {
       {/* Onboarding Tooltip */}
       {showOnboarding && onboardingStep < onboardingSteps.length && (
         <motion.div
-          className="fixed z-50  bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 max-w-xs"
+          className="fixed z-50 bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 max-w-xs"
           style={getTooltipPosition(onboardingSteps[onboardingStep].target)}
           variants={tooltipVariants}
           initial="hidden"

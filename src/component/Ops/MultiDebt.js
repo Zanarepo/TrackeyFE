@@ -208,7 +208,7 @@ export default function DebtorsSummary() {
       </div>
 
       {/* Summary Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0 mb-8 dark:bg-gray-900 text-white">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Store Debt Overview</h2>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -270,7 +270,7 @@ export default function DebtorsSummary() {
       </div>
 
       {/* Detailed Debt Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-0 dark:bg-gray-900 text-white">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Detailed Debt Records</h2>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">

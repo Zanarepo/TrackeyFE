@@ -368,15 +368,15 @@ export default function DynamicProducts() {
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto pt-24">
-          <div className="w-full max-w-3xl mx-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto pt-24 ">
+          <div className="w-full max-w-3xl mx-auto  ">
             <form
               onSubmit={createProducts}
               className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full dark:text-white"
             >
-              <h2 className="text-2xl font-bold mb-6">Add Products</h2>
+              <h2 className="text-2xl font-bold mb-6 ">Add Products</h2>
               {addForm.map((product, index) => (
-                <div key={index} className="mb-4 p-4 border rounded">
+                <div key={index} className="mb-4 p-4 border rounded ">
                   <h3 className="text-lg font-semibold mb-2">Product {index + 1}</h3>
                   {[
                     { name: 'name', label: 'Name' },
@@ -396,7 +396,7 @@ export default function DynamicProducts() {
                         value={product[field.name]}
                         onChange={(e) => handleAddChange(e, index)}
                         required={['name', 'purchase_price', 'purchase_qty', 'selling_price'].includes(field.name)}
-                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+                        className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
                       />
                     </div>
                   ))}
@@ -437,12 +437,12 @@ export default function DynamicProducts() {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow dark:text-white">
+      <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow dark:text-white">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-200 dark:bg-gray-700">
             <tr>
               {['Name', 'Description', 'Purchase', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-sm font-semibold">{h}</th>
+                <th key={h} className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-600">{h}</th>
               ))}
             </tr>
           </thead>
