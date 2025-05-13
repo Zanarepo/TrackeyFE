@@ -19,7 +19,7 @@ import StoresSalesSummary from '../Ops/StoresSalesSummary';
 import Notifications from './Notifications';
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Toolkits');
+  const [activeTab, setActiveTab] = useState('Retail Suites');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
@@ -53,7 +53,7 @@ const Dashboard = () => {
           </div>
         );
 
-      case 'Toolkits':
+      case 'Retail Suites':
         return (
           <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             <VariexDB />
@@ -129,14 +129,14 @@ const Dashboard = () => {
               <ul className="space-y-2">
                 <li
                   data-tour="toolkits"
-                  onClick={() => handleNavClick('Toolkits')}
+                  onClick={() => handleNavClick('Retail Suites')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
-                    activeTab === 'Toolkits' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
+                    activeTab === 'Retail Suites' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
                   }`}
-                  aria-label="Toolkits: Access your store management tools"
+                  aria-label="Retail Suites: Access your store management tools"
                 >
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
-                  <span className="text-indigo-800 dark:text-indigo-200">Toolkits</span>
+                  <span className="text-indigo-800 dark:text-indigo-200">Retail Tools</span>
                 </li>
                 <li
                   data-tour="sales-summary"

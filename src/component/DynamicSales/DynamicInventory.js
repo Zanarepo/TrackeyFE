@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Trash2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 
@@ -253,38 +253,7 @@ export default function InventoryManager() {
       return (a.dynamic_product?.name || '').localeCompare(b.dynamic_product?.name || '');
     });
 
-  // HANDLERS
-  async function handleDelete(id) {
-    const item = inventory.find(i => i.id === id);
-    const productName = item.dynamic_product?.name || 'Unknown';
-
-    console.log(`Deleting item ${id}: ${productName}`);
-
-    const { error } = await supabase
-      .from('dynamic_inventory')
-      .delete()
-      .eq('id', id);
-    if (error) {
-      toast.error(`Delete error: ${error.message}`, { position: 'top-right' });
-      console.error('Delete error:', error);
-    } else {
-      toast.success(`Deleted ${productName} from inventory`, { position: 'top-right' });
-      setHistory(prev => [
-        {
-          id: historyIdCounter,
-          action: 'delete',
-          product_name: productName,
-          quantity: null,
-          timestamp: new Date().toISOString()
-        },
-        ...prev.slice(0, 9)
-      ]);
-      setHistoryIdCounter(prev => prev + 1);
-      await fetchInventory(storeId);
-      console.log(`Delete completed for ${productName}`);
-    }
-  }
-
+  
   // Onboarding handlers
   const handleNextStep = () => {
     if (onboardingStep < onboardingSteps.length - 1) {
@@ -406,7 +375,7 @@ export default function InventoryManager() {
         <table className="min-w-full table-auto border-collapse">
           <thead className="bg-gray-200 text-indigo-500 dark:bg-gray-700 dark:text-indigo-400">
             <tr>
-              {['ID', 'Item', 'Avail.', 'Sold', 'Actions'].map((h, i) => (
+              {['ID', 'Item', 'Avail.', 'Sold'].map((h, i) => (
                 <th key={i} className="p-2 text-left whitespace-nowrap">
                   {h}
                 </th>
@@ -428,14 +397,7 @@ export default function InventoryManager() {
                 </td>
                 <td className="p-2 whitespace-nowrap">{item.quantity_sold}</td>
                 <td className="p-2 whitespace-nowrap">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className={`p-1 bg-red-500 text-white rounded hover:bg-red-600 delete-button-${index}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  
                 </td>
               </tr>
             ))}

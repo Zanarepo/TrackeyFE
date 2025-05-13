@@ -134,7 +134,7 @@ export default function SubscriptionPlansComponent() {
             className="text-lg md:text-xl text-gray-600 dark:text-gray-300 font-medium font-sans max-w-3xl mx-auto"
             variants={headerVariants}
           >
-            Each plan is crafted to fuel your success with scalable features, advanced analytics, and seamless management tools.
+            Each plan is crafted to fuel your success with scalable features, analytics, and seamless management tools.
           </motion.p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

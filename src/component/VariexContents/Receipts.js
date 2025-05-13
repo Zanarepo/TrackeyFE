@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from "../../supabaseClient";
 import { FaEdit, FaTrashAlt, FaPrint, FaDownload } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+//import SignaturePad from './SignaturePad'
 
 const tooltipVariants = {
   hidden: { opacity: 0, y: 10 },
@@ -573,7 +574,7 @@ export default function ReceiptManager() {
 
       {/* Edit Modal */}
       {editing && (
-        <div className="print:hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-auto mt-24">
+        <div className="print:hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-auto mt-10">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-8 space-y-6">
             <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white">Edit Receipt {editing.receipt_id}</h2>
 
@@ -656,8 +657,8 @@ export default function ReceiptManager() {
                 </div>
               </div>
             </div>
-
-            {/* Preview Header */}
+ 
+            {/* Preview Header <SignaturePad/> */}
             <div className="mt-6 p-4 rounded-lg" style={headerStyle}>
               <h3 className={`${headerFont} text-lg font-semibold text-gray-800 dark:text-white`}>{store?.shop_name}</h3>
               <p className={`${headerFont} text-sm text-gray-600 dark:text-gray-300`}>{store?.business_address}</p>
@@ -677,7 +678,7 @@ export default function ReceiptManager() {
       {/* Printable Receipt */}
       {editing && selectedSaleGroup && (
         <div ref={printRef} className="printable-area relative bg-white p-6 mt-6 shadow-lg rounded-lg overflow-x-auto">
-          {/* Watermark */}
+         {/* Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={watermarkStyle}>
             <span className={`${bodyFont}`} style={{ opacity: 0.1 }}>{store?.shop_name}</span>
           </div>
@@ -731,6 +732,7 @@ export default function ReceiptManager() {
           </div>
 
           {/* Signatures */}
+          
           <div className="grid grid-cols-2 gap-8 p-4 mt-4">
             <div className="border-t text-center pt-2">Manager Signature</div>
             <div className="border-t text-center pt-2">Customer Signature</div>

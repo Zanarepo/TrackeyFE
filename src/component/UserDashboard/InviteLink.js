@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient'; // adjust the path based on you
 
 const InviteGenerator = () => {
   const [inviteLink, setInviteLink] = useState('');
+  const [shopName, setShopName] = useState(''); // Store shop_name for WhatsApp message
   const [loading, setLoading] = useState(false);
 
   const storeId = localStorage.getItem('store_id');
@@ -16,7 +17,7 @@ const InviteGenerator = () => {
 
     setLoading(true);
 
-    // Fetch shop_name from Supabase
+    // Fetch shop_name from Supabase (unchanged)
     const { data, error } = await supabase
       .from('stores')
       .select('shop_name')
@@ -34,6 +35,7 @@ const InviteGenerator = () => {
     const encodedShopName = encodeURIComponent(data.shop_name);
     const link = `${window.location.origin}/team-signup?store_id=${storeId}&shop_name=${encodedShopName}`;
     setInviteLink(link);
+    setShopName(data.shop_name); // Store shop_name for WhatsApp
   };
 
   const copyToClipboard = async () => {
@@ -44,8 +46,14 @@ const InviteGenerator = () => {
   };
 
   const shareViaWhatsApp = () => {
-    const message = encodeURIComponent(`Join our team on Sellytics: ${inviteLink}`);
-    window.open(`https://wa.me/?text=${message}`, '_blank');
+    if (inviteLink && shopName) {
+      const message = encodeURIComponent(
+        `Hello!!! and Welcome to the Team, you have been invited to join ${shopName}'s Team. Click the link to get started on Sellytics: ${inviteLink}`
+      );
+      window.open(`https://wa.me/?text=${message}`, '_blank');
+    } else {
+      alert('Please generate an invite link first.');
+    }
   };
 
   return (

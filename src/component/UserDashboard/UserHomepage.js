@@ -21,7 +21,7 @@ import PricingFeatures from '../Payments/PricingFeatures';
 import Test from './Test'
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('Toolkits');
+  const [activeTab, setActiveTab] = useState('Retail Suites');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
@@ -48,7 +48,7 @@ const Dashboard = () => {
   // Render main content based on active tab
   const renderContent = () => {
     switch (activeTab) {
-      case 'Toolkits':
+      case 'Retail Suites':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
             <Variex />
@@ -145,18 +145,18 @@ const Dashboard = () => {
             <nav className="mt-4">
               <ul className="space-y-2">
                 <li
-                  data-tour="toolkits"
-                  onClick={() => handleNavClick('Toolkits')}
+                  data-tour="Retail Suites"
+                  onClick={() => handleNavClick('Retail Suites')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${
                     activeTab === 'Toolkits'
                       ? 'bg-indigo-200 dark:bg-indigo-600'
                       : ''
                   }`}
-                  aria-label="Toolkits: Access your store management tools"
+                  aria-label="Retail Suites: Access your store management tools"
                 >
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">
-                    Toolkits
+                    Retail Tools
                   </span>
                 </li>
 

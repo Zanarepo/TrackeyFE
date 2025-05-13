@@ -9,6 +9,7 @@ import Footer from "./component/Footer";
 import Registration from './component/Auth/Registration'
 
 import AdminDasboard from './component/SprintDashboard/AdminDasboard'
+import SignaturePad from "./component/VariexContents/SignaturePad";
 
 
 import AdminNav from './component/SprintDashboard/AdminNav';
@@ -84,7 +85,7 @@ const App = () => {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/team-signup" element={<TeamSignup/>} />
             <Route path="/push-notifications" element={< PushNotifications/>} />
-           
+            <Route path="/signaturepad" element={<SignaturePad />} />
 
             {/* premium routes duplicates */}
             
@@ -116,7 +117,8 @@ const App = () => {
           <Route path="/payment" element={<SellyticsPayment />} />
           <Route path="/premiumdashboard" element={<PremiumHomepage />} />
           <Route path="/push-notifications" element={< PushNotifications/>} />
-           
+          <Route path="/signaturepad" element={<SignaturePad />} />
+    
 
 
 
@@ -158,7 +160,7 @@ const App = () => {
               <Route path="/profile" element={<Profile />} />
             
               <Route path="/premiumdashboard" element={<PremiumHomepage />} />
-           
+            
 
             </Route>
           </Routes>
