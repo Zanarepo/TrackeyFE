@@ -81,35 +81,39 @@ export default function InventoryManager() {
   }, [storeId]);
 
   // SEED NEW PRODUCTS INTO INVENTORY
-  useEffect(() => {
-    if (!storeId || dynamicProducts.length === 0) return;
+ // SEED NEW PRODUCTS INTO INVENTORY
+useEffect(() => {
+  if (!storeId || dynamicProducts.length === 0) return;
 
-    const payload = dynamicProducts
-      .filter(p => !inventory.some(i => i.dynamic_product?.id === p.id))
-      .map(p => ({
-        dynamic_product_id: p.id,
-        store_id: storeId,
-        available_qty: p.purchase_qty,
-        quantity_sold: 0
-      }));
+  const payload = dynamicProducts
+    .filter(p => !inventory.some(i => i.dynamic_product?.id === p.id))
+    .map(p => ({
+      dynamic_product_id: p.id,
+      store_id: storeId,
+      available_qty: p.purchase_qty,
+      quantity_sold: 0
+    }));
 
-    if (payload.length === 0) return;
+  if (payload.length === 0) return;
 
-    (async () => {
-      const { error } = await supabase
-        .from('dynamic_inventory')
-        .insert(payload, {
-          onConflict: ['dynamic_product_id', 'store_id'],
-          ignoreDuplicates: true
-        });
-      if (error) {
+  (async () => {
+    const { error } = await supabase
+      .from('dynamic_inventory')
+      .insert(payload, {
+        onConflict: ['dynamic_product_id', 'store_id'],
+        ignoreDuplicates: true
+      });
+    if (error) {
+      // Suppress notification for unique constraint violation
+      if (!error.message.includes('unique_product_store')) {
         toast.error(`Seed error: ${error.message}`);
-      } else {
-        toast.success(`Seeded ${payload.length} new products to inventory`);
       }
-      fetchInventory(storeId);
-    })();
-  }, [dynamicProducts, storeId, inventory]);
+    } else {
+      toast.success(`Seeded ${payload.length} new products to inventory`);
+    }
+    fetchInventory(storeId);
+  })();
+}, [dynamicProducts, storeId, inventory]);
 
   // REAL-TIME SYNC: PRODUCT INSERT/UPDATE
   useEffect(() => {
