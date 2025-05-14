@@ -134,26 +134,36 @@ export default function InventoryManager() {
                 onConflict: ['dynamic_product_id', 'store_id']
               }
             );
-          if (error) {
-            toast.error(`Sync insert error: ${error.message}`);
+
+           // Check if error is due to unique constraint violation
+        if (error) {
+          if (error.message.includes('unique_product_store')) {
+            console.log("Unique constraint violation handled, no need to display error.");
+            return; // Avoid displaying error message for constraint violation
           } else {
-            toast.success(`Added ${p.name} to inventory`);
-            setHistory(prev => [
-              {
-                id: historyIdCounter,
-                action: 'insert',
-                product_name: p.name,
-                quantity: p.purchase_qty,
-                timestamp: new Date().toISOString()
-              },
-              ...prev.slice(0, 9)
-            ]);
-            setHistoryIdCounter(prev => prev + 1);
+            // Display other error messages
+            toast.error(`Sync insert error: ${error.message}`);
           }
-          fetchDynamicProducts(storeId);
-          fetchInventory(storeId);
+        } else {
+          toast.success(`Added ${p.name} to inventory`);
+          setHistory(prev => [
+            {
+              id: historyIdCounter,
+              action: 'insert',
+              product_name: p.name,
+              quantity: p.purchase_qty,
+              timestamp: new Date().toISOString()
+            },
+            ...prev.slice(0, 9)
+          ]);
+          setHistoryIdCounter(prev => prev + 1);
         }
-      )
+
+        // Fetch latest dynamic products and inventory
+        fetchDynamicProducts(storeId);
+        fetchInventory(storeId);
+      }
+    )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'dynamic_product', filter: `store_id=eq.${storeId}` },
