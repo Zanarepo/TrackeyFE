@@ -61,7 +61,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-40 p-6 border rounded-lg shadow-md bg-white">
+    <div className="max-w-md mx-auto mt-40 p-6 border rounded-lg shadow-md bg-white mb-10">
       <h2 className="text-2xl font-bold text-center text-indigo-800">Reset Password</h2>
 
       {message && <p className="text-green-600 text-center mt-2">{message}</p>}
