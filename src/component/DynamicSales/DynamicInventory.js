@@ -140,9 +140,6 @@ export default function InventoryManager() {
           if (error.message.includes('unique_product_store')) {
             console.log("Unique constraint violation handled, no need to display error.");
             return; // Avoid displaying error message for constraint violation
-          } else {
-            // Display other error messages
-           // toast.error(`Sync insert error: ${error.message}`);
           }
         } else {
           toast.success(`Added ${p.name} to inventory`);
