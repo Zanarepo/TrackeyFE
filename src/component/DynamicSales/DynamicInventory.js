@@ -142,7 +142,7 @@ export default function InventoryManager() {
             return; // Avoid displaying error message for constraint violation
           } else {
             // Display other error messages
-            toast.error(`Sync insert error: ${error.message}`);
+           // toast.error(`Sync insert error: ${error.message}`);
           }
         } else {
           toast.success(`Added ${p.name} to inventory`);
