@@ -74,11 +74,32 @@ export default function Login() {
 
     const storeId = opt.storeId || allAccess.find((a) => a.storeId)?.storeId || '3';
     const ownerId = allAccess.find((a) => a.ownerId)?.ownerId || '1';
+    const userId = opt.userId || null; // Store store_users.id for team role
+    const adminId = opt.adminId || null;
+    const userEmail = opt.email || email; // Store email for querying
 
     localStorage.setItem('store_id', storeId);
     localStorage.setItem('owner_id', ownerId);
+    if (userId) {
+      localStorage.setItem('user_id', userId); // Store store_users.id
+    }
+    localStorage.setItem('user_email', userEmail); // Store email
 
-    console.log('Set localStorage:', { store_id: storeId, owner_id: ownerId, user_access: userAccess });
+
+
+     if (adminId) {
+      localStorage.setItem('admin_id', adminId); // Store store_users.id
+    }
+    localStorage.setItem('user_email', userEmail);
+
+    console.log('Set localStorage:', {
+      store_id: storeId,
+      owner_id: ownerId,
+      user_id: userId,
+      user_email: userEmail,
+      admin_id: adminId,
+      user_access: userAccess,
+    });
 
     toast.success(`Accessing ${opt.label}...`, {
       position: 'top-right',
@@ -136,7 +157,7 @@ export default function Login() {
 
       const { data: teamData = [], error: teamErr } = await supabase
         .from('store_users')
-        .select('id, role, store_id, stores(id, shop_name)')
+        .select('id, role, store_id, email_address, stores(id, shop_name)')
         .eq('email_address', email)
         .eq('password', hashed);
 
@@ -176,6 +197,7 @@ export default function Login() {
           role: 'owner',
           screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
           icon: <FaStore />,
+          email: email, // Include email
         });
       });
 
@@ -184,7 +206,8 @@ export default function Login() {
           type: 'team',
           label: `${u.role.charAt(0).toUpperCase() + u.role.slice(1)} @ ${u.stores.shop_name}`,
           storeId: u.store_id,
-          userId: u.id,
+          userId: u.id, // Include store_users.id
+          email: u.email_address, // Include email_address
           role: u.role,
           screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
           icon: <FaUsers />,
@@ -199,6 +222,7 @@ export default function Login() {
           role: 'store_owner',
           screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
           icon: <FaUserShield />,
+          email: email, // Include email
         });
       });
 
@@ -210,6 +234,7 @@ export default function Login() {
           role: a.role,
           screenclipExtensionId: 'jmjbgcjbgmcfgbgikmbdioggjlhjegpp',
           icon: <FaUserCog />,
+          email: email, // Include email
         });
       });
 

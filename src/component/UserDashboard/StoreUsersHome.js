@@ -11,17 +11,15 @@ import {
 import StoreUsersTour from './StoreUsersTour';
 import WhatsapUsers from './WhatsapUsers';
 import VariexDB from './VariexDB';
-//import ExpenseTracker from './ExpenseTracker';
 import StoreUserProfile from './StoreUsersProfile';
 import Colleagues from './Colleagues';
-
 import StoresSalesSummary from '../Ops/StoresSalesSummary';
 import Notifications from './Notifications';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Retail Suites');
   const [darkMode, setDarkMode] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
   const [isTourOpen, setIsTourOpen] = useState(false);
 
   // Trigger tour on first load
@@ -52,37 +50,30 @@ const Dashboard = () => {
             <StoresSalesSummary />
           </div>
         );
-
       case 'Retail Suites':
         return (
           <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             <VariexDB />
           </div>
         );
-
-    
-
       case 'Profile':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
             <StoreUserProfile />
           </div>
         );
-
       case 'Colleagues':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
             <Colleagues />
           </div>
         );
-
       case 'Notifications':
         return (
           <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             <Notifications />
           </div>
         );
-
       default:
         return (
           <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
@@ -95,7 +86,12 @@ const Dashboard = () => {
   // Handle navigation click
   const handleNavClick = (tab) => {
     setActiveTab(tab);
-    setSidebarOpen(false);
+    setSidebarOpen(false); // Close sidebar on mobile
+  };
+
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   return (
@@ -108,19 +104,21 @@ const Dashboard = () => {
       />
       {/* Sidebar */}
       <aside
-        className={`transition-all duration-300 bg-gray-100 dark:bg-gray-800 ${
+        className={`fixed md:static top-20 left-0 h-[calc(100vh-5rem)] transition-all duration-300 bg-gray-100 dark:bg-gray-800 z-40 ${
           sidebarOpen ? 'w-64' : 'w-0'
-        } md:w-64 flex-shrink-0`}
+        } md:${sidebarOpen ? 'w-64' : 'w-0'}`}
       >
-        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block`}>
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:${sidebarOpen ? 'block' : 'hidden'}`}>
           <div className="p-4 md:p-6">
-            <div className="flex md:hidden items-center justify-between">
+            <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-indigo-800 dark:text-indigo-200">
                 Menu
               </h2>
+              {/* Mobile Close Button */}
               <button
-                onClick={() => setSidebarOpen(false)}
-                className="text-indigo-800 dark:text-indigo-200"
+                onClick={toggleSidebar}
+                className="text-indigo-800 dark:text-indigo-200 md:hidden"
+                aria-label="Close sidebar"
               >
                 <FaTimes size={24} />
               </button>
@@ -182,8 +180,6 @@ const Dashboard = () => {
                   <FaUser className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Profile</span>
                 </li>
-              
-                
               </ul>
             </nav>
           </div>
@@ -213,12 +209,28 @@ const Dashboard = () => {
         </div>
       </aside>
 
+      {/* Floating Toggle Button (Desktop Only) */}
+      <button
+        onClick={toggleSidebar}
+        className={`fixed top-24 md:top-24 transition-all duration-300 z-50 rounded-full p-2 bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 md:block hidden ${
+          sidebarOpen ? 'left-64' : 'left-4'
+        }`}
+        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+      >
+        {sidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+      </button>
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+      <div
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+          sidebarOpen ? 'md:ml-64' : 'md:ml-0'
+        }`}
+      >
         <header className="flex md:hidden items-center justify-between p-4 bg-white dark:bg-gray-800">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-indigo-800 dark:text-indigo-200"
+            aria-label="Open sidebar"
           >
             <FaBars size={24} />
           </button>
@@ -232,7 +244,7 @@ const Dashboard = () => {
             }}
             className="text-indigo-800 dark:text-indigo-200 text-sm"
           >
-            Tour
+            {/* Empty button content preserved */}
           </button>
         </header>
         <main className="flex-1 overflow-y-auto p-4">{renderContent()}</main>

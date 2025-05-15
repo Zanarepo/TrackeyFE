@@ -322,7 +322,7 @@ export default function ReceiptManager() {
     <>
       <style>{printStyles}</style>
 
-      <div className="print:hidden p-4 space-y-8 dark:bg-gray-900 dark:text-white">
+      <div className="print:hidden p-0 space-y-8 dark:bg-gray-900 dark:text-white">
         {/* Management UI */}
         <div>
           <div className="flex items-center justify-between mb-6">

@@ -50,6 +50,7 @@ import Profile from './component/UserDashboard/Profile'
 import SellyticsPayment from './component/Payments/SellyticsPayment'
 import PremiumHomepage from './component/Premiums/PremiumHomepage'
 import PushNotifications from "./component/Premiums/PushNotifications";
+import Test from './component/UserDashboard/Test'
 
 
 
@@ -86,6 +87,7 @@ const App = () => {
             <Route path="/team-signup" element={<TeamSignup/>} />
             <Route path="/push-notifications" element={< PushNotifications/>} />
             <Route path="/signaturepad" element={<SignaturePad />} />
+            <Route path="/test" element={<Test />} />
 
             {/* premium routes duplicates */}
             

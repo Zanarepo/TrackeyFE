@@ -116,15 +116,15 @@ export default function Stores() {
   };
 
   return (
-    <div className="p-4">
+   <div className="min-h-screen bg-white  text-gray-900 dark:bg-gray-900 dark:text-gray-900 p-4">
       {/* Search & Export */}
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
+      <div className="flex flex-col sm:flex-row  items-center justify-between mb-4 gap-2 ">
         <input
           type="text"
           placeholder="Search stores..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="flex-1 p-2 border rounded"
+          className="flex-1 p-2 border rounded  dark:bg-gray-900 dark:text-white"
         />
         <div className="flex gap-2">
           <button onClick={exportCSV} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
@@ -137,18 +137,18 @@ export default function Stores() {
       </div>
 
       {/* Stores Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded shadow">
+      <div className="overflow-x-auto dark:bg-gray-900 dark:text-gray-900">
+        <table className="min-w-full bg-white rounded shadow  dark:bg-gray-900 dark:text-white">
           <thead>
-            <tr className="bg-gray-200">
+            <tr className="bg-gray-200  dark:bg-indigo-600 dark:text-white">
               {['Shop Name','Owner','Email Address','Phone','Status','Actions'].map(h => (
-                <th key={h} className="p-2 text-left">{h}</th>
+                <th key={h} className="p-2 text-left ">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.map(s => (
-              <tr key={s.id} className="border-t hover:bg-gray-50">
+              <tr key={s.id} className="border-t hover:bg-gray-100 dark:hover:bg-gray-800">
                 <td className="p-2">{s.shop_name}</td>
                 <td className="p-2">{s.full_name}</td>
                 <td className="p-2">{s.email_address}</td>

@@ -1,237 +1,132 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '../../supabaseClient';
-import { FaFileCsv, FaFilePdf } from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React from 'react';
 
-export default function SuppliersInventory() {
-  const storeId = localStorage.getItem('store_id');
+// Node data structure helper
+const createNode = (title, children = []) => ({ title, children });
 
-  // State
-  const [inventory, setInventory] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [suppliers, setSuppliers] = useState([]);
-  const itemsPerPage = 5;
+// Sample mind map data for Product Management
+const productManagementData = createNode("Product Management", [
+  createNode("Strategy", [
+    createNode("Vision"),
+    createNode("Goals"),
+  ]),
+  createNode("Development", [
+    createNode("Planning"),
+    createNode("Execution"),
+  ]),
+  createNode("Marketing", [
+    createNode("Research"),
+    createNode("Campaigns"),
+  ]),
+]);
 
-  const paginatedInventory = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage]);
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+// Layout constants
+const NODE_WIDTH = 120;
+const NODE_HEIGHT = 40;
+const HORIZONTAL_SPACING = 20;
+const VERTICAL_SPACING = 60;
 
-  // Fetch inventory
-  const fetchInventory = useCallback(async () => {
-    if (!storeId) {
-      toast.error('No store ID found. Please log in.');
-      return;
-    }
-    const { data, error } = await supabase
-      .from('suppliers_inventory')
-      .select('id, supplier_name, device_name, device_id, qty, created_at')
-      .eq('store_id', storeId)
-      .order('id', { ascending: true });
-    if (error) {
-      console.error('Error fetching suppliers inventory:', error.message);
-      toast.error('Failed to fetch inventory');
-    } else {
-      setInventory(data);
-      setFiltered(data);
-    }
-  }, [storeId]);
+// Function to assign positions to nodes
+function layoutTree(node, level = 0, startX = 0) {
+  if (!node.children.length) {
+    node.x = startX;
+    node.y = level * (NODE_HEIGHT + VERTICAL_SPACING);
+    return NODE_WIDTH;
+  }
+  let currentX = startX;
+  node.children.forEach(child => {
+    const childWidth = layoutTree(child, level + 1, currentX);
+    currentX += childWidth + HORIZONTAL_SPACING;
+  });
+  const subtreeWidth = currentX - startX - HORIZONTAL_SPACING;
+  node.x = startX + subtreeWidth / 2 - NODE_WIDTH / 2;
+  node.y = level * (NODE_HEIGHT + VERTICAL_SPACING);
+  return subtreeWidth;
+}
 
-  // Fetch suppliers
-  const fetchSuppliers = useCallback(async () => {
-    if (!storeId) return;
-    const { data: productData, error } = await supabase
-      .from('dynamic_product')
-      .select('suppliers_name')
-      .eq('store_id', storeId);
-    if (error) {
-      toast.error('Failed to fetch suppliers');
-      return;
-    }
-    // Extract unique suppliers_name, including null as 'None'
-    const uniqueSuppliers = [...new Set(productData
-      .map(p => p.suppliers_name || 'None'))]
-      .map(name => ({ value: name === 'None' ? '' : name, label: name }));
-    setSuppliers(uniqueSuppliers);
-  }, [storeId]);
+// Collect all nodes to determine bounds
+function getAllNodes(node) {
+  let nodes = [node];
+  node.children.forEach(child => nodes = nodes.concat(getAllNodes(child)));
+  return nodes;
+}
 
-  useEffect(() => {
-    fetchInventory();
-    fetchSuppliers();
-  }, [fetchInventory, fetchSuppliers]);
-
-  // Search filter
-  useEffect(() => {
-    if (!search) setFiltered(inventory);
-    else {
-      const q = search.toLowerCase();
-      setFiltered(
-        inventory.filter(item => item.device_id.toLowerCase().includes(q))
-      );
-    }
-    setCurrentPage(1);
-  }, [search, inventory]);
-
-  // Update supplier_name
-  const updateSupplier = async (inventoryId, newSupplierName) => {
-    const supplierValue = newSupplierName === '' ? null : newSupplierName;
-    const { error } = await supabase
-      .from('suppliers_inventory')
-      .update({ supplier_name: supplierValue })
-      .eq('id', inventoryId);
-    if (error) {
-      toast.error(`Failed to update supplier: ${error.message}`);
-    } else {
-      toast.success('Supplier updated successfully');
-      fetchInventory();
-    }
-  };
-
-  // Export CSV
-  const exportCSV = () => {
-    let csv = "data:text/csv;charset=utf-8,";
-    csv += "Supplier,ProductName,ProductID,Qty,CreatedAt\n";
-    filtered.forEach(item => {
-      const row = [
-        item.supplier_name || 'None',
-        item.device_name,
-        item.device_id,
-        item.qty,
-        item.created_at
-      ].join(',');
-      csv += row + '\n';
+// Collect edges for connecting lines
+function getEdges(node) {
+  let edges = [];
+  node.children.forEach(child => {
+    edges.push({
+      fromX: node.x + NODE_WIDTH / 2,
+      fromY: node.y + NODE_HEIGHT,
+      toX: child.x + NODE_WIDTH / 2,
+      toY: child.y,
     });
-    const link = document.createElement('a');
-    link.href = encodeURI(csv);
-    link.download = 'suppliers_inventory.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    edges = edges.concat(getEdges(child));
+  });
+  return edges;
+}
 
-  // Export PDF
-  const exportPDF = () => {
-    import('jspdf').then(({ jsPDF }) => {
-      const doc = new jsPDF();
-      let y = 10;
-      doc.text('Suppliers Inventory', 10, y);
-      y += 10;
-      filtered.forEach(item => {
-        const line = `Supplier: ${item.supplier_name || 'None'}, Product: ${item.device_name}, ID: ${item.device_id}, Qty: ${item.qty}`;
-        doc.text(line, 10, y);
-        y += 10;
-      });
-      doc.save('suppliers_inventory.pdf');
-    });
-  };
+// Recursive Node Component
+const NodeComponent = ({ node }) => (
+  <>
+    <div
+      className="absolute bg-blue-100 text-center text-sm font-medium rounded shadow p-2 border border-blue-300"
+      style={{
+        left: `${node.x}px`,
+        top: `${node.y}px`,
+        width: `${NODE_WIDTH}px`,
+        height: `${NODE_HEIGHT}px`,
+      }}
+    >
+      {node.title}
+    </div>
+    {node.children.map((child, index) => (
+      <NodeComponent key={index} node={child} />
+    ))}
+  </>
+);
+
+// Main MindMap Component
+const MindMap = ({ root }) => {
+  layoutTree(root);
+  const allNodes = getAllNodes(root);
+  const maxX = Math.max(...allNodes.map(n => n.x + NODE_WIDTH));
+  const maxY = Math.max(...allNodes.map(n => n.y + NODE_HEIGHT));
+  const edges = getEdges(root);
 
   return (
-    <div className="p-4">
-      <ToastContainer position="top-right" autoClose={3000} />
-
-      {/* Search */}
-      <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Search by Product ID..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
-        />
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow dark:text-white">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-200 dark:bg-gray-700">
-            <tr>
-              {['Supplier', 'Product Name', 'Product ID', 'Qty', 'Created At'].map(h => (
-                <th
-                  key={h}
-                  className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-600"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {paginatedInventory.map(item => (
-              <tr key={item.id}>
-                <td className="px-4 py-2 text-sm">
-                  <select
-                    value={item.supplier_name || ''}
-                    onChange={e => updateSupplier(item.id, e.target.value)}
-                    className="p-1 border rounded dark:bg-gray-900 dark:text-white"
-                  >
-                    <option value="">None</option>
-                    {suppliers.map(supplier => (
-                      <option key={supplier.value} value={supplier.value}>
-                        {supplier.label}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-4 py-2 text-sm">{item.device_name}</td>
-                <td className="px-4 py-2 text-sm">{item.device_id}</td>
-                <td className="px-4 py-2 text-sm">{item.qty}</td>
-                <td className="px-4 py-2 text-sm">
-                  {new Date(item.created_at).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
-        <button
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
-        >
-          Prev
-        </button>
-        {[...Array(totalPages)].map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i + 1)}
-            className={`px-3 py-1 rounded ${
-              currentPage === i + 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
-            }`}
-          >
-            {i + 1}
-          </button>
+    <div
+      className="relative bg-white rounded-lg shadow-lg p-4 mx-auto"
+      style={{ width: `${maxX + 40}px`, height: `${maxY + 40}px` }}
+    >
+      <svg
+        className="absolute top-0 left-0"
+        style={{ width: `${maxX + 40}px`, height: `${maxY + 40}px`, zIndex: 0 }}
+      >
+        {edges.map((edge, index) => (
+          <line
+            key={index}
+            x1={edge.fromX + 20}
+            y1={edge.fromY + 20}
+            x2={edge.toX + 20}
+            y2={edge.toY + 20}
+            stroke="gray"
+            strokeWidth="2"
+          />
         ))}
-        <button
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-
-      {/* Exports */}
-      <div className="flex justify-center gap-4 mt-4">
-        <button
-          onClick={exportCSV}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          <FaFileCsv /> CSV
-        </button>
-        <button
-          onClick={exportPDF}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-        >
-          <FaFilePdf /> PDF
-        </button>
+      </svg>
+      <div className="relative z-10">
+        <NodeComponent node={root} />
       </div>
     </div>
   );
-}
+};
+
+// App Component
+const App = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+    <h1 className="text-2xl font-bold mb-4 text-gray-800">Mind Mapping for Product Management</h1>
+    <MindMap root={productManagementData} />
+  </div>
+);
+
+export default App;

@@ -26,7 +26,7 @@ import PricingFeatures from '../Payments/PricingFeatures';
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('My Stores');
   const [darkMode, setDarkMode] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
   const [isTourOpen, setIsTourOpen] = useState(false);
 
   // Check if tour has been shown before
@@ -57,73 +57,68 @@ const Dashboard = () => {
             <MyStores />
           </div>
         );
-
       case 'Multi Sales':
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <MultiSales />
           </div>
         );
-
       case 'Multi Inventory':
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <MultiInventory />
           </div>
         );
-
       case 'Multi Debts':
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <MultiDebt />
           </div>
         );
-
       case 'VDashboard':
         return (
-          <div className="w-full bg-white dark:bg-gray-900 p-4"></div>
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
+            {/* Placeholder for VDashboard content */}
+            VDashboard Content
+          </div>
         );
-
       case 'Test':
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Test />
           </div>
         );
-
       case 'Upgrade':
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <PricingFeatures />
           </div>
         );
-
       case 'Variex':
         return (
-          <div className="w-full bg-white dark:bg-gray-900 p-4"></div>
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
+            {/* Placeholder for Variex content */}
+            Variex Content
+          </div>
         );
-
       case 'Employees':
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <StoreOwnersEmployees />
           </div>
         );
-
       case 'Profile':
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Profile />
           </div>
         );
-
       case 'Store Notifications':
         return (
           <div className="w-full bg-white dark:bg-gray-800 p-4">
             <StoreNotications />
           </div>
         );
-
       default:
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
@@ -136,7 +131,12 @@ const Dashboard = () => {
   // Handle navigation click: update active tab and close sidebar on mobile
   const handleNavClick = (tab) => {
     setActiveTab(tab);
-    setSidebarOpen(false);
+    setSidebarOpen(false); // Close sidebar on mobile
+  };
+
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   return (
@@ -150,18 +150,19 @@ const Dashboard = () => {
       />
       {/* Sidebar */}
       <aside
-        className={`transition-all duration-300 bg-gray-100 dark:bg-gray-900 ${
+        className={`fixed md:static top-20 left-0 h-[calc(100vh-5rem)] transition-all duration-300 bg-gray-100 dark:bg-gray-900 z-40 ${
           sidebarOpen ? 'w-64' : 'w-0'
-        } md:w-64 flex-shrink-0`}
+        } md:${sidebarOpen ? 'w-64' : 'w-0'}`}
       >
-        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block`}>
+        <div className={`${sidebarOpen ? 'block' : 'hidden'} md:${sidebarOpen ? 'block' : 'hidden'}`}>
           <div className="p-6">
-            {/* Mobile Header inside sidebar */}
-            <div className="flex md:hidden items-center justify-between">
+            <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-indigo-800 dark:text-white">Menu</h2>
+              {/* Mobile Close Button */}
               <button
-                onClick={() => setSidebarOpen(false)}
-                className="text-indigo-800 dark:text-indigo-200"
+                onClick={toggleSidebar}
+                className="text-indigo-800 dark:text-indigo-200 md:hidden"
+                aria-label="Close sidebar"
               >
                 <FaTimes size={24} />
               </button>
@@ -179,7 +180,6 @@ const Dashboard = () => {
                   <FaStore className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Stores Dashboard</span>
                 </li>
-
                 <li
                   data-tour="multi-sales"
                   onClick={() => handleNavClick('Multi Sales')}
@@ -191,7 +191,6 @@ const Dashboard = () => {
                   <FaChartLine className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Sales Dashboard</span>
                 </li>
-
                 <li
                   data-tour="multi-inventory"
                   onClick={() => handleNavClick('Multi Inventory')}
@@ -203,7 +202,6 @@ const Dashboard = () => {
                   <FaTasks className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Inventory Dashboard</span>
                 </li>
-
                 <li
                   data-tour="multi-debts"
                   onClick={() => handleNavClick('Multi Debts')}
@@ -215,7 +213,6 @@ const Dashboard = () => {
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Debtors Dashboard</span>
                 </li>
-
                 <li
                   data-tour="store-notifications"
                   onClick={() => handleNavClick('Store Notifications')}
@@ -227,7 +224,6 @@ const Dashboard = () => {
                   <FaBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Notifications</span>
                 </li>
-
                 <li
                   data-tour="upgrade"
                   onClick={() => handleNavClick('Upgrade')}
@@ -239,10 +235,7 @@ const Dashboard = () => {
                   <FaCrown className="text-yellow-800 dark:text-yellow-800 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Upgrade</span>
                 </li>
-
-
-                  {/* 
-
+                {/*
                 <li
                   onClick={() => handleNavClick('Test')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${
@@ -254,7 +247,6 @@ const Dashboard = () => {
                   <span className="text-indigo-800 dark:text-indigo-200">TESTING</span>
                 </li>
                 */}
-                
                 <li
                   data-tour="employees"
                   onClick={() => handleNavClick('Employees')}
@@ -266,7 +258,6 @@ const Dashboard = () => {
                   <FaIdBadge className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Employees</span>
                 </li>
-
                 <li
                   data-tour="profile"
                   onClick={() => handleNavClick('Profile')}
@@ -308,20 +299,43 @@ const Dashboard = () => {
         </div>
       </aside>
 
+      {/* Floating Toggle Button (Desktop Only) */}
+      <button
+        onClick={toggleSidebar}
+        className={`fixed top-24 md:top-24 transition-all duration-300 z-50 rounded-full p-2 bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 md:block hidden ${
+          sidebarOpen ? 'left-64' : 'left-4'
+        }`}
+        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+      >
+        {sidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+      </button>
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+      <div
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+          sidebarOpen ? 'md:ml-64' : 'md:ml-0'
+        }`}
+      >
         {/* Mobile Header */}
         <header className="flex md:hidden items-center justify-between p-4 bg-white dark:bg-gray-800">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-indigo-800 dark:text-indigo-200"
+            aria-label="Open sidebar"
           >
             <FaBars size={24} />
           </button>
           <h1 className="text-xl font-bold text-indigo-800 dark:text-indigo-200">
             {activeTab}
           </h1>
-          <div style={{ width: 24 }}></div>
+          <button
+            onClick={() => {
+              localStorage.removeItem('hasSeenTour');
+              setIsTourOpen(true);
+            }}
+            className="text-indigo-800 dark:text-indigo-200 text-sm"
+          >
+          </button>
         </header>
         <main className="flex-1 overflow-y-auto p-4">{renderContent()}</main>
       </div>
