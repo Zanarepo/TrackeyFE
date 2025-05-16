@@ -1,9 +1,9 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HomePage from "./component/HomePage";
-
+import LandingFooterLayout from "./component/LandingFooterLayout";
 import Navbar from "./component/Navbar";
-import Footer from "./component/Footer";
+//import Footer from "./component/Footer";
 //import RegisteredHomePage from './component/UserDashboard/RegisteredHomePage'
 // Registered Users components
 import Registration from './component/Auth/Registration'
@@ -51,6 +51,8 @@ import SellyticsPayment from './component/Payments/SellyticsPayment'
 import PremiumHomepage from './component/Premiums/PremiumHomepage'
 import PushNotifications from "./component/Premiums/PushNotifications";
 import Test from './component/UserDashboard/Test'
+import FooterLayout from "./component/FooterLayout";
+
 
 
 
@@ -75,9 +77,14 @@ const App = () => {
 
 
           <Routes>
+
+
+          
+            <Route element={<LandingFooterLayout />}>
+       
             <Route path="/" element={<HomePage />} />
             <Route path="/register" element={<Registration />} />
-            
+           
             <Route path="/login" element={<Login />} />
             
             <Route path="/forgot-password" element={<Forgotpassword />} />
@@ -94,10 +101,13 @@ const App = () => {
             
           {/* Dashboard*/}
 
-
+ </Route>
           </Routes>
          
+
+          
           <Routes>
+            <Route element={<FooterLayout />}>
           <Route element={<AdminNav />}>
           <Route path="/admindashboard" element={<AdminDasboard/>} />
 
@@ -121,7 +131,7 @@ const App = () => {
           <Route path="/push-notifications" element={< PushNotifications/>} />
           <Route path="/signaturepad" element={<SignaturePad />} />
     
-
+</Route>
 
 
           
@@ -130,7 +140,7 @@ const App = () => {
           
             
                     </Routes>
-
+        
 
 
           {/* Dashbaord*/}
@@ -188,9 +198,9 @@ const App = () => {
 
 
 
-
+ 
         </div>
-        <Footer />
+       
       </div>
     </Router>
   );

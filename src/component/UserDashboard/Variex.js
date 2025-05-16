@@ -30,6 +30,7 @@ import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
 import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
 import Suppliers from '../Ops/Suppliers'
+import DashboardAccess from '../Ops/DashboardAccess'
 
 
 const tools = [
@@ -148,6 +149,7 @@ export default function DynamicDashboard() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 p-0">
+      <DashboardAccess />
   
       <header className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white">

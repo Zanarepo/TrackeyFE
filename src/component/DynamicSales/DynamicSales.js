@@ -29,7 +29,7 @@ export default function SalesTracker() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState('list'); // 'list', 'daily', 'weekly'
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
   const [showAdd, setShowAdd] = useState(false);
   const [lines, setLines] = useState([
     { dynamic_product_id: '', quantity: 1, unit_price: '', device_id: '' },

@@ -10,6 +10,7 @@ import AdminProfile from './AdminProfile';
 import Stores from './Stores';
 import StoreUsers from './StoreUsers';
 import Owners from './Owners';
+import DashboardAccess from '../Ops/DashboardAccess';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('AdminProfile');
@@ -48,6 +49,14 @@ const Dashboard = () => {
             <AdminProfile />
           </div>
         );
+    case 'Access':
+        return (
+          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <DashboardAccess />
+          </div>
+        );
+    
+        
       default:
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
@@ -56,6 +65,10 @@ const Dashboard = () => {
         );
     }
   };
+
+
+
+
 
   // Handle navigation click: update active tab and close sidebar on mobile
   const handleNavClick = (tab) => {
@@ -69,7 +82,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-200 dark:bg-gray-700 mt-20">
+    <div className="flex h-screen bg-green-300 dark:bg-gray-700 mt-20">
       {/* Sidebar */}
       <aside
         className={`fixed md:static top-20 left-0 h-[calc(100vh-5rem)] transition-all duration-300 bg-gray-100 dark:bg-gray-800 z-40 ${
@@ -121,6 +134,8 @@ const Dashboard = () => {
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Store Users</span>
                 </li>
+              
+              
                 <li
                   onClick={() => handleNavClick('Stores')}
                   className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
@@ -131,6 +146,23 @@ const Dashboard = () => {
                   <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Stores</span>
                 </li>
+
+
+                <li
+                  onClick={() => handleNavClick('Access')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Access' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
+                  }`}
+                  aria-label="Stores: Manage stores"
+                >
+                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Access Dashboard</span>
+                </li>
+
+
+
+
+                
               </ul>
             </nav>
           </div>

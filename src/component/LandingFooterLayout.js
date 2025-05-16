@@ -1,8 +1,9 @@
-import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
-import { Link as ScrollLink } from 'react-scroll';
-import { motion } from 'framer-motion';
-import { FaLinkedin, FaTwitter, FaEnvelope, FaPhone } from 'react-icons/fa';
+import React from "react";
+import { Outlet } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import { Link as ScrollLink } from "react-scroll";
+import { motion } from "framer-motion";
+import { FaLinkedin, FaTwitter, FaEnvelope, FaPhone } from "react-icons/fa";
 
 const footerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -16,55 +17,53 @@ const sectionVariants = {
 
 const iconVariants = {
   rest: { scale: 1 },
-  hover: { scale: 1.2, transition: { type: 'spring', stiffness: 300 } },
+  hover: { scale: 1.2, transition: { type: "spring", stiffness: 300 } },
 };
 
 const Footer = () => {
   const quickLinks = [
-    { id: 'features', label: 'Features', to: 'features', type: 'scroll' },
-    { id: 'how-it-works', label: 'How It Works', to: 'how-it-works', type: 'scroll' },
-    { id: 'pricing', label: 'Pricing', to: 'pricing', type: 'scroll' },
-    { id: 'use-cases', label: 'Use Cases', to: 'use-cases', type: 'scroll' },
-    { id: 'who-is-it-for', label: 'Who It’s For', to: 'who-is-it-for', type: 'scroll' },
-    { id: 'faq', label: 'FAQ', to: 'faq', type: 'scroll' },
-    { id: 'register', label: 'Start for Free', to: '/register', type: 'router' },
-    { id: 'login', label: 'Login', to: '/login', type: 'router' },
+    { id: "features", label: "Features", to: "features", type: "scroll" },
+    { id: "how-it-works", label: "How It Works", to: "how-it-works", type: "scroll" },
+    { id: "pricing", label: "Pricing", to: "pricing", type: "scroll" },
+    { id: "use-cases", label: "Use Cases", to: "use-cases", type: "scroll" },
+    { id: "who-is-it-for", label: "Who It’s For", to: "who-is-it-for", type: "scroll" },
+    { id: "faq", label: "FAQ", to: "faq", type: "scroll" },
+    { id: "register", label: "Start for Free", to: "/register", type: "router" },
+    { id: "login", label: "Login", to: "/login", type: "router" },
   ];
 
   const products = [
-    'Live Stock Alerts',
-    'Daily Sales Overview',
-    'Customer Hub',
-    'Insightful Reports',
-    'Returns Tracker',
-    'Quick Receipts',
-    'Dynamic Pricing',
-    'Debt Manager',
-    'Outstanding Bills',
-    'Multi-Store View',
+    "Live Stock Alerts",
+    "Daily Sales Overview",
+    "Customer Hub",
+    "Insightful Reports",
+    "Returns Tracker",
+    "Quick Receipts",
+    "Dynamic Pricing",
+    "Debt Manager",
+    "Outstanding Bills",
+    "Multi-Store View",
   ];
 
-  // Split quick links into two columns
   const quickLinksFirstColumn = quickLinks.slice(0, 4);
   const quickLinksSecondColumn = quickLinks.slice(4);
 
-  // Split products into two columns
   const productsFirstColumn = products.slice(0, 5);
   const productsSecondColumn = products.slice(5);
 
   const socialLinks = [
     {
-      href: 'https://www.linkedin.com/company/sprintifyhq/',
+      href: "https://www.linkedin.com/company/sprintifyhq/",
       icon: <FaLinkedin size={24} />,
-      label: 'LinkedIn',
+      label: "LinkedIn",
     },
-    { href: 'https://x.com/sprintifyhq', icon: <FaTwitter size={24} />, label: 'X' },
+    { href: "https://x.com/sprintifyhq", icon: <FaTwitter size={24} />, label: "X" },
     {
-      href: 'mailto:sellytics@sprintifyhq.com',
+      href: "mailto:sellytics@sprintifyhq.com",
       icon: <FaEnvelope size={24} />,
-      label: 'Email',
+      label: "Email",
     },
-    { href: 'tel:+2347088347620', icon: <FaPhone size={24} />, label: 'Phone' },
+    { href: "tel:+2347088347620", icon: <FaPhone size={24} />, label: "Phone" },
   ];
 
   return (
@@ -74,7 +73,6 @@ const Footer = () => {
       animate="visible"
       variants={footerVariants}
     >
-      {/* Wavy Top Border */}
       <svg
         className="absolute top-0 w-full"
         viewBox="0 0 1440 60"
@@ -87,15 +85,14 @@ const Footer = () => {
         />
         <defs>
           <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style={{ stopColor: '#e0e7ff', stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: '#c7d2fe', stopOpacity: 1 }} />
+            <stop offset="0%" style={{ stopColor: "#e0e7ff", stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: "#c7d2fe", stopOpacity: 1 }} />
           </linearGradient>
         </defs>
       </svg>
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 ">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Quick Links */}
           <motion.div variants={sectionVariants} className="flex flex-col items-center mt-2">
             <h3 className="text-lg font-bold text-white mb-4 font-sans text-center">
               Quick Links
@@ -104,7 +101,7 @@ const Footer = () => {
               <ul className="space-y-2">
                 {quickLinksFirstColumn.map(({ id, label, to, type }) => (
                   <li key={id}>
-                    {type === 'scroll' ? (
+                    {type === "scroll" ? (
                       <ScrollLink
                         to={to}
                         smooth={true}
@@ -130,7 +127,7 @@ const Footer = () => {
               <ul className="space-y-2">
                 {quickLinksSecondColumn.map(({ id, label, to, type }) => (
                   <li key={id}>
-                    {type === 'scroll' ? (
+                    {type === "scroll" ? (
                       <ScrollLink
                         to={to}
                         smooth={true}
@@ -156,7 +153,6 @@ const Footer = () => {
             </div>
           </motion.div>
 
-          {/* Products */}
           <motion.div variants={sectionVariants} className="flex flex-col items-center mt-2">
             <h3 className="text-lg font-bold text-white mb-4 font-sans text-center">
               Products
@@ -183,14 +179,13 @@ const Footer = () => {
             </div>
           </motion.div>
 
-          {/* Connect With Us */}
           <motion.div variants={sectionVariants} className="flex flex-col items-center mt-2">
             <h3 className="text-lg font-bold text-white mb-4 font-sans text-center">
               Connect With Us
             </h3>
             <div className="flex flex-col items-center space-y-2">
               <p className="text-sm text-gray-300">
-                Email:{' '}
+                Email:{" "}
                 <a
                   href="mailto:sellytics@sprintifyhq.com"
                   className="hover:text-indigo-400 transition-colors duration-200"
@@ -199,7 +194,7 @@ const Footer = () => {
                 </a>
               </p>
               <p className="text-sm text-gray-300">
-                Phone:{' '}
+                Phone:{" "}
                 <a
                   href="tel:+2347088347620"
                   className="hover:text-indigo-400 transition-colors duration-200"
@@ -228,18 +223,27 @@ const Footer = () => {
           </motion.div>
         </div>
 
-        {/* Bottom Bar */}
         <motion.div
           className="mt-12 pt-6 border-t border-indigo-700/50 text-center text-sm text-gray-300"
           variants={sectionVariants}
         >
-          <p>
-            © {new Date().getFullYear()} Sellytics. All rights reserved.
-          </p>
+          <p>© {new Date().getFullYear()} Sellytics. All rights reserved.</p>
         </motion.div>
       </div>
     </motion.footer>
   );
 };
 
-export default Footer;
+// FooterLayout for embedding components
+const FooterLayout = () => {
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-grow">
+        <Outlet />
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+export default FooterLayout;

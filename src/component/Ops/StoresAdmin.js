@@ -140,7 +140,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-800 mt-20">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 mt-20">
       <WhatsapUsers />
       {/* Onboarding Tour */}
       <OnboardingTour

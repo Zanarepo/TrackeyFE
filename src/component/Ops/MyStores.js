@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import DashboardAccess from '../Ops/DashboardAccess';
 
 export default function OwnerDashboard() {
   const navigate = useNavigate();
@@ -128,7 +129,8 @@ export default function OwnerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6">
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6">
+      <DashboardAccess />
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
 
       {/* ─── HEADER ────────────────────────────────────────── */}

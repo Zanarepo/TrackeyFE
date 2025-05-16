@@ -17,6 +17,7 @@ import VsalesSummary from '../Ops/VsalesSummary';
 import WhatsapUsers from './WhatsapUsers';
 import Notifications from './Notifications';
 import PricingFeatures from '../Payments/PricingFeatures';
+//import DashboardAccess from '../Ops/DashboardAccess';
 import Test from './Test';
 
 const Dashboard = () => {
@@ -49,49 +50,49 @@ const Dashboard = () => {
     switch (activeTab) {
       case 'Retail Suites':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Variex />
           </div>
         );
       case 'Sales Summary':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <VsalesSummary />
           </div>
         );
       case 'Notifications':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Notifications />
           </div>
         );
       case 'Employees':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Employees />
           </div>
         );
       case 'Upgrade':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <PricingFeatures />
           </div>
         );
       case 'Profile':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Profile />
           </div>
         );
       case 'Test':
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Test />
           </div>
         );
       default:
         return (
-          <div className="w-full bg-white dark:bg-gray-800 p-4">
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
             Dashboard Content
           </div>
         );
@@ -110,7 +111,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900 mt-20">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 mt-20">
+      
       <WhatsapUsers />
       {/* Onboarding Tour */}
       <UserOnboardingTour
