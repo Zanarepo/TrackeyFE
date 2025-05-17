@@ -11,6 +11,7 @@ import Stores from './Stores';
 import StoreUsers from './StoreUsers';
 import Owners from './Owners';
 import DashboardAccess from '../Ops/DashboardAccess';
+import PriceUpdateCompo from '../Payments/PriceUpdateCompo';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('AdminProfile');
@@ -43,12 +44,24 @@ const Dashboard = () => {
             <Owners />
           </div>
         );
+      
       case 'AdminProfile':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
             <AdminProfile />
           </div>
         );
+
+
+        case 'Pricing':
+        return (
+          <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
+            <PriceUpdateCompo />
+          </div>
+        );
+
+
+
     case 'Access':
         return (
           <div className="w-full bg-white dark:bg-gray-700 rounded-lg shadow p-4">
@@ -82,7 +95,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-green-300 dark:bg-gray-700 mt-20">
+    <div className="flex h-screen bg-gray-300 dark:bg-gray-700 mt-20">
       {/* Sidebar */}
       <aside
         className={`fixed md:static top-20 left-0 h-[calc(100vh-5rem)] transition-all duration-300 bg-gray-100 dark:bg-gray-800 z-40 ${
@@ -147,6 +160,17 @@ const Dashboard = () => {
                   <span className="text-indigo-800 dark:text-indigo-200">Stores</span>
                 </li>
 
+
+                <li
+                  onClick={() => handleNavClick('Pricing')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Pricing' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
+                  }`}
+                  aria-label="Stores: Manage stores"
+                >
+                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Pricing</span>
+                </li>
 
                 <li
                   onClick={() => handleNavClick('Access')}

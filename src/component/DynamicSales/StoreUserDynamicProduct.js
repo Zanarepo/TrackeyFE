@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
 import {
   FaEdit,
-  FaTrashAlt,
   FaFileCsv,
   FaFilePdf,
   FaPlus,
@@ -260,24 +259,7 @@ export default function DynamicProducts() {
     fetchProducts();
   };
 
-  const deleteProduct = async p => {
-    if (window.confirm(`Delete product "${p.name}"?`)) {
-      const { error } = await supabase.from('dynamic_product').delete().eq('id', p.id);
-      if (error) {
-        toast.error(`Failed to delete product: ${error.message}`);
-      } else {
-        // Clean up dynamic inventory
-        await supabase
-          .from('dynamic_inventory')
-          .delete()
-          .eq('dynamic_product_id', p.id)
-          .eq('store_id', storeId);
-        toast.success('Product deleted successfully');
-        fetchProducts();
-      }
-    }
-  };
-
+ 
   // Export CSV
   const exportCSV = () => {
     let csv = "data:text/csv;charset=utf-8,";
@@ -379,13 +361,13 @@ export default function DynamicProducts() {
                 <div key={index} className="mb-4 p-4 border rounded ">
                   <h3 className="text-lg font-semibold mb-2">Product {index + 1}</h3>
                   {[
-                    { name: 'name', label: 'Name' },
+                    { name: 'name', label: 'Name (iPhone, TV, etc)' },
                     { name: 'description', label: 'Description' },
-                    { name: 'purchase_price', label: 'Total Purchase Price' },
-                    { name: 'purchase_qty', label: 'Quantity Purchased' },
-                    { name: 'selling_price', label: 'Selling Price' },
-                    { name: 'suppliers_name', label: 'Supplier Name' },
-                    { name: 'device_id', label: 'Product ID' },
+                  
+                    { name: 'purchase_qty', label: 'Quantity of items bought (Restock)' },
+                    { name: 'selling_price', label: 'Selling Price (optional)'  },
+                    { name: 'suppliers_name', label: 'Supplier Name (optional)' },
+                    { name: 'device_id', label: 'Product ID (optional)' },
                   ].map(field => (
                     <div key={field.name} className="mb-2">
                       <label className="block mb-1">{field.label}</label>
@@ -438,24 +420,25 @@ export default function DynamicProducts() {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow dark:text-white">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-200 dark:bg-gray-700">
-            <tr>
-              {['Name', 'Description', 'Purchase', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-600">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
+    <thead className="bg-gray-200 dark:bg-gray-700">
+      <tr>
+        {['Name', 'Description', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Edit/Restock'].map(h => (
+          <th
+            key={h}
+            className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-indigo-400 whitespace-nowrap"
+          >
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
             {paginatedProducts.map((p, index) => (
               <tr key={p.id}>
                 <td className="px-4 py-2 text-sm">{p.name}</td>
                 <td className="px-4 py-2 text-sm">{p.description}</td>
-                <td className="px-4 py-2 text-sm">
-                  {p.purchase_price != null
-                    ? parseFloat(p.purchase_price).toFixed(2)
-                    : ''}
-                </td>
+                
                 <td className="px-4 py-2 text-sm">{p.purchase_qty}</td>
                 <td className="px-4 py-2 text-sm">
                   {p.selling_price != null
@@ -467,13 +450,15 @@ export default function DynamicProducts() {
                 <td className="px-4 py-2 text-sm">
                   {new Date(p.created_at).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-2 flex gap-2">
-                  <button onClick={() => startEdit(p)} className={`text-indigo-600 hover:text-indigo-800 edit-button-${index}`}>
-                    <FaEdit />
-                  </button>
-                  <button onClick={() => deleteProduct(p)} className="text-red-600 hover:text-red-800">
-                    <FaTrashAlt />
-                  </button>
+              <td className="px-4 py-2 flex items-center justify-center gap-2">
+  <button onClick={() => startEdit(p)} className={`text-indigo-600 hover:text-indigo-800 edit-button-${index}`}>
+    <FaEdit />
+  </button>
+  {/* Add more buttons here if needed */}
+
+              
+                 
+                 
                 </td>
               </tr>
             ))}
@@ -522,17 +507,18 @@ export default function DynamicProducts() {
 
       {/* Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto pt-24 ">
+
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md overflow-y-auto max-h-[90vh] mt-32">
             <h2 className="text-xl font-bold mb-4">Edit {editing.name}</h2>
             {[
-              { name: 'name', label: 'Name' },
+              { name: 'name', label: 'Name (iPhone, TV, etc)' },
               { name: 'description', label: 'Description' },
-              { name: 'purchase_price', label: 'Total Purchase Price' },
-              { name: 'purchase_qty', label: 'Qty Purchased (Restock)' },
+            
+              { name: 'purchase_qty', label: 'Qty Purchased' },
               { name: 'selling_price', label: 'Selling Price' },
-              { name: 'suppliers_name', label: 'Supplier Name' },
-              { name: 'device_id', label: 'Product ID' },
+              { name: 'suppliers_name', label: 'Supplier Name (optional)' },
+              { name: 'device_id', label: 'Product ID (optional))' },
             ].map(field => (
               <div className="mb-3" key={field.name}>
                 <label className="block mb-1">{field.label}</label>
@@ -542,7 +528,7 @@ export default function DynamicProducts() {
                   name={field.name}
                   value={form[field.name]}
                   onChange={handleFormChange}
-                  required={['name', 'purchase_price', 'purchase_qty'].includes(field.name)}
+                  required={['name',  'purchase_qty'].includes(field.name)}
                   className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
                 />
               </div>

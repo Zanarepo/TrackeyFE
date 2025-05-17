@@ -407,9 +407,7 @@ useEffect(() => {
                   </div>
                 </td>
                 <td className="p-2 whitespace-nowrap">{item.quantity_sold}</td>
-                <td className="p-2 whitespace-nowrap">
-                  
-                </td>
+             
               </tr>
             ))}
           </tbody>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { supabase } from '../../supabaseClient';
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 40 },
@@ -27,6 +28,7 @@ const buttonVariants = {
   hover: { scale: 1.1, transition: { type: 'spring', stiffness: 300 } },
 };
 
+// Static features mapping
 const features = {
   free: [
     '✅ Manage up to 50 products with ease',
@@ -60,15 +62,25 @@ const features = {
   ],
 };
 
-const plans = [
-  { id: 1, name: 'Free', price: 0 },
-  { id: 2, name: 'Premium', price: 5000 },
-  { id: 3, name: 'Business', price: 15000 },
-];
-
 export default function SubscriptionPlansComponent() {
   const [expandedPlans, setExpandedPlans] = useState({});
+  const [plans, setPlans] = useState([]);
   const navigate = useNavigate();
+
+  // Fetch plans from Supabase
+  useEffect(() => {
+    const fetchPlans = async () => {
+      const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('id, name, price, description');
+      if (error) {
+        console.error('Error fetching plans:', error);
+      } else {
+        setPlans(data);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   const toggleDetails = (planId) => {
     setExpandedPlans((prev) => ({
@@ -80,7 +92,7 @@ export default function SubscriptionPlansComponent() {
   const handleSubscribe = (plan) => {
     const normalizedPlan = {
       ...plan,
-      nameKey: plan.name?.toLowerCase().trim(),
+      nameKey: plan.name.toLowerCase().trim(),
     };
     navigate('/payment', { state: { plan: normalizedPlan } });
   };
@@ -158,7 +170,6 @@ export default function SubscriptionPlansComponent() {
                 whileHover={{ scale: 1.05, y: -10 }}
                 aria-label={`${plan.name} Plan Card`}
               >
-                {/* Popular Badge for Premium */}
                 {isPremium && (
                   <span className="absolute top-4 right-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
                     Most Popular
@@ -176,6 +187,10 @@ export default function SubscriptionPlansComponent() {
                   >
                     {plan.name} Plan
                   </h2>
+                  {/* New: Plan Description from DB */}
+                  <p className="text-base text-gray-700 dark:text-gray-300 font-sans">
+                    {plan.description}
+                  </p>
                   <p className="text-3xl font-extrabold text-indigo-900 dark:text-white">
                     {isFree ? '₦0' : `₦${plan.price.toLocaleString()}`}
                     <span className="text-base text-gray-500 dark:text-gray-400 font-normal"> /month</span>
@@ -188,17 +203,17 @@ export default function SubscriptionPlansComponent() {
                     whileHover="hover"
                     aria-expanded={isExpanded}
                     aria-controls={`features-${plan.id}`}
-                    aria-label={`Toggle ${plan.name} Plan Details`} 
+                    aria-label={`Toggle ${plan.name} Plan Details`}
                   >
                     {isExpanded ? 'Hide Details' : 'Show Details'}
-                  </motion.button> <p/>
+                  </motion.button>
                   <motion.ul
                     id={`features-${plan.id}`}
                     variants={featureVariants}
                     animate={isExpanded ? 'expanded' : 'collapsed'}
                     className="text-base text-gray-600 dark:text-gray-300 space-y-3 overflow-hidden"
                   >
-                    {features[planKey].map((feature, index) => (
+                    {features[planKey]?.map((feature, index) => (
                       <li key={index} className="flex items-start">
                         <span className="mr-2">{feature.startsWith('✅') ? '✅' : '❌'}</span>
                         <span>{feature.slice(2)}</span>
@@ -209,7 +224,7 @@ export default function SubscriptionPlansComponent() {
                 <motion.button
                   onClick={() => handleSubscribe(plan)}
                   disabled={isFree}
-                  className={`mt吕布6 w-full py-3 px-4 font-medium rounded-xl transition-all duration-300 ${
+                  className={`mt-6 w-full py-3 px-4 font-medium rounded-xl transition-all duration-300 ${
                     isFree
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : isPremium
@@ -217,7 +232,7 @@ export default function SubscriptionPlansComponent() {
                       : plan.name === 'Business'
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 hover:shadow-purple-500/30'
                       : 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 hover:shadow-green-500/30'
-                  }`}
+                  }`} oproved
                   variants={buttonVariants}
                   initial="rest"
                   whileHover="hover"

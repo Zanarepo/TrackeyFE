@@ -61,8 +61,8 @@ const features = {
 
 const plans = [
   { id: 1, name: 'Free', price: 0 },
-  { id: 2, name: 'Premium', price: 5000 },
-  { id: 3, name: 'Business', price: 15000 },
+  { id: 2, name: 'Premium', price: 15000 },
+  { id: 3, name: 'Business', price: 25000 },
 ];
 
 export default function SubscriptionPlansComponent() {

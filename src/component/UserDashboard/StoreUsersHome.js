@@ -10,11 +10,12 @@ import {
 } from 'react-icons/fa';
 import StoreUsersTour from './StoreUsersTour';
 import WhatsapUsers from './WhatsapUsers';
-import VariexDB from './VariexDB';
+//import VariexDB from './VariexDB';
 import StoreUserProfile from './StoreUsersProfile';
 import Colleagues from './Colleagues';
 import StoresSalesSummary from '../Ops/StoresSalesSummary';
 import Notifications from './Notifications';
+import StoreUsersVariex from './StoreUsersVariex';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Retail Suites');
@@ -53,7 +54,7 @@ const Dashboard = () => {
       case 'Retail Suites':
         return (
           <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-            <VariexDB />
+            <StoreUsersVariex />
           </div>
         );
       case 'Profile':

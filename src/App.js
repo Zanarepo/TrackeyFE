@@ -78,13 +78,16 @@ const App = () => {
 
           <Routes>
 
-
+  
           
             <Route element={<LandingFooterLayout />}>
        
             <Route path="/" element={<HomePage />} />
+            
+ </Route>
+
             <Route path="/register" element={<Registration />} />
-           
+           <Route path="/login" element={<Login />} />
             <Route path="/login" element={<Login />} />
             
             <Route path="/forgot-password" element={<Forgotpassword />} />
@@ -101,13 +104,12 @@ const App = () => {
             
           {/* Dashboard*/}
 
- </Route>
           </Routes>
          
 
           
           <Routes>
-            <Route element={<FooterLayout />}>
+          <Route element={<FooterLayout />}>
           <Route element={<AdminNav />}>
           <Route path="/admindashboard" element={<AdminDasboard/>} />
 
