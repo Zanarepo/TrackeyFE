@@ -165,42 +165,67 @@ useEffect(() => {
         fetchInventory(storeId);
       }
     )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'dynamic_product', filter: `store_id=eq.${storeId}` },
-        async ({ new: p }) => {
-          console.log('Real-time UPDATE received:', p);
-          const { data: existing } = await supabase
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'dynamic_product', filter: `store_id=eq.${storeId}` },
+      async ({ new: p }) => {
+        console.log('Real-time UPDATE received:', p);
+        // Fetch inventory to check if it exists
+        const { data: existing } = await supabase
+          .from('dynamic_inventory')
+          .select('available_qty')
+          .eq('dynamic_product_id', p.id)
+          .eq('store_id', storeId)
+          .maybeSingle();
+
+        if (!existing) {
+          // If no inventory exists, create it
+          const { error } = await supabase
             .from('dynamic_inventory')
-            .select('available_qty')
-            .eq('dynamic_product_id', p.id)
-            .eq('store_id', storeId)
-            .single();
-          if (existing && existing.available_qty !== p.purchase_qty) {
-            const { error } = await supabase
-              .from('dynamic_inventory')
-              .update({ available_qty: p.purchase_qty, updated_at: new Date() })
-              .eq('dynamic_product_id', p.id)
-              .eq('store_id', storeId);
-            if (error) {
-              toast.error(`Sync update error: ${error.message}`);
-            } else {
-              toast.success(`Updated ${p.name} inventory`);
-            }
+            .upsert(
+              {
+                dynamic_product_id: p.id,
+                store_id: storeId,
+                available_qty: p.purchase_qty,
+                quantity_sold: 0,
+                last_updated: new Date().toISOString(),
+              },
+              { onConflict: ['dynamic_product_id', 'store_id'] }
+            );
+
+          if (error) {
+            toast.error(`Sync insert error: ${error.message}`);
+          } else {
+            toast.success(`Initialized ${p.name} in inventory`);
+            setHistory(prev => [
+              {
+                id: historyIdCounter,
+                action: 'insert',
+                product_name: p.name,
+                quantity: p.purchase_qty,
+                timestamp: new Date().toISOString(),
+              },
+              ...prev.slice(0, 9),
+            ]);
+            setHistoryIdCounter(prev => prev + 1);
           }
-          fetchInventory(storeId);
         }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
-      });
+        // Do not update available_qty to avoid overwriting restock logic
+        fetchDynamicProducts(storeId); // Refresh product names if changed
+        fetchInventory(storeId);
+      }
+    )
+    .subscribe(status => {
+      console.log('Subscription status:', status);
+    });
 
     return () => {
       supabase.removeChannel(chan);
       console.log('Unsubscribed from channel:', `inv-sync-${storeId}`);
     };
   }, [storeId, historyIdCounter]);
-
+ 
+ 
   // FETCHERS
   async function fetchDynamicProducts(sid) {
     const { data, error } = await supabase

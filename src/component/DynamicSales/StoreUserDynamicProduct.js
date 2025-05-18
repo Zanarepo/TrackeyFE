@@ -212,54 +212,90 @@ export default function DynamicProducts() {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
   };
+const saveEdit = async () => {
+  if (!form.name || !form.purchase_qty) {
+    toast.error('Please fill all required fields');
+    return;
+  }
 
-  const saveEdit = async () => {
-    if (!form.name || !form.purchase_qty) {
-      toast.error('Please fill all required fields');
-      return;
-    }
+  const restockQty = parseInt(form.purchase_qty);
+  if (restockQty <= 0) {
+    toast.error('Restock quantity must be greater than zero');
+    return;
+  }
 
-    // Update dynamic_product
-    const productUpdate = {
-      name: form.name,
-      description: form.description,
-      purchase_price: parseFloat(form.purchase_price),
-      purchase_qty: parseInt(form.purchase_qty),
-      selling_price: parseFloat(form.selling_price),
-      suppliers_name: form.suppliers_name,
-      device_id: form.device_id
-    };
-    const { error: productError } = await supabase
-      .from('dynamic_product')
-      .update(productUpdate)
-      .eq('id', editing.id);
-    if (productError) {
-      toast.error(`Failed to update product: ${productError.message}`);
-      return;
-    }
+  // Log input for debugging
+  console.log('Restock Quantity Entered:', restockQty);
 
-    // Update dynamic_inventory
-    const inventoryUpdate = {
-      dynamic_product_id: editing.id,
-      store_id: storeId,
-      available_qty: parseInt(form.purchase_qty),
-      quantity_sold: 0,
-      last_updated: new Date().toISOString()
-    };
-    const { error: inventoryError } = await supabase
-      .from('dynamic_inventory')
-      .upsert([inventoryUpdate], { onConflict: ['dynamic_product_id', 'store_id'] });
-    if (inventoryError) {
-      toast.error(`Failed to update inventory: ${inventoryError.message}`);
-      return;
-    }
-
-    toast.success('Product updated successfully');
-    setEditing(null);
-    fetchProducts();
+  // Update dynamic_product (store restock amount for transaction history)
+  const productUpdate = {
+    name: form.name,
+    description: form.description,
+    purchase_price: parseFloat(form.purchase_price),
+    purchase_qty: restockQty, // Record restock amount
+    selling_price: parseFloat(form.selling_price),
+    suppliers_name: form.suppliers_name,
+    device_id: form.device_id,
   };
+  const { error: productError } = await supabase
+    .from('dynamic_product')
+    .update(productUpdate)
+    .eq('id', editing.id);
+  if (productError) {
+    toast.error(`Failed to update product: ${productError.message}`);
+    return;
+  }
 
- 
+  // Fetch current inventory data
+  const { data: inventoryData, error: fetchInventoryError } = await supabase
+    .from('dynamic_inventory')
+    .select('available_qty, quantity_sold')
+    .eq('dynamic_product_id', editing.id)
+    .eq('store_id', storeId)
+    .maybeSingle();
+
+  // Log fetched inventory data
+  console.log('Fetched Inventory Data:', inventoryData);
+  console.log('Fetch Inventory Error:', fetchInventoryError);
+
+  let newAvailableQty = restockQty; // Default for new inventory entries
+  let existingQuantitySold = 0; // Default for new entries
+  if (inventoryData) {
+    // Add restock quantity to existing available_qty
+    newAvailableQty = inventoryData.available_qty + restockQty;
+    existingQuantitySold = inventoryData.quantity_sold || 0;
+  } else if (fetchInventoryError) {
+    toast.error(`Failed to fetch inventory: ${fetchInventoryError.message}`);
+    return;
+  }
+
+  // Log calculated new available_qty
+  console.log('Calculated New Available Qty:', newAvailableQty);
+
+  // Update or insert dynamic_inventory
+  const inventoryUpdate = {
+    dynamic_product_id: editing.id,
+    store_id: storeId,
+    available_qty: newAvailableQty,
+    quantity_sold: existingQuantitySold,
+    last_updated: new Date().toISOString(),
+  };
+  const { error: inventoryError } = await supabase
+    .from('dynamic_inventory')
+    .upsert([inventoryUpdate], { onConflict: ['dynamic_product_id', 'store_id'] });
+  if (inventoryError) {
+    toast.error(`Failed to update inventory: ${inventoryError.message}`);
+    return;
+  }
+
+  toast.success('Product restocked successfully');
+  setEditing(null);
+  fetchProducts();
+};
+
+
+
+
   // Export CSV
   const exportCSV = () => {
     let csv = "data:text/csv;charset=utf-8,";
@@ -328,7 +364,7 @@ export default function DynamicProducts() {
   };
 
   return (
-    <div className="p-0">
+    <div className="p-0 mt-24">
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Search & Add */}
@@ -361,13 +397,13 @@ export default function DynamicProducts() {
                 <div key={index} className="mb-4 p-4 border rounded ">
                   <h3 className="text-lg font-semibold mb-2">Product {index + 1}</h3>
                   {[
-                    { name: 'name', label: 'Name (iPhone, TV, etc)' },
+                    { name: 'name', label: 'Name' },
                     { name: 'description', label: 'Description' },
-                  
-                    { name: 'purchase_qty', label: 'Quantity of items bought (Restock)' },
-                    { name: 'selling_price', label: 'Selling Price (optional)'  },
-                    { name: 'suppliers_name', label: 'Supplier Name (optional)' },
-                    { name: 'device_id', label: 'Product ID (optional)' },
+   
+                    { name: 'purchase_qty', label: 'Quantity Bought' },
+                    { name: 'selling_price', label: 'Selling Price' },
+                    { name: 'suppliers_name', label: 'Supplier Name' },
+                    { name: 'device_id', label: 'Product ID' },
                   ].map(field => (
                     <div key={field.name} className="mb-2">
                       <label className="block mb-1">{field.label}</label>
@@ -420,25 +456,24 @@ export default function DynamicProducts() {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow dark:text-white">
-          <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
-    <thead className="bg-gray-200 dark:bg-gray-700">
-      <tr>
-        {['Name', 'Description', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Edit/Restock'].map(h => (
-          <th
-            key={h}
-            className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-indigo-400 whitespace-nowrap"
-          >
-            {h}
-          </th>
-        ))}
-      </tr>
-    </thead>
-    <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-200 dark:bg-gray-700">
+            <tr>
+              {['Name', 'Description', 'Purchase', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Edit/Restock'].map(h => (
+                <th key={h} className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-600">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {paginatedProducts.map((p, index) => (
               <tr key={p.id}>
                 <td className="px-4 py-2 text-sm">{p.name}</td>
                 <td className="px-4 py-2 text-sm">{p.description}</td>
-                
+                <td className="px-4 py-2 text-sm">
+                  {p.purchase_price != null
+                    ? parseFloat(p.purchase_price).toFixed(2)
+                    : ''}
+                </td>
                 <td className="px-4 py-2 text-sm">{p.purchase_qty}</td>
                 <td className="px-4 py-2 text-sm">
                   {p.selling_price != null
@@ -450,15 +485,11 @@ export default function DynamicProducts() {
                 <td className="px-4 py-2 text-sm">
                   {new Date(p.created_at).toLocaleDateString()}
                 </td>
-              <td className="px-4 py-2 flex items-center justify-center gap-2">
-  <button onClick={() => startEdit(p)} className={`text-indigo-600 hover:text-indigo-800 edit-button-${index}`}>
-    <FaEdit />
-  </button>
-  {/* Add more buttons here if needed */}
-
-              
-                 
-                 
+                <td className="px-4 py-2 flex gap-2">
+                  <button onClick={() => startEdit(p)} className={`text-indigo-600 hover:text-indigo-800 edit-button-${index}`}>
+                    <FaEdit />
+                  </button>
+                  
                 </td>
               </tr>
             ))}
@@ -507,18 +538,17 @@ export default function DynamicProducts() {
 
       {/* Edit Modal */}
       {editing && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto pt-24 ">
-
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md overflow-y-auto max-h-[90vh] mt-32">
             <h2 className="text-xl font-bold mb-4">Edit {editing.name}</h2>
             {[
-              { name: 'name', label: 'Name (iPhone, TV, etc)' },
+              { name: 'name', label: 'Name' },
               { name: 'description', label: 'Description' },
-            
-              { name: 'purchase_qty', label: 'Qty Purchased' },
+          
+              { name: 'purchase_qty', label: 'Qty Bought (Restock)' },
               { name: 'selling_price', label: 'Selling Price' },
-              { name: 'suppliers_name', label: 'Supplier Name (optional)' },
-              { name: 'device_id', label: 'Product ID (optional))' },
+              { name: 'suppliers_name', label: 'Supplier Name' },
+              { name: 'device_id', label: 'Product ID' },
             ].map(field => (
               <div className="mb-3" key={field.name}>
                 <label className="block mb-1">{field.label}</label>
@@ -528,7 +558,7 @@ export default function DynamicProducts() {
                   name={field.name}
                   value={form[field.name]}
                   onChange={handleFormChange}
-                  required={['name',  'purchase_qty'].includes(field.name)}
+                  required={['name', 'purchase_price', 'purchase_qty'].includes(field.name)}
                   className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
                 />
               </div>

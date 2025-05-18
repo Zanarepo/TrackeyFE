@@ -213,52 +213,88 @@ export default function DynamicProducts() {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
   };
+const saveEdit = async () => {
+  if (!form.name || !form.purchase_qty) {
+    toast.error('Please fill all required fields');
+    return;
+  }
 
-  const saveEdit = async () => {
-    if (!form.name || !form.purchase_qty) {
-      toast.error('Please fill all required fields');
-      return;
-    }
+  const restockQty = parseInt(form.purchase_qty);
+  if (restockQty <= 0) {
+    toast.error('Restock quantity must be greater than zero');
+    return;
+  }
 
-    // Update dynamic_product
-    const productUpdate = {
-      name: form.name,
-      description: form.description,
-      purchase_price: parseFloat(form.purchase_price),
-      purchase_qty: parseInt(form.purchase_qty),
-      selling_price: parseFloat(form.selling_price),
-      suppliers_name: form.suppliers_name,
-      device_id: form.device_id
-    };
-    const { error: productError } = await supabase
-      .from('dynamic_product')
-      .update(productUpdate)
-      .eq('id', editing.id);
-    if (productError) {
-      toast.error(`Failed to update product: ${productError.message}`);
-      return;
-    }
+  // Log input for debugging
+  console.log('Restock Quantity Entered:', restockQty);
 
-    // Update dynamic_inventory
-    const inventoryUpdate = {
-      dynamic_product_id: editing.id,
-      store_id: storeId,
-      available_qty: parseInt(form.purchase_qty),
-      quantity_sold: 0,
-      last_updated: new Date().toISOString()
-    };
-    const { error: inventoryError } = await supabase
-      .from('dynamic_inventory')
-      .upsert([inventoryUpdate], { onConflict: ['dynamic_product_id', 'store_id'] });
-    if (inventoryError) {
-      toast.error(`Failed to update inventory: ${inventoryError.message}`);
-      return;
-    }
-
-    toast.success('Product updated successfully');
-    setEditing(null);
-    fetchProducts();
+  // Update dynamic_product (store restock amount for transaction history)
+  const productUpdate = {
+    name: form.name,
+    description: form.description,
+    purchase_price: parseFloat(form.purchase_price),
+    purchase_qty: restockQty, // Record restock amount
+    selling_price: parseFloat(form.selling_price),
+    suppliers_name: form.suppliers_name,
+    device_id: form.device_id,
   };
+  const { error: productError } = await supabase
+    .from('dynamic_product')
+    .update(productUpdate)
+    .eq('id', editing.id);
+  if (productError) {
+    toast.error(`Failed to update product: ${productError.message}`);
+    return;
+  }
+
+  // Fetch current inventory data
+  const { data: inventoryData, error: fetchInventoryError } = await supabase
+    .from('dynamic_inventory')
+    .select('available_qty, quantity_sold')
+    .eq('dynamic_product_id', editing.id)
+    .eq('store_id', storeId)
+    .maybeSingle();
+
+  // Log fetched inventory data
+  console.log('Fetched Inventory Data:', inventoryData);
+  console.log('Fetch Inventory Error:', fetchInventoryError);
+
+  let newAvailableQty = restockQty; // Default for new inventory entries
+  let existingQuantitySold = 0; // Default for new entries
+  if (inventoryData) {
+    // Add restock quantity to existing available_qty
+    newAvailableQty = inventoryData.available_qty + restockQty;
+    existingQuantitySold = inventoryData.quantity_sold || 0;
+  } else if (fetchInventoryError) {
+    toast.error(`Failed to fetch inventory: ${fetchInventoryError.message}`);
+    return;
+  }
+
+  // Log calculated new available_qty
+  console.log('Calculated New Available Qty:', newAvailableQty);
+
+  // Update or insert dynamic_inventory
+  const inventoryUpdate = {
+    dynamic_product_id: editing.id,
+    store_id: storeId,
+    available_qty: newAvailableQty,
+    quantity_sold: existingQuantitySold,
+    last_updated: new Date().toISOString(),
+  };
+  const { error: inventoryError } = await supabase
+    .from('dynamic_inventory')
+    .upsert([inventoryUpdate], { onConflict: ['dynamic_product_id', 'store_id'] });
+  if (inventoryError) {
+    toast.error(`Failed to update inventory: ${inventoryError.message}`);
+    return;
+  }
+
+  toast.success('Product restocked successfully');
+  setEditing(null);
+  fetchProducts();
+};
+
+
 
   const deleteProduct = async p => {
     if (window.confirm(`Delete product "${p.name}"?`)) {
@@ -346,7 +382,7 @@ export default function DynamicProducts() {
   };
 
   return (
-    <div className="p-0">
+    <div className="p-0 mt-24">
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Search & Add */}
@@ -441,7 +477,7 @@ export default function DynamicProducts() {
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-200 dark:bg-gray-700">
             <tr>
-              {['Name', 'Description', 'Purchase', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Actions'].map(h => (
+              {['Name', 'Description', 'Purchase', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Edit/Restock'].map(h => (
                 <th key={h} className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-600">{h}</th>
               ))}
             </tr>

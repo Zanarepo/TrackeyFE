@@ -13,7 +13,7 @@ export default function SuppliersInventory() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [suppliers, setSuppliers] = useState([]);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
 
   const paginatedInventory = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
