@@ -1,633 +1,228 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import {
-  FaEdit,
-  FaTrashAlt,
-  FaFileCsv,
-  FaFilePdf,
-  FaPlus,
- 
-} from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { motion } from 'framer-motion';
 
-const tooltipVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-};
+export default function Dashboard({ session }) {
+  const [salesPrefs, setSalesPrefs] = useState({
+    email_address: '',
+    frequency: 'daily',
+  });
+  const [inventoryPrefs, setInventoryPrefs] = useState({
+    low_stock_email_address: '',
+    low_stock_frequency: 'daily',
+    low_stock_threshold: 5,
+  });
+  const [loading, setLoading] = useState(true);
+  const [storeId, setStoreId] = useState(null);
 
-export default function DynamicProducts() {
-  const storeId = localStorage.getItem('store_id');
-
-  // State
-  const [products, setProducts] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [search, setSearch] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState([{
-    name: '',
-    description: '',
-    purchase_price: '',
-    purchase_qty: '',
-    selling_price: '',
-    suppliers_name: '',
-    device_id: '',
-  }]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(0);
-
-  const itemsPerPage = 20;
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage]);
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  // Onboarding steps
-  const onboardingSteps = [
-    {
-      target: '.add-product-button',
-      content: 'Click to add a new product to your catalog.',
-    },
-    {
-      target: '.search-input',
-      content: 'Search by product name to filter the catalog.',
-    },
-    {
-      target: products.length > 0 ? '.edit-button-0' : '.add-product-button',
-      content: products.length > 0 ? 'Click to edit product details.' : 'Start by adding your first product!',
-    },
-  ];
-
-  // Check if onboarding has been completed
+  // Get store_id from local storage
   useEffect(() => {
-    if (!localStorage.getItem('productCatalogOnboardingCompleted')) {
-      const timer = setTimeout(() => {
-        setShowOnboarding(true);
-      }, 3000); // 3-second delay
-      return () => clearTimeout(timer);
+    const id = localStorage.getItem('store_id');
+    if (id) {
+      setStoreId(parseInt(id));
+    } else {
+      console.error('No store_id found in local storage');
+      setLoading(false);
     }
   }, []);
 
-  // Fetch products
-  const fetchProducts = useCallback(async () => {
-    if (!storeId) {
-      toast.error('No store ID found. Please log in.');
-      return;
-    }
-    const { data, error } = await supabase
-      .from('dynamic_product')
-      .select('id, name, description, purchase_price, purchase_qty, selling_price, suppliers_name, device_id, created_at')
-      .eq('store_id', storeId)
-      .order('id', { ascending: true });
-    if (error) {
-      console.error('Error fetching products:', error.message);
-      toast.error('Failed to fetch products');
-    } else {
-      setProducts(data);
-      setFiltered(data);
-    }
+  // Fetch store email and preferences
+  useEffect(() => {
+    if (!storeId) return;
+    const fetchData = async () => {
+      const { data: store, error: storeError } = await supabase
+        .from('stores')
+        .select('email_address')
+        .eq('id', storeId)
+        .single();
+      if (storeError) {
+        console.error(storeError);
+        setLoading(false);
+        return;
+      }
+
+      const { data: salesPrefsData, error: salesPrefsError } = await supabase
+        .from('store_preferences')
+        .select('email_address, frequency')
+        .eq('store_id', storeId)
+        .single();
+      if (salesPrefsError && salesPrefsError.code !== 'PGRST116') {
+        console.error(salesPrefsError);
+      }
+
+      const { data: inventoryPrefsData, error: inventoryPrefsError } = await supabase
+        .from('inventory_alert_preferences')
+        .select('email_address, frequency, low_stock_threshold')
+        .eq('store_id', storeId)
+        .limit(1);
+      if (inventoryPrefsError && inventoryPrefsError.code !== 'PGRST116') {
+        console.error(inventoryPrefsError);
+      }
+
+      setSalesPrefs({
+        email_address: salesPrefsData?.email_address || store.email_address || '',
+        frequency: salesPrefsData?.frequency || 'daily',
+      });
+      setInventoryPrefs({
+        low_stock_email_address: inventoryPrefsData?.[0]?.email_address || store.email_address || '',
+        low_stock_frequency: inventoryPrefsData?.[0]?.frequency || 'daily',
+        low_stock_threshold: inventoryPrefsData?.[0]?.low_stock_threshold || 5,
+      });
+      setLoading(false);
+    };
+    fetchData();
   }, [storeId]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  // Search filter
-  useEffect(() => {
-    if (!search) setFiltered(products);
-    else {
-      const q = search.toLowerCase();
-      setFiltered(products.filter(p => p.name.toLowerCase().includes(q)));
-    }
-    setCurrentPage(1);
-  }, [search, products]);
-
-  // Add product handlers
-  const handleAddChange = (e, index) => {
-    const { name, value } = e.target;
-    setAddForm(prev => {
-      const newForm = [...prev];
-      newForm[index][name] = value;
-      return newForm;
-    });
-  };
-
-  const removeProduct = (index) => {
-    setAddForm(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const addAnotherProduct = () => {
-    setAddForm(prev => [...prev, {
-      name: '',
-      description: '',
-      purchase_price: '',
-      purchase_qty: '',
-      selling_price: '',
-      suppliers_name: '',
-      device_id: '',
-    }]);
-  };
-
-  const createProducts = async (e) => {
+  const updateSalesPrefs = async (e) => {
     e.preventDefault();
-    if (addForm.length === 0) {
-      toast.error('Please add at least one product');
-      return;
-    }
-    const isValid = addForm.every(product =>
-      product.name &&  product.purchase_qty
-    );
-    if (!isValid) {
-      toast.error('Please fill all required fields for each product');
-      return;
-    }
-    const productsToInsert = addForm.map(product => ({
+    setLoading(true);
+    const { error } = await supabase.from('store_preferences').upsert({
       store_id: storeId,
-      name: product.name,
-      description: product.description,
-      purchase_price: parseFloat(product.purchase_price),
-      purchase_qty: parseInt(product.purchase_qty),
-      selling_price: parseFloat(product.selling_price),
-      suppliers_name: product.suppliers_name,
-      device_id: product.device_id
-    }));
-    const { data: insertedProducts, error: insertError } = await supabase
-      .from('dynamic_product')
-      .insert(productsToInsert)
-      .select();
-    if (insertError) {
-      toast.error(`Failed to add products: ${insertError.message}`);
-      return;
-    }
-
-    // Update dynamic_inventory for each inserted product
-    const inventoryUpdates = insertedProducts.map(product => ({
-      dynamic_product_id: product.id,
-      store_id: storeId,
-      available_qty: parseInt(product.purchase_qty),
-      quantity_sold: 0,
-      last_updated: new Date().toISOString()
-    }));
-    const { error: inventoryError } = await supabase
-      .from('dynamic_inventory')
-      .upsert(inventoryUpdates, { onConflict: ['dynamic_product_id', 'store_id'] });
-    if (inventoryError) {
-      toast.error(`Failed to update inventory: ${inventoryError.message}`);
-      return;
-    }
-
-    toast.success('Products added successfully');
-    setShowAdd(false);
-    setAddForm([{
-      name: '',
-      description: '',
-      purchase_price: '',
-      purchase_qty: '',
-      selling_price: '',
-      suppliers_name: '',
-      device_id: '',
-    }]);
-    fetchProducts();
-  };
-
-  // Edit handlers
-  const startEdit = p => {
-    setEditing(p);
-    setForm({
-      name: p.name,
-      description: p.description || '',
-      purchase_price: p.purchase_price,
-      purchase_qty: p.purchase_qty,
-      selling_price: p.selling_price,
-      suppliers_name: p.suppliers_name || '',
-      device_id: p.device_id || '',
+      email_address: salesPrefs.email_address || null,
+      frequency: salesPrefs.frequency,
+      low_sales_threshold: 1000, // Ignored, but required by schema
     });
-  };
-
-  const handleFormChange = e => {
-    const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
-  };
-const saveEdit = async () => {
-  if (!form.name || !form.purchase_qty) {
-    toast.error('Please fill all required fields');
-    return;
-  }
-
-  const restockQty = parseInt(form.purchase_qty);
-  if (restockQty <= 0) {
-    toast.error('Restock quantity must be greater than zero');
-    return;
-  }
-
-  // Log input for debugging
-  console.log('Restock Quantity Entered:', restockQty);
-
-  // Update dynamic_product (store restock amount for transaction history)
-  const productUpdate = {
-    name: form.name,
-    description: form.description,
-    purchase_price: parseFloat(form.purchase_price),
-    purchase_qty: restockQty, // Record restock amount
-    selling_price: parseFloat(form.selling_price),
-    suppliers_name: form.suppliers_name,
-    device_id: form.device_id,
-  };
-  const { error: productError } = await supabase
-    .from('dynamic_product')
-    .update(productUpdate)
-    .eq('id', editing.id);
-  if (productError) {
-    toast.error(`Failed to update product: ${productError.message}`);
-    return;
-  }
-
-  // Fetch current inventory data
-  const { data: inventoryData, error: fetchInventoryError } = await supabase
-    .from('dynamic_inventory')
-    .select('available_qty, quantity_sold')
-    .eq('dynamic_product_id', editing.id)
-    .eq('store_id', storeId)
-    .maybeSingle();
-
-  // Log fetched inventory data
-  console.log('Fetched Inventory Data:', inventoryData);
-  console.log('Fetch Inventory Error:', fetchInventoryError);
-
-  let newAvailableQty = restockQty; // Default for new inventory entries
-  let existingQuantitySold = 0; // Default for new entries
-  if (inventoryData) {
-    // Add restock quantity to existing available_qty
-    newAvailableQty = inventoryData.available_qty + restockQty;
-    existingQuantitySold = inventoryData.quantity_sold || 0;
-  } else if (fetchInventoryError) {
-    toast.error(`Failed to fetch inventory: ${fetchInventoryError.message}`);
-    return;
-  }
-
-  // Log calculated new available_qty
-  console.log('Calculated New Available Qty:', newAvailableQty);
-
-  // Update or insert dynamic_inventory
-  const inventoryUpdate = {
-    dynamic_product_id: editing.id,
-    store_id: storeId,
-    available_qty: newAvailableQty,
-    quantity_sold: existingQuantitySold,
-    last_updated: new Date().toISOString(),
-  };
-  const { error: inventoryError } = await supabase
-    .from('dynamic_inventory')
-    .upsert([inventoryUpdate], { onConflict: ['dynamic_product_id', 'store_id'] });
-  if (inventoryError) {
-    toast.error(`Failed to update inventory: ${inventoryError.message}`);
-    return;
-  }
-
-  toast.success('Product restocked successfully');
-  setEditing(null);
-  fetchProducts();
-};
-
-
-
-  const deleteProduct = async p => {
-    if (window.confirm(`Delete product "${p.name}"?`)) {
-      const { error } = await supabase.from('dynamic_product').delete().eq('id', p.id);
-      if (error) {
-        toast.error(`Failed to delete product: ${error.message}`);
-      } else {
-        // Clean up dynamic inventory
-        await supabase
-          .from('dynamic_inventory')
-          .delete()
-          .eq('dynamic_product_id', p.id)
-          .eq('store_id', storeId);
-        toast.success('Product deleted successfully');
-        fetchProducts();
-      }
-    }
-  };
-
-  // Export CSV
-  const exportCSV = () => {
-    let csv = "data:text/csv;charset=utf-8,";
-    csv += "Name,Description,PurchasePrice,Qty,SellingPrice,Supplier,DeviceID,CreatedAt\n";
-    filtered.forEach(p => {
-      const row = [
-        p.name,
-        (p.description || '').replace(/,/g, ' '),
-        parseFloat(p.purchase_price).toFixed(2),
-        p.purchase_qty,
-        parseFloat(p.selling_price).toFixed(2),
-        p.suppliers_name || '',
-        p.device_id || '',
-        p.created_at
-      ].join(',');
-      csv += row + '\n';
-    });
-    const link = document.createElement('a');
-    link.href = encodeURI(csv);
-    link.download = 'dynamic_products.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Export PDF
-  const exportPDF = () => {
-    import('jspdf').then(({ jsPDF }) => {
-      const doc = new jsPDF();
-      let y = 10;
-      doc.text('Dynamic Products', 10, y);
-      y += 10;
-      filtered.forEach(p => {
-        const line = `Name: ${p.name}, Purchase: $${parseFloat(p.purchase_price).toFixed(2)}, Qty: ${p.purchase_qty}, Sell: $${parseFloat(p.selling_price).toFixed(2)}`;
-        doc.text(line, 10, y);
-        y += 10;
-      });
-      doc.save('dynamic_products.pdf');
-    });
-  };
-
-  // Onboarding handlers
-  const handleNextStep = () => {
-    if (onboardingStep < onboardingSteps.length - 1) {
-      setOnboardingStep(onboardingStep + 1);
+    if (error) {
+      alert(error.message);
     } else {
-      setShowOnboarding(false);
-      localStorage.setItem('productCatalogOnboardingCompleted', 'true');
+      alert('Sales preferences updated!');
     }
+    setLoading(false);
   };
 
-  const handleSkipOnboarding = () => {
-    setShowOnboarding(false);
-    localStorage.setItem('productCatalogOnboardingCompleted', 'true');
+  const updateInventoryPrefs = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Fetch all dynamic_product_id from dynamic_inventory for the store
+    const { data: inventory, error: inventoryError } = await supabase
+      .from('dynamic_inventory')
+      .select('dynamic_product_id')
+      .eq('store_id', storeId);
+    if (inventoryError) {
+      alert(inventoryError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Upsert inventory_alert_preferences for all products
+    const preferences = inventory.map((item) => ({
+      store_id: storeId,
+      dynamic_product_id: item.dynamic_product_id,
+      email_address: inventoryPrefs.low_stock_email_address || null,
+      frequency: inventoryPrefs.low_stock_frequency,
+      low_stock_threshold: parseInt(inventoryPrefs.low_stock_threshold),
+    }));
+
+    const { error: prefsError } = await supabase.from('inventory_alert_preferences').upsert(preferences, {
+      onConflict: ['store_id', 'dynamic_product_id'],
+    });
+    if (prefsError) {
+      alert(prefsError.message);
+    } else {
+      alert('Inventory alert preferences updated!');
+    }
+    setLoading(false);
   };
 
-  // Tooltip positioning
-  const getTooltipPosition = (target) => {
-    const element = document.querySelector(target);
-    if (!element) return { top: 0, left: 0 };
-    const rect = element.getBoundingClientRect();
-    return {
-      top: rect.bottom + window.scrollY + 10,
-      left: rect.left + window.scrollX,
-    };
-  };
+  if (!storeId) return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <p className="text-red-600 text-lg">No store ID found. Please log in again.</p>
+    </div>
+  );
 
   return (
-    <div className="p-0 mt-24">
-      <ToastContainer position="top-right" autoClose={3000} />
-
-      {/* Search & Add */}
-      <div className="flex flex-col sm:flex-row items-center gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white search-input"
-        />
-        <button
-          onClick={() => setShowAdd(true)}
-          className="w-full sm:w-auto flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 add-product-button"
-        >
-          <FaPlus /> Products
-        </button>
-      </div>
-
-      {/* Add Modal */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto pt-24 ">
-          <div className="w-full max-w-3xl mx-auto  ">
-            <form
-              onSubmit={createProducts}
-              className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full dark:text-white"
-            >
-              <h2 className="text-2xl font-bold mb-6 ">Add Products</h2>
-              {addForm.map((product, index) => (
-                <div key={index} className="mb-4 p-4 border rounded ">
-                  <h3 className="text-lg font-semibold mb-2">Product {index + 1}</h3>
-                  {[
-                    { name: 'name', label: 'Name' },
-                    { name: 'description', label: 'Description' },
-                    { name: 'purchase_price', label: 'Total Purchase Price' },
-                    { name: 'purchase_qty', label: 'Quantity Purchased' },
-                    { name: 'selling_price', label: 'Selling Price' },
-                    { name: 'suppliers_name', label: 'Supplier Name' },
-                    { name: 'device_id', label: 'Product ID' },
-                  ].map(field => (
-                    <div key={field.name} className="mb-2">
-                      <label className="block mb-1">{field.label}</label>
-                      <input
-                        type={field.name.includes('price') || field.name.includes('qty') ? 'number' : 'text'}
-                        step="0.01"
-                        name={field.name}
-                        value={product[field.name]}
-                        onChange={(e) => handleAddChange(e, index)}
-                        required={['name',  'purchase_qty'].includes(field.name)}
-                        className="w-full p-2 border rounded dark:bg-gray-900 dark:text-white"
-                      />
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => removeProduct(index)}
-                    className="mt-2 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addAnotherProduct}
-                className="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Add Another Product
-              </button>
-              <div className="w-full flex justify-center gap-2 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowAdd(false)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                >
-                  Add Products
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow dark:text-white">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-200 dark:bg-gray-700">
-            <tr>
-              {['Name', 'Description', 'Purchase', 'Qty', 'Selling', 'Supplier', 'Product ID', 'Date', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-sm font-semibold dark:bg-gray-900 dark:text-indigo-600">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {paginatedProducts.map((p, index) => (
-              <tr key={p.id}>
-                <td className="px-4 py-2 text-sm">{p.name}</td>
-                <td className="px-4 py-2 text-sm">{p.description}</td>
-                <td className="px-4 py-2 text-sm">
-                  {p.purchase_price != null
-                    ? parseFloat(p.purchase_price).toFixed(2)
-                    : ''}
-                </td>
-                <td className="px-4 py-2 text-sm">{p.purchase_qty}</td>
-                <td className="px-4 py-2 text-sm">
-                  {p.selling_price != null
-                    ? parseFloat(p.selling_price).toFixed(2)
-                    : ''}
-                </td>
-                <td className="px-4 py-2 text-sm">{p.suppliers_name}</td>
-                <td className="px-4 py-2 text-sm">{p.device_id}</td>
-                <td className="px-4 py-2 text-sm">
-                  {new Date(p.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-2 flex gap-2">
-                  <button onClick={() => startEdit(p)} className={`text-indigo-600 hover:text-indigo-800 edit-button-${index}`}>
-                    <FaEdit />
-                  </button>
-                  <button onClick={() => deleteProduct(p)} className="text-red-600 hover:text-red-800">
-                    <FaTrashAlt />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
-        <button
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
-        >
-          Prev
-        </button>
-        {[...Array(totalPages)].map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentPage(i + 1)}
-            className={`px-3 py-1 rounded ${currentPage === i + 1
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-200 hover:bg-gray-300'}`}
-          >
-            {i + 1}
-          </button>
-        ))}
-        <button
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-
-      {/* Exports */}
-      <div className="flex justify-center gap-4 mt-4">
-        <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-          <FaFileCsv /> CSV
-        </button>
-        <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-          <FaFilePdf /> PDF
-        </button>
-      </div>
-
-      {/* Edit Modal */}
-      {editing && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md overflow-y-auto max-h-[90vh] mt-32">
-            <h2 className="text-xl font-bold mb-4">Edit {editing.name}</h2>
-            {[
-              { name: 'name', label: 'Name' },
-              { name: 'description', label: 'Description' },
-              { name: 'purchase_price', label: 'Total Purchase Price' },
-              { name: 'purchase_qty', label: 'Qty Purchased (Restock)' },
-              { name: 'selling_price', label: 'Selling Price' },
-              { name: 'suppliers_name', label: 'Supplier Name' },
-              { name: 'device_id', label: 'Product ID' },
-            ].map(field => (
-              <div className="mb-3" key={field.name}>
-                <label className="block mb-1">{field.label}</label>
-                <input
-                  type={field.name.includes('price') || field.name.includes('qty') ? 'number' : 'text'}
-                  step="0.01"
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={handleFormChange}
-                  required={['name', 'purchase_price', 'purchase_qty'].includes(field.name)}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-            ))}
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
-                Cancel
-              </button>
-              <button onClick={saveEdit} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Onboarding Tooltip */}
-      {showOnboarding && onboardingStep < onboardingSteps.length && (
-        <motion.div
-          className="fixed z-50  bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 max-w-xs"
-          style={getTooltipPosition(onboardingSteps[onboardingStep].target)}
-          variants={tooltipVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <p className="text-sm text-white dark:text-gray-300 mb-2">
-            {onboardingSteps[onboardingStep].content}
+    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md mx-auto space-y-8">
+        {/* Sales Summary Alerts */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Sales Summary Alerts</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Set the email and frequency for receiving sales summary alerts.
           </p>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-200">
-              Step {onboardingStep + 1} of {onboardingSteps.length}
-            </span>
-            <div className="space-x-2">
-              <button
-                onClick={handleSkipOnboarding}
-                className="text-sm text-gray-300 hover:text-gray-800 dark:text-gray-300"
-              >
-                Skip
-              </button>
-              <button
-                onClick={handleNextStep}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
-              >
-                {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
-              </button>
+          <form onSubmit={updateSalesPrefs} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email Address (defaults to {salesPrefs.email_address})
+              </label>
+              <input
+                type="email"
+                value={salesPrefs.email_address}
+                onChange={(e) => setSalesPrefs({ ...salesPrefs, email_address: e.target.value })}
+                placeholder="Custom email (optional)"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
             </div>
-          </div>
-        </motion.div>
-      )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Frequency</label>
+              <select
+                value={salesPrefs.frequency}
+                onChange={(e) => setSalesPrefs({ ...salesPrefs, frequency: e.target.value })}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full px-4 py-2 rounded-md text-white ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} transition`}
+            >
+              {loading ? 'Updating...' : 'Save'}
+            </button>
+          </form>
+        </div>
+
+        {/* Inventory Alert Preferences */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Inventory Alert Preferences</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Set the email, frequency, and low stock threshold for receiving low inventory alerts for all products.
+          </p>
+          <form onSubmit={updateInventoryPrefs} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email Address (defaults to {inventoryPrefs.low_stock_email_address})
+              </label>
+              <input
+                type="email"
+                value={inventoryPrefs.low_stock_email_address}
+                onChange={(e) => setInventoryPrefs({ ...inventoryPrefs, low_stock_email_address: e.target.value })}
+                placeholder="Custom email (optional)"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Frequency</label>
+              <select
+                value={inventoryPrefs.low_stock_frequency}
+                onChange={(e) => setInventoryPrefs({ ...inventoryPrefs, low_stock_frequency: e.target.value })}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Low Stock Threshold (units)</label>
+              <input
+                type="number"
+                value={inventoryPrefs.low_stock_threshold}
+                onChange={(e) => setInventoryPrefs({ ...inventoryPrefs, low_stock_threshold: e.target.value })}
+                min="0"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full px-4 py-2 rounded-md text-white ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} transition`}
+            >
+              {loading ? 'Updating...' : 'Save'}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
