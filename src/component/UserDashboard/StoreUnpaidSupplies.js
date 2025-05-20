@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from "../../supabaseClient";
-import { FaPlus, FaBell } from 'react-icons/fa';
+import { FaTrashAlt, FaPlus, FaBell } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DynamicDebtRepayment from './DynamicDebtRepayment';
@@ -410,6 +410,16 @@ export default function DebtsManager() {
     }
   };
 
+  const deleteDebt = async id => {
+    try {
+      await supabase.from("debts").delete().eq("id", id);
+      toast.success("Debt deleted successfully!");
+      fetchDebts();
+    } catch (err) {
+      setError("Failed to delete debt: " + err.message);
+      toast.error("Failed to delete debt.");
+    }
+  };
 
   if (!storeId) {
     return <div className="p-4 text-center text-red-500">Store ID is missing. Please log in or select a store.</div>;
@@ -496,7 +506,12 @@ export default function DebtsManager() {
                   <td className="px-4 py-2 border-b">{d.date}</td>
                   <td className="px-4 py-2 border-b">
                     <div className="flex gap-3">
-                     
+                      <button
+                        onClick={() => deleteDebt(d.id)}
+                        className="text-red-400 hover:text-red-600 dark:bg-gray-900 dark:text-white"
+                      >
+                        <FaTrashAlt />
+                      </button>
                     </div>
                   </td>
                 </tr>

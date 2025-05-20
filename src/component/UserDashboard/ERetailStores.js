@@ -28,10 +28,15 @@ import Customers        from './Customers';
 import Receipts from '../VariexContents/Receipts'
 import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
-import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
+
+
+
+
+
 import Suppliers from '../Ops/Suppliers'
 import DashboardAccess from '../Ops/DashboardAccess'
 import GadgetsDynamicProducts from './GadgetsDynamicProducts';
+import StoreUnpaidSupplies from './StoreUnpaidSupplies';
 
 
 const tools = [
@@ -93,7 +98,7 @@ const tools = [
     label: 'Unpaid Supplies',
     icon: <FaBoxOpen className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track unpaid supplies.',
-    component: <Unpaidsupplies />,
+    component: <StoreUnpaidSupplies/>,
   },
 
 

@@ -472,7 +472,7 @@ export default function DebtsManager() {
                 <th className="text-left px-4 py-2 border-b">Deposited</th>
                 <th className="text-left px-4 py-2 border-b">Remaining Balance</th>
                 <th className="text-left px-4 py-2 border-b">Date</th>
-                <th className="text-left px-4 py-2 border-b">Actions</th>
+                
               </tr>
             </thead>
             <tbody>
