@@ -40,7 +40,7 @@ export default function DynamicProducts() {
 
   // For modal device ID pagination
   const [detailPage, setDetailPage] = useState(1);
-  const detailPageSize = 20;
+  const detailPageSize = 5;
 
   const filteredDevices = useMemo(() => {
     return showDetail?.deviceList || [];
@@ -382,7 +382,7 @@ export default function DynamicProducts() {
   };
 
   return (
-    <div className="p-4 mt-24">
+    <div className="p-4 mt-4">
       <ToastContainer />
       <div className="flex gap-2 mb-4">
         <input
@@ -392,21 +392,21 @@ export default function DynamicProducts() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-          <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded text-sm sm:text-base hover:bg-indigo-700 transition-all"
-        >
-          <FaPlus className="text-sm sm:text-base" />
-          <span className="hidden sm:inline">Add</span>
-        </button>
-        
+         <button
+         onClick={() => setShowAdd(true)}
+         className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded text-sm sm:text-base hover:bg-indigo-700 transition-all"
+       >
+         <FaPlus className="text-sm sm:text-base" />
+         <span className="hidden sm:inline">Add</span>
+       </button>
+       
       </div>
 
       {showAdd && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <form
             onSubmit={createProducts}
-            className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-lg shadow-lg space-y-6"
+            className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto p-4 rounded-lg shadow-lg space-y-6 mt-24"
           >
             <h2 className="text-2xl font-semibold text-gray-800">Add Products</h2>
 
@@ -602,7 +602,7 @@ export default function DynamicProducts() {
       </div>
 
       {showDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 mt-24">
           <div className="bg-white p-6 rounded max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">{showDetail.name} Device IDs</h2>
 
@@ -749,15 +749,6 @@ export default function DynamicProducts() {
               <div className="space-y-3 pt-4 border-t">
                 <h3 className="text-lg font-semibold text-gray-700">Restock</h3>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to Add</label>
-                  <input 
-                    type="number" 
-                    value={editForm.editQty} 
-                    onChange={e => handleEditChange('editQty', e.target.value)} 
-                    className="w-full p-2 border rounded" 
-                  />
-                </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Additional Device IDs</label>

@@ -670,16 +670,7 @@ export default function DynamicProducts() {
               {/* Restock Section */}
               <div className="space-y-3 pt-4 border-t">
                 <h3 className="text-lg font-semibold text-gray-700">Restock</h3>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to Add</label>
-                  <input 
-                    type="number" 
-                    value={editForm.editQty} 
-                    onChange={e => handleEditChange('editQty', e.target.value)} 
-                    className="w-full p-2 border rounded" 
-                  />
-                </div>
+              
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Additional Device IDs</label>
