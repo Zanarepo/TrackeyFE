@@ -19,7 +19,7 @@ import {
 } from 'react-icons/fa';
 
 import DynamicInventory from '../DynamicSales/DynamicInventory';
-import DynamicProducts  from '../DynamicSales/DynamicProducts';
+//import DynamicProducts  from '../DynamicSales/DynamicProducts';
 import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
 //import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
@@ -30,8 +30,9 @@ import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
 import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
 import Suppliers from '../Ops/Suppliers'
-import DashboardAccess from '../Ops/DashboardAccess'
-//import GadgetsDynamicProducts from './GadgetsDynamicProducts';
+//import DashboardAccess from '../Ops/DashboardAccess'
+
+import UserGadgetsDynamicProducts from './UserGadgetsDynamicProducts';
 
 
 const tools = [
@@ -44,16 +45,16 @@ const tools = [
   },
   
 
-
-
-
-  {
-    key: 'products',
-    label: 'Products & Pricing',
+{
+    key: 'Dynamic Products',
+    label: 'Dynamic Products',
     icon: <FaBoxes className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Manage your product catalog.',
-    component: <DynamicProducts />,
+    desc: 'Track your products with Device ID.',
+    component: <UserGadgetsDynamicProducts />,
   },
+
+
+
   {
     key: 'inventory',
     label: 'Manage Inventory (Stocks)',
@@ -151,7 +152,7 @@ export default function DynamicDashboard() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 p-0">
-      <DashboardAccess />
+      
   
       <header className="text-center mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-indigo-800 dark:text-white">

@@ -16,6 +16,7 @@ import Colleagues from './Colleagues';
 import StoresSalesSummary from '../Ops/StoresSalesSummary';
 import Notifications from './Notifications';
 import StoreUsersVariex from './StoreUsersVariex';
+import UsersERetailStores from './UsersERetailStores';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Retail Suites');
@@ -56,6 +57,15 @@ const Dashboard = () => {
           <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
             <StoreUsersVariex />
           </div>
+
+   );
+      case 'Electronic Suites':
+        return (
+          <div className="w-full bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+            <UsersERetailStores />
+          </div>
+
+
         );
       case 'Profile':
         return (
@@ -136,6 +146,18 @@ const Dashboard = () => {
                 >
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Retail Tools</span>
+                </li>
+
+                <li
+                  data-tour="Electronic Suites"
+                  onClick={() => handleNavClick('Electronic Suites')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-300 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Electronic Suites' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
+                  }`}
+                  aria-label="Sales Dashboard: View and analyze sales data"
+                >
+                  <FaMoneyBillWave className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Electronic Suites</span>
                 </li>
                 <li
                   data-tour="sales-summary"

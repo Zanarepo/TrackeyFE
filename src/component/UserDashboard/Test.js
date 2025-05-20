@@ -1,228 +1,813 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
+import { FaEdit, FaTrashAlt, FaPlus } from 'react-icons/fa';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-export default function Dashboard({ session }) {
-  const [salesPrefs, setSalesPrefs] = useState({
-    email_address: '',
-    frequency: 'daily',
+export default function DynamicProducts() {
+  const storeId = localStorage.getItem('store_id');
+
+  // STATES
+  const [products, setProducts] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [search, setSearch] = useState('');
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState([
+    { name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }
+  ]);
+
+  // Enhanced editing state to include product details
+  const [editing, setEditing] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    purchase_price: '',
+    selling_price: '',
+    suppliers_name: '',
+    editQty: '',
+    editIds: []
   });
-  const [inventoryPrefs, setInventoryPrefs] = useState({
-    low_stock_email_address: '',
-    low_stock_frequency: 'daily',
-    low_stock_threshold: 5,
-  });
-  const [loading, setLoading] = useState(true);
-  const [storeId, setStoreId] = useState(null);
 
-  // Get store_id from local storage
-  useEffect(() => {
-    const id = localStorage.getItem('store_id');
-    if (id) {
-      setStoreId(parseInt(id));
-    } else {
-      console.error('No store_id found in local storage');
-      setLoading(false);
-    }
-  }, []);
+  const [showDetail, setShowDetail] = useState(null);
+  const [soldDeviceIds, setSoldDeviceIds] = useState([]);
+  const [isLoadingSoldStatus, setIsLoadingSoldStatus] = useState(false);
+  const [refreshDeviceList, setRefreshDeviceList] = useState(false);
 
-  // Fetch store email and preferences
-  useEffect(() => {
+  const [currentPage, setCurrentPage] = useState(1); // For product table
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  // For modal device ID pagination
+  const [detailPage, setDetailPage] = useState(1);
+  const detailPageSize = 20;
+
+  const filteredDevices = useMemo(() => {
+    return showDetail?.deviceList || [];
+  }, [showDetail]);
+
+  const totalDetailPages = Math.ceil(filteredDevices.length / detailPageSize);
+
+  const paginatedDevices = useMemo(() => {
+    const start = (detailPage - 1) * detailPageSize;
+    const end = start + detailPageSize;
+    return filteredDevices.slice(start, end);
+  }, [filteredDevices, detailPage]);
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
     if (!storeId) return;
-    const fetchData = async () => {
-      const { data: store, error: storeError } = await supabase
-        .from('stores')
-        .select('email_address')
-        .eq('id', storeId)
-        .single();
-      if (storeError) {
-        console.error(storeError);
-        setLoading(false);
-        return;
-      }
-
-      const { data: salesPrefsData, error: salesPrefsError } = await supabase
-        .from('store_preferences')
-        .select('email_address, frequency')
-        .eq('store_id', storeId)
-        .single();
-      if (salesPrefsError && salesPrefsError.code !== 'PGRST116') {
-        console.error(salesPrefsError);
-      }
-
-      const { data: inventoryPrefsData, error: inventoryPrefsError } = await supabase
-        .from('inventory_alert_preferences')
-        .select('email_address, frequency, low_stock_threshold')
-        .eq('store_id', storeId)
-        .limit(1);
-      if (inventoryPrefsError && inventoryPrefsError.code !== 'PGRST116') {
-        console.error(inventoryPrefsError);
-      }
-
-      setSalesPrefs({
-        email_address: salesPrefsData?.email_address || store.email_address || '',
-        frequency: salesPrefsData?.frequency || 'daily',
-      });
-      setInventoryPrefs({
-        low_stock_email_address: inventoryPrefsData?.[0]?.email_address || store.email_address || '',
-        low_stock_frequency: inventoryPrefsData?.[0]?.frequency || 'daily',
-        low_stock_threshold: inventoryPrefsData?.[0]?.low_stock_threshold || 5,
-      });
-      setLoading(false);
-    };
-    fetchData();
-  }, [storeId]);
-
-  const updateSalesPrefs = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.from('store_preferences').upsert({
-      store_id: storeId,
-      email_address: salesPrefs.email_address || null,
-      frequency: salesPrefs.frequency,
-      low_sales_threshold: 1000, // Ignored, but required by schema
-    });
+    const { data, error } = await supabase
+      .from('dynamic_product')
+      .select('id, name, description, purchase_price, purchase_qty, selling_price, suppliers_name, device_id, dynamic_product_imeis, created_at')
+      .eq('store_id', storeId)
+      .order('id', { ascending: true });
     if (error) {
-      alert(error.message);
-    } else {
-      alert('Sales preferences updated!');
-    }
-    setLoading(false);
-  };
-
-  const updateInventoryPrefs = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    // Fetch all dynamic_product_id from dynamic_inventory for the store
-    const { data: inventory, error: inventoryError } = await supabase
-      .from('dynamic_inventory')
-      .select('dynamic_product_id')
-      .eq('store_id', storeId);
-    if (inventoryError) {
-      alert(inventoryError.message);
-      setLoading(false);
+      toast.error('Failed to fetch products');
       return;
     }
-
-    // Upsert inventory_alert_preferences for all products
-    const preferences = inventory.map((item) => ({
-      store_id: storeId,
-      dynamic_product_id: item.dynamic_product_id,
-      email_address: inventoryPrefs.low_stock_email_address || null,
-      frequency: inventoryPrefs.low_stock_frequency,
-      low_stock_threshold: parseInt(inventoryPrefs.low_stock_threshold),
+    const withIds = data.map(p => ({
+      ...p,
+      deviceList: p.dynamic_product_imeis ? p.dynamic_product_imeis.split(',').filter(id => id.trim()) : []
     }));
+    setProducts(withIds);
+    setFiltered(withIds);
+  }, [storeId]);
 
-    const { error: prefsError } = await supabase.from('inventory_alert_preferences').upsert(preferences, {
-      onConflict: ['store_id', 'dynamic_product_id'],
-    });
-    if (prefsError) {
-      alert(prefsError.message);
+  useEffect(() => { fetchProducts(); }, [fetchProducts, refreshDeviceList]);
+
+  // Search filter
+  useEffect(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      setFiltered(products);
     } else {
-      alert('Inventory alert preferences updated!');
+      setFiltered(
+        products.filter(p =>
+          p.name.toLowerCase().includes(q) ||
+          p.deviceList.some(id => id.toLowerCase().includes(q))
+        )
+      );
     }
-    setLoading(false);
+    setCurrentPage(1);
+  }, [search, products]);
+
+  // Check which device IDs are sold
+  const checkSoldDevices = useCallback(async (deviceIds) => {
+  if (!deviceIds || deviceIds.length === 0) return [];
+  setIsLoadingSoldStatus(true);
+  
+  try {
+    // Make sure we're trimming and normalizing the IDs for comparison
+    const normalizedIds = deviceIds.map(id => id.trim());
+    
+    // Log the IDs we're checking for debugging
+    console.log("Checking device IDs:", normalizedIds);
+    
+    const { data, error } = await supabase
+      .from('dynamic_sales')
+      .select('device_id')
+      .in('device_id', normalizedIds);
+      
+    if (error) {
+      console.error('Error fetching sold devices:', error);
+      return [];
+    }
+    
+    // Log the response to see what we're getting back
+    console.log("Response from sales table:", data);
+    
+    // Extract the device_ids from the results
+    // Make sure we normalize these as well for consistent comparison
+    const soldIds = data.map(item => item.device_id.trim());
+    console.log("Identified sold IDs:", soldIds);
+    
+    setSoldDeviceIds(soldIds);
+    return soldIds;
+  } catch (error) {
+    console.error('Error:', error);
+    return [];
+  } finally {
+    setIsLoadingSoldStatus(false);
+  }
+}, []);
+
+
+  // When showing device details, check sold status
+  useEffect(() => {
+    if (showDetail && showDetail.deviceList.length > 0) {
+      checkSoldDevices(showDetail.deviceList);
+    } else {
+      setSoldDeviceIds([]);
+    }
+  }, [showDetail, checkSoldDevices]);
+
+  // Remove device ID from product
+  const removeDeviceId = async (deviceId) => {
+    if (!showDetail) return;
+    
+    if (!window.confirm(`Remove device ID ${deviceId} from ${showDetail.name}?`)) return;
+    
+    try {
+      // Remove the ID from the deviceList
+      const updatedDeviceList = showDetail.deviceList.filter(id => id !== deviceId);
+      
+      // Update the database
+      const { error } = await supabase
+        .from('dynamic_product')
+        .update({
+          dynamic_product_imeis: updatedDeviceList.join(',')
+        })
+        .eq('id', showDetail.id);
+        
+      if (error) {
+        toast.error('Failed to remove device ID');
+        console.error(error);
+        return;
+      }
+      
+      // Update inventory count
+      const { data: inv } = await supabase
+        .from('dynamic_inventory')
+        .select('available_qty, quantity_sold')
+        .eq('dynamic_product_id', showDetail.id)
+        .eq('store_id', storeId)
+        .maybeSingle();
+        
+      if (inv) {
+        await supabase
+          .from('dynamic_inventory')
+          .update({
+            available_qty: Math.max(0, (inv.available_qty || 0) - 1),
+            last_updated: new Date().toISOString()
+          })
+          .eq('dynamic_product_id', showDetail.id)
+          .eq('store_id', storeId);
+      }
+      
+      // Update local state
+      setShowDetail({
+        ...showDetail,
+        deviceList: updatedDeviceList
+      });
+      
+      // Force refresh of products
+      setRefreshDeviceList(prev => !prev);
+      
+      toast.success('Device ID removed');
+    } catch (error) {
+      console.error('Error removing device ID:', error);
+      toast.error('An error occurred');
+    }
   };
 
-  if (!storeId) return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <p className="text-red-600 text-lg">No store ID found. Please log in again.</p>
-    </div>
+  // Pagination
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
+    [filtered, currentPage]
   );
 
-  return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md mx-auto space-y-8">
-        {/* Sales Summary Alerts */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Sales Summary Alerts</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Set the email and frequency for receiving sales summary alerts.
-          </p>
-          <form onSubmit={updateSalesPrefs} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email Address (defaults to {salesPrefs.email_address})
-              </label>
-              <input
-                type="email"
-                value={salesPrefs.email_address}
-                onChange={(e) => setSalesPrefs({ ...salesPrefs, email_address: e.target.value })}
-                placeholder="Custom email (optional)"
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Frequency</label>
-              <select
-                value={salesPrefs.frequency}
-                onChange={(e) => setSalesPrefs({ ...salesPrefs, frequency: e.target.value })}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full px-4 py-2 rounded-md text-white ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} transition`}
-            >
-              {loading ? 'Updating...' : 'Save'}
-            </button>
-          </form>
-        </div>
+  // Add handlers
+  const handleAddChange = (idx, field, val) => {
+    const f = [...addForm];
+    f[idx][field] = val;
+    setAddForm(f);
+  };
+  
+  const handleAddId = (pIdx, iIdx, val) => {
+    const f = [...addForm];
+    f[pIdx].deviceIds[iIdx] = val;
+    setAddForm(f);
+  };
+  
+  const addIdField = pIdx => {
+    const f = [...addForm];
+    f[pIdx].deviceIds.push('');
+    setAddForm(f);
+  };
+  
+  const removeIdField = (pIdx, iIdx) => {
+    const f = [...addForm];
+    f[pIdx].deviceIds.splice(iIdx, 1);
+    setAddForm(f);
+  };
+  
+  const addAnotherProduct = () => {
+    setAddForm(prev => [...prev, { name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }]);
+  };
 
-        {/* Inventory Alert Preferences */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Inventory Alert Preferences</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Set the email, frequency, and low stock threshold for receiving low inventory alerts for all products.
-          </p>
-          <form onSubmit={updateInventoryPrefs} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email Address (defaults to {inventoryPrefs.low_stock_email_address})
-              </label>
-              <input
-                type="email"
-                value={inventoryPrefs.low_stock_email_address}
-                onChange={(e) => setInventoryPrefs({ ...inventoryPrefs, low_stock_email_address: e.target.value })}
-                placeholder="Custom email (optional)"
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Frequency</label>
-              <select
-                value={inventoryPrefs.low_stock_frequency}
-                onChange={(e) => setInventoryPrefs({ ...inventoryPrefs, low_stock_frequency: e.target.value })}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+  const removeProductForm = (index) => {
+    setAddForm(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Create products
+  const createProducts = async e => {
+    e.preventDefault();
+    if (!addForm.length) return toast.error('Add at least one product');
+    for (const p of addForm) {
+      if (!p.name.trim() || p.deviceIds.filter(d => d.trim()).length === 0)
+        return toast.error('Name and at least one Device ID required');
+    }
+    const toInsert = addForm.map(p => ({
+      store_id: storeId,
+      name: p.name,
+      description: p.description,
+      purchase_price: parseFloat(p.purchase_price) || 0,
+      purchase_qty: parseInt(p.purchase_qty) || p.deviceIds.filter(d => d).length,
+      selling_price: parseFloat(p.selling_price) || 0,
+      suppliers_name: p.suppliers_name,
+      dynamic_product_imeis: p.deviceIds.filter(d => d.trim()).join(',')
+    }));
+    const { data: newProds, error } = await supabase.from('dynamic_product').insert(toInsert).select();
+    if (error) return toast.error('Failed to add products');
+
+    const invUpdates = newProds.map(p => ({
+      dynamic_product_id: p.id,
+      store_id: storeId,
+      available_qty: p.dynamic_product_imeis.split(',').length,
+      quantity_sold: 0,
+      last_updated: new Date().toISOString()
+    }));
+    await supabase.from('dynamic_inventory').upsert(invUpdates, { onConflict: ['dynamic_product_id', 'store_id'] });
+
+    toast.success('Products added');
+    setShowAdd(false);
+    setAddForm([{ name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }]);
+    fetchProducts();
+  };
+
+  // Enhanced Edit/Restock functionality
+  const openEdit = p => {
+    setEditing(p);
+    setEditForm({
+      name: p.name,
+      description: p.description,
+      purchase_price: p.purchase_price,
+      selling_price: p.selling_price,
+      suppliers_name: p.suppliers_name,
+      editQty: '',
+      editIds: []
+    });
+  };
+  
+  const handleEditChange = (field, value) => {
+    setEditForm(prev => ({...prev, [field]: value}));
+  };
+  
+  const handleRestockId = (idx, val) => {
+    const arr = [...editForm.editIds];
+    arr[idx] = val;
+    setEditForm(prev => ({...prev, editIds: arr}));
+  };
+  
+  const addRestockId = () => {
+    setEditForm(prev => ({...prev, editIds: [...prev.editIds, '']}));
+  };
+  
+  const removeRestockId = idx => {
+    setEditForm(prev => ({
+      ...prev, 
+      editIds: prev.editIds.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const saveEdit = async () => {
+    // Validate inputs
+    if (!editForm.name.trim()) {
+      return toast.error('Product name is required');
+    }
+    
+    // Get restock qty and IDs
+    const restock = parseInt(editForm.editQty) || 0;
+    const allIds = [...editing.deviceList];
+    editForm.editIds.forEach(id => id.trim() && allIds.push(id.trim()));
+    const dedup = Array.from(new Set(allIds));
+    
+    // Update product information
+    const { error: prodErr } = await supabase
+      .from('dynamic_product')
+      .update({
+        name: editForm.name,
+        description: editForm.description,
+        purchase_price: parseFloat(editForm.purchase_price) || 0,
+        purchase_qty: editing.purchase_qty + restock,
+        selling_price: parseFloat(editForm.selling_price) || 0,
+        suppliers_name: editForm.suppliers_name,
+        dynamic_product_imeis: dedup.join(',')
+      })
+      .eq('id', editing.id);
+      
+    if (prodErr) {
+      console.error(prodErr);
+      return toast.error('Failed to update product');
+    }
+
+    // Update inventory if restock quantity changed
+    if (restock > 0 || editForm.editIds.filter(id => id.trim()).length > 0) {
+      const { data: inv } = await supabase
+        .from('dynamic_inventory')
+        .select('available_qty, quantity_sold')
+        .eq('dynamic_product_id', editing.id)
+        .eq('store_id', storeId)
+        .maybeSingle();
+        
+      const newAvail = (inv?.available_qty || 0) + restock + 
+                      editForm.editIds.filter(id => id.trim()).length;
+                      
+      await supabase
+        .from('dynamic_inventory')
+        .upsert({
+          dynamic_product_id: editing.id,
+          store_id: storeId,
+          available_qty: newAvail,
+          quantity_sold: inv?.quantity_sold || 0,
+          last_updated: new Date().toISOString()
+        }, { onConflict: ['dynamic_product_id','store_id'] });
+    }
+
+    toast.success('Product updated successfully');
+    setEditing(null);
+    fetchProducts();
+  };
+
+  // Delete
+  const deleteProduct = async p => {
+    if (!window.confirm(`Delete ${p.name}?`)) return;
+    await supabase.from('dynamic_product').delete().eq('id', p.id);
+    await supabase.from('dynamic_inventory').delete()
+      .eq('dynamic_product_id', p.id)
+      .eq('store_id', storeId);
+    toast.success('Deleted');
+    fetchProducts();
+  };
+
+  return (
+    <div className="p-4 mt-24">
+      <ToastContainer />
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Search by name or Device ID..."
+          className="flex-1 p-2 border rounded"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+          <button
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded text-sm sm:text-base hover:bg-indigo-700 transition-all"
+        >
+          <FaPlus className="text-sm sm:text-base" />
+          <span className="hidden sm:inline">Add</span>
+        </button>
+        
+      </div>
+
+      {showAdd && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <form
+            onSubmit={createProducts}
+            className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-lg shadow-lg space-y-6"
+          >
+            <h2 className="text-2xl font-semibold text-gray-800">Add Products</h2>
+
+            {addForm.map((p, pi) => (
+              <div key={pi} className="border border-gray-200 p-4 rounded-lg relative shadow-sm bg-gray-50">
+                {/* Remove Product Button */}
+                {addForm.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeProductForm(pi)}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-lg"
+                    title="Remove this product"
+                  >
+                    &times;
+                  </button>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Product Name"
+                    value={p.name}
+                    onChange={e => handleAddChange(pi, 'name', e.target.value)}
+                    className="p-2 border rounded w-full"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Supplier Name"
+                    value={p.suppliers_name}
+                    onChange={e => handleAddChange(pi, 'suppliers_name', e.target.value)}
+                    className="p-2 border rounded w-full"
+                  />
+                  <textarea
+                    placeholder="Description"
+                    value={p.description}
+                    onChange={e => handleAddChange(pi, 'description', e.target.value)}
+                    className="p-2 border rounded w-full md:col-span-2 resize-none"
+                    rows={3}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Purchase Price"
+                    value={p.purchase_price}
+                    onChange={e => handleAddChange(pi, 'purchase_price', e.target.value)}
+                    className="p-2 border rounded w-full md:col-span-2"
+                  />
+                
+                  <input
+                    type="number"
+                    placeholder="Selling Price"
+                    value={p.selling_price}
+                    onChange={e => handleAddChange(pi, 'selling_price', e.target.value)}
+                    className="p-2 border rounded w-full md:col-span-2"
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="block font-semibold text-gray-700 mb-1">Device IDs</label>
+                  {p.deviceIds.map((id, i) => (
+                    <div key={i} className="flex gap-2 mt-2">
+                      <input
+                        value={id}
+                        onChange={e => handleAddId(pi, i, e.target.value)}
+                        placeholder="Device ID"
+                        className="flex-1 p-2 border rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeIdField(pi, i)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove ID"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addIdField(pi)}
+                    className="mt-2 text-indigo-600 hover:underline text-sm"
+                  >
+                    + Add Device ID
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={addAnotherProduct}
+                className="text-indigo-600 hover:underline text-sm"
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
+                + Add Another Product
+              </button> 
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdd(false)}
+                  className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                >
+                  Save
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Low Stock Threshold (units)</label>
-              <input
-                type="number"
-                value={inventoryPrefs.low_stock_threshold}
-                onChange={(e) => setInventoryPrefs({ ...inventoryPrefs, low_stock_threshold: e.target.value })}
-                min="0"
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full px-4 py-2 rounded-md text-white ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} transition`}
-            >
-              {loading ? 'Updating...' : 'Save'}
-            </button>
           </form>
         </div>
+      )}
+
+      <div className="overflow-x-auto bg-white rounded shadow">
+        <table className="min-w-full text-sm text-left text-gray-700">
+          <thead className="bg-gray-100 text-xs uppercase text-gray-600">
+            <tr>
+              <th className="px-4 py-3 whitespace-nowrap">Name</th>
+              <th className="px-4 py-3 whitespace-nowrap">Description</th>
+              <th className="px-4 py-3 whitespace-nowrap">Purchase</th>
+              <th className="px-4 py-3 whitespace-nowrap">Qty</th>
+              <th className="px-4 py-3 whitespace-nowrap">Selling</th>
+              <th className="px-4 py-3 whitespace-nowrap">Supplier</th>
+              <th className="px-4 py-3 whitespace-nowrap">Product ID</th>
+              <th className="px-4 py-3 whitespace-nowrap">Date</th>
+              <th className="px-4 py-3 whitespace-nowrap">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {paginated.map((p) => (
+              <tr key={p.id} className="hover:bg-gray-50 transition">
+                <td className="px-4 py-3 whitespace-nowrap">{p.name}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.description}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.purchase_price?.toFixed(2)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.deviceList.length}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.selling_price?.toFixed(2)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.suppliers_name}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <button
+                    onClick={() => setShowDetail(p)}
+                    className="text-blue-600 hover:underline focus:outline-none"
+                  >
+                    {p.device_id || 'View'}
+                  </button>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {new Date(p.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => openEdit(p)}
+                      className="text-indigo-600 hover:text-indigo-800"
+                      title="Edit"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      onClick={() => deleteProduct(p)}
+                      className="text-red-600 hover:text-red-800"
+                      title="Delete"
+                    >
+                      <FaTrashAlt />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center gap-2 mt-4">
+        <button 
+          disabled={currentPage === 1} 
+          onClick={() => setCurrentPage(cp => cp - 1)}
+          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+        >
+          Prev
+        </button>
+        <span className="px-3 py-1">{currentPage} / {totalPages || 1}</span>
+        <button 
+          disabled={currentPage === totalPages || totalPages === 0} 
+          onClick={() => setCurrentPage(cp => cp + 1)}
+          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+
+      {showDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">{showDetail.name} Device IDs</h2>
+
+            {isLoadingSoldStatus ? (
+              <div className="flex justify-center py-4">
+                <p>Loading device status...</p>
+              </div>
+            ) : (
+              <div>
+                <ul className="mt-2 divide-y divide-gray-200">
+                  {paginatedDevices.map((id, i) => {
+                    const q = search.trim().toLowerCase();
+                    const match = id.toLowerCase().includes(q);
+                    const isSold = soldDeviceIds.includes(id);
+                    
+                    return (
+                      <li key={i} className={`py-2 px-1 flex items-center justify-between ${match ? 'bg-yellow-50' : ''}`}>
+                        <div className="flex items-center">
+                          <span className={match ? 'font-semibold' : ''}>
+                            {id}
+                          </span>
+                          {isSold && (
+                            <span className="ml-2 px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">
+                              SOLD
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeDeviceId(id)}
+                          className="ml-2 text-red-600 hover:text-red-800"
+                          title="Remove this device ID"
+                        >
+                          <FaTrashAlt size={14} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {/* Pagination Controls */}
+                {totalDetailPages > 1 && (
+                  <div className="flex justify-between items-center mt-4 text-sm text-gray-700">
+                    <button
+                      onClick={() => setDetailPage(p => Math.max(p - 1, 1))}
+                      disabled={detailPage === 1}
+                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    <span>
+                      Page {detailPage} of {totalDetailPages}
+                    </span>
+                    <button
+                      onClick={() => setDetailPage(p => Math.min(p + 1, totalDetailPages))}
+                      disabled={detailPage === totalDetailPages}
+                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end">
+              <button 
+                onClick={() => setShowDetail(null)} 
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Edit/Restock Modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Edit Product</h2>
+            
+            <div className="space-y-4">
+              {/* Product Details Section */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-700">Product Information</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                  <input 
+                    type="text" 
+                    value={editForm.name} 
+                    onChange={e => handleEditChange('name', e.target.value)} 
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea 
+                    value={editForm.description} 
+                    onChange={e => handleEditChange('description', e.target.value)} 
+                    className="w-full p-2 border rounded"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Price</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={editForm.purchase_price} 
+                      onChange={e => handleEditChange('purchase_price', e.target.value)} 
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price</label>
+                    <input 
+                      type="number"
+                      step="0.01" 
+                      value={editForm.selling_price} 
+                      onChange={e => handleEditChange('selling_price', e.target.value)} 
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                  <input 
+                    type="text" 
+                    value={editForm.suppliers_name} 
+                    onChange={e => handleEditChange('suppliers_name', e.target.value)} 
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+              </div>
+              
+              {/* Restock Section */}
+              <div className="space-y-3 pt-4 border-t">
+                <h3 className="text-lg font-semibold text-gray-700">Restock</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to Add</label>
+                  <input 
+                    type="number" 
+                    value={editForm.editQty} 
+                    onChange={e => handleEditChange('editQty', e.target.value)} 
+                    className="w-full p-2 border rounded" 
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Additional Device IDs</label>
+                  {editForm.editIds.map((id, i) => (
+                    <div key={i} className="flex gap-2 mt-2">
+                      <input 
+                        value={id} 
+                        onChange={e => handleRestockId(i, e.target.value)} 
+                        placeholder="Device ID" 
+                        className="flex-1 p-2 border rounded" 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => removeRestockId(i)} 
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                  <button 
+                    type="button" 
+                    onClick={addRestockId} 
+                    className="mt-2 text-indigo-600 hover:underline text-sm"
+                  >
+                    + Add Device ID
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button 
+                type="button" 
+                onClick={() => setEditing(null)} 
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={saveEdit} 
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

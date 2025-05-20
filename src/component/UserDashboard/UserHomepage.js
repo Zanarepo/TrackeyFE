@@ -17,6 +17,7 @@ import VsalesSummary from '../Ops/VsalesSummary';
 import WhatsapUsers from './WhatsapUsers';
 import Notifications from './Notifications';
 import PricingFeatures from '../Payments/PricingFeatures';
+import ERetailStores from './ERetailStores';
 //import DashboardAccess from '../Ops/DashboardAccess';
 import Test from './Test';
 
@@ -52,6 +53,14 @@ const Dashboard = () => {
         return (
           <div className="w-full bg-white dark:bg-gray-900 p-4">
             <Variex />
+          </div>
+        );
+
+
+         case 'Electronic Suites':
+        return (
+          <div className="w-full bg-white dark:bg-gray-900 p-4">
+            <ERetailStores/>
           </div>
         );
       case 'Sales Summary':
@@ -154,6 +163,21 @@ const Dashboard = () => {
                   <FaConciergeBell className="text-indigo-800 dark:text-indigo-200 mr-3" />
                   <span className="text-indigo-800 dark:text-indigo-200">Retail Tools</span>
                 </li>
+
+
+                 <li
+                  data-tour="Electronic Suites"
+                  onClick={() => handleNavClick('Electronic Suites')}
+                  className={`flex items-center p-2 rounded cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-600 transition ${
+                    activeTab === 'Electronic Suites' ? 'bg-indigo-200 dark:bg-indigo-600' : ''
+                  }`}
+                  aria-label="Profile: View and edit your profile"
+                >
+                  <FaUser className="text-indigo-800 dark:text-indigo-200 mr-3" />
+                  <span className="text-indigo-800 dark:text-indigo-200">Electronic Suites</span>
+                </li>
+
+
                 <li
                   data-tour="sales-summary"
                   onClick={() => handleNavClick('Sales Summary')}

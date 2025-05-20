@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
-import { FaEdit, FaTrashAlt, FaPlus } from 'react-icons/fa';
+import { FaEdit,  FaPlus } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -32,7 +32,7 @@ export default function DynamicProducts() {
   const [showDetail, setShowDetail] = useState(null);
   const [soldDeviceIds, setSoldDeviceIds] = useState([]);
   const [isLoadingSoldStatus, setIsLoadingSoldStatus] = useState(false);
-  const [refreshDeviceList, setRefreshDeviceList] = useState(false);
+  const [refreshDeviceList] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1); // For product table
   const itemsPerPage = 20;
@@ -143,63 +143,6 @@ export default function DynamicProducts() {
   }, [showDetail, checkSoldDevices]);
 
   // Remove device ID from product
-  const removeDeviceId = async (deviceId) => {
-    if (!showDetail) return;
-    
-    if (!window.confirm(`Remove device ID ${deviceId} from ${showDetail.name}?`)) return;
-    
-    try {
-      // Remove the ID from the deviceList
-      const updatedDeviceList = showDetail.deviceList.filter(id => id !== deviceId);
-      
-      // Update the database
-      const { error } = await supabase
-        .from('dynamic_product')
-        .update({
-          dynamic_product_imeis: updatedDeviceList.join(',')
-        })
-        .eq('id', showDetail.id);
-        
-      if (error) {
-        toast.error('Failed to remove device ID');
-        console.error(error);
-        return;
-      }
-      
-      // Update inventory count
-      const { data: inv } = await supabase
-        .from('dynamic_inventory')
-        .select('available_qty, quantity_sold')
-        .eq('dynamic_product_id', showDetail.id)
-        .eq('store_id', storeId)
-        .maybeSingle();
-        
-      if (inv) {
-        await supabase
-          .from('dynamic_inventory')
-          .update({
-            available_qty: Math.max(0, (inv.available_qty || 0) - 1),
-            last_updated: new Date().toISOString()
-          })
-          .eq('dynamic_product_id', showDetail.id)
-          .eq('store_id', storeId);
-      }
-      
-      // Update local state
-      setShowDetail({
-        ...showDetail,
-        deviceList: updatedDeviceList
-      });
-      
-      // Force refresh of products
-      setRefreshDeviceList(prev => !prev);
-      
-      toast.success('Device ID removed');
-    } catch (error) {
-      console.error('Error removing device ID:', error);
-      toast.error('An error occurred');
-    }
-  };
 
   // Pagination
   const paginated = useMemo(
@@ -371,18 +314,9 @@ export default function DynamicProducts() {
   };
 
   // Delete
-  const deleteProduct = async p => {
-    if (!window.confirm(`Delete ${p.name}?`)) return;
-    await supabase.from('dynamic_product').delete().eq('id', p.id);
-    await supabase.from('dynamic_inventory').delete()
-      .eq('dynamic_product_id', p.id)
-      .eq('store_id', storeId);
-    toast.success('Deleted');
-    fetchProducts();
-  };
 
   return (
-    <div className="p-4 mt-24">
+    <div className="p-4 mt-4">
       <ToastContainer />
       <div className="flex gap-2 mb-4">
         <input
@@ -392,16 +326,21 @@ export default function DynamicProducts() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <button onClick={() => setShowAdd(true)} className="px-4 py-2 bg-indigo-600 text-white rounded">
-          <FaPlus /> Add
-        </button>
+       <button
+  onClick={() => setShowAdd(true)}
+  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded text-sm sm:text-base hover:bg-indigo-700 transition-all"
+>
+  <FaPlus className="text-sm sm:text-base" />
+  <span className="hidden sm:inline">Add</span>
+</button>
+
       </div>
 
       {showAdd && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <form
             onSubmit={createProducts}
-            className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-lg shadow-lg space-y-6"
+            className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto p-4 rounded-lg shadow-lg space-y-6 mt-24"
           >
             <h2 className="text-2xl font-semibold text-gray-800">Add Products</h2>
 
@@ -545,7 +484,7 @@ export default function DynamicProducts() {
                 <td className="px-4 py-3 whitespace-nowrap">
                   <button
                     onClick={() => setShowDetail(p)}
-                    className="text-blue-600 hover:underline focus:outline-none"
+                    className="text-indigo-600 hover:underline focus:outline-none"
                   >
                     {p.device_id || 'View'}
                   </button>
@@ -562,13 +501,7 @@ export default function DynamicProducts() {
                     >
                       <FaEdit />
                     </button>
-                    <button
-                      onClick={() => deleteProduct(p)}
-                      className="text-red-600 hover:text-red-800"
-                      title="Delete"
-                    >
-                      <FaTrashAlt />
-                    </button>
+                  
                   </div>
                 </td>
               </tr>
@@ -597,7 +530,7 @@ export default function DynamicProducts() {
       </div>
 
       {showDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 mt-24">
           <div className="bg-white p-6 rounded max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">{showDetail.name} Device IDs</h2>
 
@@ -625,13 +558,7 @@ export default function DynamicProducts() {
                             </span>
                           )}
                         </div>
-                        <button
-                          onClick={() => removeDeviceId(id)}
-                          className="ml-2 text-red-600 hover:text-red-800"
-                          title="Remove this device ID"
-                        >
-                          <FaTrashAlt size={14} />
-                        </button>
+                       
                       </li>
                     );
                   })}

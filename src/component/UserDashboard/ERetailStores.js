@@ -19,7 +19,7 @@ import {
 } from 'react-icons/fa';
 
 import DynamicInventory from '../DynamicSales/DynamicInventory';
-import DynamicProducts  from '../DynamicSales/DynamicProducts';
+//import DynamicProducts  from '../DynamicSales/DynamicProducts';
 import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
 //import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
@@ -31,7 +31,7 @@ import DebtTracker from './DebtTracker'
 import Unpaidsupplies from '../UserDashboard/Unpaidsupplies'
 import Suppliers from '../Ops/Suppliers'
 import DashboardAccess from '../Ops/DashboardAccess'
-//import GadgetsDynamicProducts from './GadgetsDynamicProducts';
+import GadgetsDynamicProducts from './GadgetsDynamicProducts';
 
 
 const tools = [
@@ -44,16 +44,16 @@ const tools = [
   },
   
 
-
-
-
-  {
-    key: 'products',
-    label: 'Products & Pricing',
+{
+    key: 'Dynamic Products',
+    label: 'Dynamic Products',
     icon: <FaBoxes className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Manage your product catalog.',
-    component: <DynamicProducts />,
+    desc: 'Track your products with Device ID.',
+    component: <GadgetsDynamicProducts />,
   },
+
+
+
   {
     key: 'inventory',
     label: 'Manage Inventory (Stocks)',
