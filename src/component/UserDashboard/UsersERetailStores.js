@@ -7,7 +7,7 @@ import {
   FaMoneyCheckAlt,
   FaBoxes,
   FaChartLine,
-  FaUsers,
+ 
   FaTasks,
   FaArrowLeft,
   FaReceipt,
@@ -20,10 +20,11 @@ import {
 
 import DynamicInventory from '../DynamicSales/DynamicInventory';
 //import DynamicProducts  from '../DynamicSales/DynamicProducts';
-import DynamicSales     from '../DynamicSales/DynamicSales';
+//import DynamicSales     from '../DynamicSales/DynamicSales';
+import AttendantsDynamicSales from '../UserDashboard/AttendantsDynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
 //import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
-import Customers        from './Customers';
+//import Customers        from './Customers';
 //import VariexFeature  from '../DynamicSales/VariexFeature';
 import Receipts from '../VariexContents/Receipts'
 import ReturnedItems from '../VariexContents/ReturnedItems'
@@ -42,7 +43,7 @@ const tools = [
     label: 'Sales Tracker',
     icon: <FaChartLine className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Analyze your sales performance.',
-    component: <DynamicSales />,
+    component: <AttendantsDynamicSales />,
   },
   
 
@@ -121,13 +122,6 @@ const tools = [
 
   
 
-  {
-    key: 'customers',
-    label: 'Customer Manager',
-    icon: <FaUsers className="text-5xl sm:text-6xl text-indigo-600" />,
-    desc: 'Manage your customers.',
-    component: <Customers />,
-  },
 ];
 
 export default function DynamicDashboard() {

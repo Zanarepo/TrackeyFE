@@ -20,7 +20,7 @@ import {
 
 import DynamicInventory from '../DynamicSales/DynamicInventory';
 //import DynamicProducts  from '../DynamicSales/DynamicProducts';
-import DynamicSales     from '../DynamicSales/DynamicSales';
+//import DynamicSales     from '../DynamicSales/DynamicSales';
 import ExpenseTracker   from './ExpenseTracker';
 //import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
 import Customers        from './Customers';
@@ -28,6 +28,7 @@ import Customers        from './Customers';
 import Receipts from '../VariexContents/Receipts'
 import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
+import DeviceDynamicSales from '../DynamicSales/DeviceDynamicSales';
 
 
 
@@ -45,7 +46,7 @@ const tools = [
     label: 'Sales Tracker',
     icon: <FaChartLine className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Analyze your sales performance.',
-    component: <DynamicSales />,
+    component: <DeviceDynamicSales />,
   },
   
 

@@ -4,12 +4,11 @@ import {
   FaTrashAlt,
   FaFileCsv,
   FaFilePdf,
-  FaEdit,
-
+ 
 } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 import { ToastContainer, toast } from 'react-toastify';
-import DynamiclowStockAlert from './DynamiclowStockAlert';
+import DynamiclowStockAlert from '../DynamicSales/DynamiclowStockAlert';
 import 'react-toastify/dist/ReactToastify.css';
 import { motion } from 'framer-motion';
 
@@ -459,33 +458,6 @@ export default function SalesTracker() {
     }
   };
 
-  const deleteSale = async (s) => {
-    if (!window.confirm(`Delete sale #${s.id}?`)) return;
-    try {
-      const { error } = await supabase.from('dynamic_sales').delete().eq('id', s.id);
-      if (error) throw new Error(`Deletion failed: ${error.message}`);
-
-      const inv = inventory.find((i) => i.dynamic_product_id === s.dynamic_product_id);
-      if (inv) {
-        const newQty = inv.available_qty + s.quantity;
-        await supabase
-          .from('dynamic_inventory')
-          .update({ available_qty: newQty })
-          .eq('dynamic_product_id', s.dynamic_product_id)
-          .eq('store_id', storeId);
-        setInventory((prev) =>
-          prev.map((i) =>
-            i.dynamic_product_id === s.dynamic_product_id ? { ...i, available_qty: newQty } : i
-          )
-        );
-      }
-
-      toast.success('Sale deleted successfully!');
-      fetchSales();
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
 
   // Export Functions
   const exportCSV = () => {
@@ -572,7 +544,7 @@ export default function SalesTracker() {
 
   // Render
   return (
-    <div className="p-0 max-w-7xl mx-auto dark:bg-gray-900 dark:text-white mt-24">
+    <div className="p-2 max-w-7xl mx-auto dark:bg-gray-900 dark:text-white ">
       <DynamiclowStockAlert/>
       
       {/* Header */}
@@ -887,7 +859,7 @@ export default function SalesTracker() {
           <table className="min-w-full bg-white dark:bg-gray-900 divide-y divide-gray-200">
             <thead className="bg-gray-100 dark:bg-gray-800">
               <tr>
-                {['Product', 'Quantity', 'Unit Price', 'Amount', 'Payment', 'Device IDs', 'Sold At', 'Actions'].map((h) => (
+                {['Product', 'Quantity', 'Unit Price', 'Amount', 'Payment', 'Device IDs', 'Date Sold'].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-200"
@@ -917,8 +889,9 @@ export default function SalesTracker() {
                       '-'
                     )}
                   </td>
+                 
                   <td className="px-4 py-2 text-sm">{new Date(s.sold_at).toLocaleString()}</td>
-                  <td className="px-4 py-2 text-sm flex gap-2">
+                  {/* <td className="px-4 py-2 text-sm flex gap-2">
                     <button
                       onClick={() => {
                         setEditing(s.id);
@@ -943,6 +916,7 @@ export default function SalesTracker() {
                       <FaTrashAlt />
                     </button>
                   </td>
+                  */} 
                 </tr>
               ))}
             </tbody>

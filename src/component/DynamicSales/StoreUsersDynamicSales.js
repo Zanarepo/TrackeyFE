@@ -5,11 +5,11 @@ import {
   FaFileCsv,
   FaFilePdf,
   FaEdit,
-
+  FaEye,
 } from 'react-icons/fa';
 import { supabase } from '../../supabaseClient';
 import { ToastContainer, toast } from 'react-toastify';
-import DynamiclowStockAlert from './DynamiclowStockAlert';
+//import DynamiclowStockAlert from './DynamiclowStockAlert';
 import 'react-toastify/dist/ReactToastify.css';
 import { motion } from 'framer-motion';
 
@@ -573,7 +573,7 @@ export default function SalesTracker() {
   // Render
   return (
     <div className="p-0 max-w-7xl mx-auto dark:bg-gray-900 dark:text-white mt-24">
-      <DynamiclowStockAlert/>
+  
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
@@ -610,7 +610,7 @@ export default function SalesTracker() {
 
       {/* Add Modal */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 mt-24">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <form
             onSubmit={createSale}
             className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto"

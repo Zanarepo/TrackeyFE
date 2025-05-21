@@ -494,11 +494,7 @@ export default function DebtsManager() {
                   <td className="px-4 py-2 border-b">₦{(d.deposited || 0).toFixed(2)}</td>
                   <td className="px-4 py-2 border-b">₦{(d.remaining_balance || 0).toFixed(2)}</td>
                   <td className="px-4 py-2 border-b">{d.date}</td>
-                  <td className="px-4 py-2 border-b">
-                    <div className="flex gap-3">
-                     
-                    </div>
-                  </td>
+                  
                 </tr>
               ))}
               {filteredDebts.length === 0 && (

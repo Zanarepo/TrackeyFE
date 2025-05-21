@@ -6,7 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 export default function DebtPaymentManager() {
   const storeId = Number(localStorage.getItem('store_id'));
-  const pageSize = 10;
+  const pageSize = 20;
   const detailPageSize = 20; // Device IDs per page in view modal
 
   const [debts, setDebts] = useState([]);
@@ -88,6 +88,27 @@ export default function DebtPaymentManager() {
     ).sort((a, b) => (a.remaining_balance > 0 && b.remaining_balance <= 0 ? -1 : 1));
     setFilteredDebts(filtered);
   }, [debts, search]);
+
+  // Calculate unpaid and paid device metrics
+  const { unpaidDevices, unpaidWorth, paidDevices, paidAmount } = useMemo(() => {
+    let unpaidDevices = 0;
+    let unpaidWorth = 0;
+    let paidDevices = 0;
+    let paidAmount = 0;
+
+    debts.forEach(debt => {
+      const deviceCount = debt.deviceIds.length;
+      if (debt.status === 'paid') {
+        paidDevices += deviceCount;
+        paidAmount += debt.deposited || 0;
+      } else {
+        unpaidDevices += deviceCount;
+        unpaidWorth += debt.remaining_balance || 0;
+      }
+    });
+
+    return { unpaidDevices, unpaidWorth, paidDevices, paidAmount };
+  }, [debts]);
 
   // Check sold devices
   const checkSoldDevices = useCallback(async (deviceIds) => {
@@ -239,7 +260,7 @@ export default function DebtPaymentManager() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white mt-24">
+    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white">
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Toggle Manager Button */}
@@ -263,6 +284,26 @@ export default function DebtPaymentManager() {
       {showManager && (
         <>
           <h1 className="text-3xl font-bold text-center text-indigo-700 mb-4 dark:text-indigo-300">Debt Payments</h1>
+
+          {/* Summary Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-red-800 dark:text-red-300">Unpaid Devices</h3>
+              <p className="text-2xl font-bold">{unpaidDevices}</p>
+            </div>
+            <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-red-800 dark:text-red-300">Unpaid Worth</h3>
+              <p className="text-2xl font-bold">₦{unpaidWorth.toFixed(2)}</p>
+            </div>
+            <div className="bg-green-100 dark:bg-green-900 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">Paid Devices</h3>
+              <p className="text-2xl font-bold">{paidDevices}</p>
+            </div>
+            <div className="bg-green-100 dark:bg-green-900 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">Paid Amount</h3>
+              <p className="text-2xl font-bold">₦{paidAmount.toFixed(2)}</p>
+            </div>
+          </div>
 
           {/* Search */}
           <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">

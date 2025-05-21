@@ -3,7 +3,8 @@ import { supabase } from "../../supabaseClient";
 import { FaTrashAlt, FaPlus, FaBell } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import DynamicDebtRepayment from './DynamicDebtRepayment';
+//import DynamicDebtRepayment from './DynamicDebtRepayment';
+import DeviceDebtRepayment from './DeviceDebtRepayment';
 
 export default function DebtsManager() {
   const storeId = localStorage.getItem("store_id");
@@ -426,8 +427,8 @@ export default function DebtsManager() {
   }
 
   return (
-    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white mt-24">
-      <DynamicDebtRepayment />
+    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white ">
+      <DeviceDebtRepayment />
       <ToastContainer position="top-right" autoClose={3000} />
 
       {/* Error Message */}

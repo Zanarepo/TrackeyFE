@@ -460,7 +460,7 @@ export default function DebtsManager() {
                       <option value="">Select Customer</option>
                       {customers.map(c => (
                         <option key={c.id} value={c.id}>
-                          {c.fullname} ({c.phone_number || 'No Phone'})
+                          {c.fullname} 
                         </option>
                       ))}
                     </select>
