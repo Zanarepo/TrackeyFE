@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
-import { FaPlus, FaTimes, FaCheckCircle, FaHistory } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaCheckCircle, FaHistory, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function DebtPaymentManager() {
   const storeId = Number(localStorage.getItem('store_id'));
   const pageSize = 20;
-  const detailPageSize = 20; // Device IDs per page in view modal
+  const detailPageSize = 20;
 
   const [debts, setDebts] = useState([]);
   const [filteredDebts, setFilteredDebts] = useState([]);
@@ -21,11 +21,14 @@ export default function DebtPaymentManager() {
   const [showManager, setShowManager] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState([]);
-  const [showDetailModal, setShowDetailModal] = useState(false); // For viewing device IDs
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]); // Device IDs for selected debt
-  const [soldDeviceIds, setSoldDeviceIds] = useState([]); // Track sold device IDs
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
+  const [soldDeviceIds, setSoldDeviceIds] = useState([]);
   const [isLoadingSoldStatus, setIsLoadingSoldStatus] = useState(false);
-  const [detailPage, setDetailPage] = useState(1); // Pagination for device IDs
+  const [detailPage, setDetailPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const [statusFilter, setStatusFilter] = useState('All'); // New filter state
 
   // Fetch debts
   const fetchDebts = useCallback(async () => {
@@ -57,9 +60,9 @@ export default function DebtPaymentManager() {
         const status = d.remaining_balance <= 0 ? 'paid' : d.deposited > 0 ? 'partial' : 'owing';
         latestDebts.push({
           ...d,
-          deviceIds: d.device_id ? d.device_id.split(',').filter(id => id.trim()) : [], // Convert device_id to array
+          deviceIds: d.device_id ? d.device_id.split(',').filter(id => id.trim()) : [],
           status,
-          last_payment_date: d.date
+          last_payment_date: d.date,
         });
       }
     }
@@ -76,18 +79,77 @@ export default function DebtPaymentManager() {
     }
   }, [fetchDebts, storeId]);
 
-  // Filter debts based on search
+  // Filter and sort debts
   useEffect(() => {
+    // Apply search filter
     const q = search.toLowerCase();
-    const filtered = debts.filter(
+    let filtered = debts.filter(
       d =>
         d.customer_name.toLowerCase().includes(q) ||
         d.product_name.toLowerCase().includes(q) ||
         d.deviceIds.some(id => id.toLowerCase().includes(q)) ||
         (d.paid_to || '').toLowerCase().includes(q)
-    ).sort((a, b) => (a.remaining_balance > 0 && b.remaining_balance <= 0 ? -1 : 1));
-    setFilteredDebts(filtered);
-  }, [debts, search]);
+    );
+
+    // Apply status filter
+    if (statusFilter === 'Paid') {
+      filtered = filtered.filter(d => d.status === 'paid');
+    } else if (statusFilter === 'Unpaid') {
+      filtered = filtered.filter(d => d.status === 'owing' || d.status === 'partial');
+    }
+
+    // Sort debts
+    const sorted = filtered.sort((a, b) => {
+      // When "All" filter is active, prioritize unpaid debts
+      if (statusFilter === 'All') {
+        if (a.remaining_balance > 0 && b.remaining_balance <= 0) return -1;
+        if (a.remaining_balance <= 0 && b.remaining_balance > 0) return 1;
+      }
+
+      // Apply column sorting
+      let valueA, valueB;
+      switch (sortColumn) {
+        case 'customer_name':
+        case 'product_name':
+        case 'paid_to':
+          valueA = (a[sortColumn] || '').toLowerCase();
+          valueB = (b[sortColumn] || '').toLowerCase();
+          break;
+        case 'owed':
+        case 'deposited':
+        case 'remaining_balance':
+          valueA = a[sortColumn] || 0;
+          valueB = b[sortColumn] || 0;
+          break;
+        case 'last_payment_date':
+          valueA = a.last_payment_date ? new Date(a.last_payment_date).getTime() : 0;
+          valueB = b.last_payment_date ? new Date(b.last_payment_date).getTime() : 0;
+          break;
+        case 'created_at':
+          valueA = new Date(a.created_at).getTime();
+          valueB = new Date(b.created_at).getTime();
+          break;
+        default:
+          valueA = valueB = 0;
+      }
+
+      if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+      if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    setFilteredDebts(sorted);
+  }, [debts, search, sortColumn, sortDirection, statusFilter]);
+
+  // Handle column sort
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortDirection(column === 'created_at' ? 'desc' : 'asc');
+    }
+  };
 
   // Calculate unpaid and paid device metrics
   const { unpaidDevices, unpaidWorth, paidDevices, paidAmount } = useMemo(() => {
@@ -135,7 +197,6 @@ export default function DebtPaymentManager() {
     }
   }, []);
 
-  // When showing device IDs, check sold status
   useEffect(() => {
     if (showDetailModal && selectedDeviceIds.length > 0) {
       checkSoldDevices(selectedDeviceIds);
@@ -144,7 +205,6 @@ export default function DebtPaymentManager() {
     }
   }, [showDetailModal, selectedDeviceIds, checkSoldDevices]);
 
-  // Pagination for device IDs modal
   const paginatedDevices = useMemo(() => {
     const start = (detailPage - 1) * detailPageSize;
     const end = start + detailPageSize;
@@ -153,7 +213,6 @@ export default function DebtPaymentManager() {
 
   const totalDetailPages = Math.ceil(selectedDeviceIds.length / detailPageSize);
 
-  // Fetch payment history
   const fetchPaymentHistory = async (customerId, dynamicProductId) => {
     const { data, error } = await supabase
       .from('debt_payments')
@@ -180,7 +239,7 @@ export default function DebtPaymentManager() {
 
   const openDetailModal = debt => {
     setSelectedDeviceIds(debt.deviceIds || []);
-    setDetailPage(1); // Reset to first page
+    setDetailPage(1);
     setShowDetailModal(true);
   };
 
@@ -217,17 +276,16 @@ export default function DebtPaymentManager() {
       product_name: selectedDebt.product_name,
       phone_number: selectedDebt.phone_number || null,
       supplier: selectedDebt.supplier || null,
-      device_id: selectedDebt.deviceIds.join(','), // Join device IDs
+      device_id: selectedDebt.deviceIds.join(','),
       qty: selectedDebt.qty,
       owed: selectedDebt.owed,
       deposited: newDeposited,
       remaining_balance: newRemainingBalance,
       paid_to: paidTo || null,
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
     };
 
     try {
-      // Insert into debts table
       const { data: newDebt, error: debtError } = await supabase
         .from('debts')
         .insert([paymentData])
@@ -235,7 +293,6 @@ export default function DebtPaymentManager() {
         .single();
       if (debtError) throw debtError;
 
-      // Insert into debt_payments table
       const paymentRecord = {
         store_id: storeId,
         customer_id: selectedDebt.customer_id,
@@ -243,7 +300,7 @@ export default function DebtPaymentManager() {
         debt_id: newDebt.id,
         payment_amount: payment,
         paid_to: paidTo || null,
-        payment_date: new Date().toISOString().split('T')[0]
+        payment_date: new Date().toISOString().split('T')[0],
       };
       const { error: paymentError } = await supabase.from('debt_payments').insert([paymentRecord]);
       if (paymentError) throw paymentError;
@@ -305,9 +362,9 @@ export default function DebtPaymentManager() {
             </div>
           </div>
 
-          {/* Search */}
+          {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-            <div className="w-full mb-4">
+            <div className="w-full sm:w-1/2">
               <input
                 type="text"
                 placeholder="Search by customer, product, device ID, or payment type..."
@@ -316,6 +373,17 @@ export default function DebtPaymentManager() {
                 className="w-full pl-4 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
               />
             </div>
+            <div className="w-full sm:w-1/4">
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="w-full pl-4 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
+              >
+                <option value="All">All Debts</option>
+                <option value="Paid">Paid</option>
+                <option value="Unpaid">Unpaid</option>
+              </select>
+            </div>
           </div>
 
           {/* Table */}
@@ -323,15 +391,40 @@ export default function DebtPaymentManager() {
             <table className="min-w-full bg-white dark:bg-gray-900">
               <thead>
                 <tr className="bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-indigo-600">
-                  <th className="px-4 py-3 text-left text-sm font-bold">Customer</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Product</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Device IDs</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Owed</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Paid</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Balance</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Paid To</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Last Payment</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold">Actions</th>
+                  {[
+                    { label: 'Customer', key: 'customer_name' },
+                    { label: 'Product', key: 'product_name' },
+                    { label: 'Device IDs', key: null },
+                    { label: 'Owed', key: 'owed' },
+                    { label: 'Paid', key: 'deposited' },
+                    { label: 'Balance', key: 'remaining_balance' },
+                    { label: 'Paid To', key: 'paid_to' },
+                    { label: 'Last Payment', key: 'last_payment_date' },
+                    { label: 'Actions', key: null },
+                  ].map(({ label, key }) => (
+                    <th
+                      key={label}
+                      className="px-4 py-3 text-left text-sm font-bold cursor-pointer"
+                      onClick={() => key && handleSort(key)}
+                    >
+                      <div className="flex items-center">
+                        {label}
+                        {key && (
+                          <span className="ml-1">
+                            {sortColumn === key ? (
+                              sortDirection === 'asc' ? (
+                                <FaSortUp />
+                              ) : (
+                                <FaSortDown />
+                              )
+                            ) : (
+                              <FaSort className="text-gray-400" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
