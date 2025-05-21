@@ -1,183 +1,103 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
-import { FaPlus, FaTimes, FaCheckCircle, FaHistory, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaPlus } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-export default function DebtPaymentManager() {
-  const storeId = Number(localStorage.getItem('store_id'));
-  const pageSize = 20;
-  const detailPageSize = 20;
+export default function DynamicProducts() {
+  const storeId = localStorage.getItem('store_id');
 
-  const [debts, setDebts] = useState([]);
-  const [filteredDebts, setFilteredDebts] = useState([]);
+  // STATES
+  const [products, setProducts] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedDebt, setSelectedDebt] = useState(null);
-  const [payAmount, setPayAmount] = useState('');
-  const [paidTo, setPaidTo] = useState('');
-  const [showManager, setShowManager] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [paymentHistory, setPaymentHistory] = useState([]);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState([
+    { name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }
+  ]);
+
+  // Enhanced editing state to include all device IDs
+  const [editing, setEditing] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    purchase_price: '',
+    selling_price: '',
+    suppliers_name: '',
+    deviceIds: [] // Changed from editIds to deviceIds for clarity
+  });
+
+  const [showDetail, setShowDetail] = useState(null);
   const [soldDeviceIds, setSoldDeviceIds] = useState([]);
   const [isLoadingSoldStatus, setIsLoadingSoldStatus] = useState(false);
+  const [refreshDeviceList, setRefreshDeviceList] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  // For modal device ID pagination
   const [detailPage, setDetailPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState('created_at');
-  const [sortDirection, setSortDirection] = useState('desc');
-  const [statusFilter, setStatusFilter] = useState('All'); // New filter state
+  const detailPageSize = 5;
 
-  // Fetch debts
-  const fetchDebts = useCallback(async () => {
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+  const filteredDevices = useMemo(() => {
+    return showDetail?.deviceList || [];
+  }, [showDetail]);
 
-    const { data, count, error } = await supabase
-      .from('debts')
-      .select(
-        'id, customer_id, dynamic_product_id, customer_name, product_name, device_id, qty, owed, deposited, remaining_balance, paid_to, date, created_at',
-        { count: 'exact' }
-      )
+  const totalDetailPages = Math.ceil(filteredDevices.length / detailPageSize);
+
+  const paginatedDevices = useMemo(() => {
+    const start = (detailPage - 1) * detailPageSize;
+    const end = start + detailPageSize;
+    return filteredDevices.slice(start, end);
+  }, [filteredDevices, detailPage]);
+
+  // Fetch products
+  const fetchProducts = useCallback(async () => {
+    if (!storeId) return;
+    const { data, error } = await supabase
+      .from('dynamic_product')
+      .select('id, name, description, purchase_price, purchase_qty, selling_price, suppliers_name, device_id, dynamic_product_imeis, created_at')
       .eq('store_id', storeId)
-      .order('created_at', { ascending: false })
-      .range(from, to);
-
+      .order('id', { ascending: true });
     if (error) {
-      console.error(error);
-      toast.error('Failed to fetch debts.');
+      toast.error('Failed to fetch products');
       return;
     }
+    const withIds = data.map(p => ({
+      ...p,
+      deviceList: p.dynamic_product_imeis ? p.dynamic_product_imeis.split(',').filter(id => id.trim()) : []
+    }));
+    setProducts(withIds);
+    setFiltered(withIds);
+  }, [storeId]);
 
-    const latestDebts = [];
-    const seen = new Set();
-    for (const d of data) {
-      const key = `${d.customer_id}-${d.dynamic_product_id}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        const status = d.remaining_balance <= 0 ? 'paid' : d.deposited > 0 ? 'partial' : 'owing';
-        latestDebts.push({
-          ...d,
-          deviceIds: d.device_id ? d.device_id.split(',').filter(id => id.trim()) : [],
-          status,
-          last_payment_date: d.date,
-        });
-      }
-    }
+  useEffect(() => { fetchProducts(); }, [fetchProducts, refreshDeviceList]);
 
-    setDebts(latestDebts);
-    setTotalCount(count || 0);
-  }, [page, storeId]);
-
+  // Search filter
   useEffect(() => {
-    if (storeId) {
-      fetchDebts();
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      setFiltered(products);
     } else {
-      toast.error('Store ID is missing. Please log in or select a store.');
+      setFiltered(
+        products.filter(p =>
+          p.name.toLowerCase().includes(q) ||
+          p.deviceList.some(id => id.toLowerCase().includes(q))
+        )
+      );
     }
-  }, [fetchDebts, storeId]);
+    setCurrentPage(1);
+  }, [search, products]);
 
-  // Filter and sort debts
-  useEffect(() => {
-    // Apply search filter
-    const q = search.toLowerCase();
-    let filtered = debts.filter(
-      d =>
-        d.customer_name.toLowerCase().includes(q) ||
-        d.product_name.toLowerCase().includes(q) ||
-        d.deviceIds.some(id => id.toLowerCase().includes(q)) ||
-        (d.paid_to || '').toLowerCase().includes(q)
-    );
-
-    // Apply status filter
-    if (statusFilter === 'Paid') {
-      filtered = filtered.filter(d => d.status === 'paid');
-    } else if (statusFilter === 'Unpaid') {
-      filtered = filtered.filter(d => d.status === 'owing' || d.status === 'partial');
-    }
-
-    // Sort debts
-    const sorted = filtered.sort((a, b) => {
-      // When "All" filter is active, prioritize unpaid debts
-      if (statusFilter === 'All') {
-        if (a.remaining_balance > 0 && b.remaining_balance <= 0) return -1;
-        if (a.remaining_balance <= 0 && b.remaining_balance > 0) return 1;
-      }
-
-      // Apply column sorting
-      let valueA, valueB;
-      switch (sortColumn) {
-        case 'customer_name':
-        case 'product_name':
-        case 'paid_to':
-          valueA = (a[sortColumn] || '').toLowerCase();
-          valueB = (b[sortColumn] || '').toLowerCase();
-          break;
-        case 'owed':
-        case 'deposited':
-        case 'remaining_balance':
-          valueA = a[sortColumn] || 0;
-          valueB = b[sortColumn] || 0;
-          break;
-        case 'last_payment_date':
-          valueA = a.last_payment_date ? new Date(a.last_payment_date).getTime() : 0;
-          valueB = b.last_payment_date ? new Date(b.last_payment_date).getTime() : 0;
-          break;
-        case 'created_at':
-          valueA = new Date(a.created_at).getTime();
-          valueB = new Date(b.created_at).getTime();
-          break;
-        default:
-          valueA = valueB = 0;
-      }
-
-      if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
-      if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    setFilteredDebts(sorted);
-  }, [debts, search, sortColumn, sortDirection, statusFilter]);
-
-  // Handle column sort
-  const handleSort = (column) => {
-    if (sortColumn === column) {
-      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortColumn(column);
-      setSortDirection(column === 'created_at' ? 'desc' : 'asc');
-    }
-  };
-
-  // Calculate unpaid and paid device metrics
-  const { unpaidDevices, unpaidWorth, paidDevices, paidAmount } = useMemo(() => {
-    let unpaidDevices = 0;
-    let unpaidWorth = 0;
-    let paidDevices = 0;
-    let paidAmount = 0;
-
-    debts.forEach(debt => {
-      const deviceCount = debt.deviceIds.length;
-      if (debt.status === 'paid') {
-        paidDevices += deviceCount;
-        paidAmount += debt.deposited || 0;
-      } else {
-        unpaidDevices += deviceCount;
-        unpaidWorth += debt.remaining_balance || 0;
-      }
-    });
-
-    return { unpaidDevices, unpaidWorth, paidDevices, paidAmount };
-  }, [debts]);
-
-  // Check sold devices
+  // Check which device IDs are sold
   const checkSoldDevices = useCallback(async (deviceIds) => {
     if (!deviceIds || deviceIds.length === 0) return [];
     setIsLoadingSoldStatus(true);
     try {
       const normalizedIds = deviceIds.map(id => id.trim());
+      console.log("Checking device IDs:", normalizedIds);
       const { data, error } = await supabase
         .from('dynamic_sales')
         .select('device_id')
@@ -186,7 +106,9 @@ export default function DebtPaymentManager() {
         console.error('Error fetching sold devices:', error);
         return [];
       }
+      console.log("Response from sales table:", data);
       const soldIds = data.map(item => item.device_id.trim());
+      console.log("Identified sold IDs:", soldIds);
       setSoldDeviceIds(soldIds);
       return soldIds;
     } catch (error) {
@@ -198,430 +120,502 @@ export default function DebtPaymentManager() {
   }, []);
 
   useEffect(() => {
-    if (showDetailModal && selectedDeviceIds.length > 0) {
-      checkSoldDevices(selectedDeviceIds);
+    if (showDetail && showDetail.deviceList.length > 0) {
+      checkSoldDevices(showDetail.deviceList);
     } else {
       setSoldDeviceIds([]);
     }
-  }, [showDetailModal, selectedDeviceIds, checkSoldDevices]);
+  }, [showDetail, checkSoldDevices]);
 
-  const paginatedDevices = useMemo(() => {
-    const start = (detailPage - 1) * detailPageSize;
-    const end = start + detailPageSize;
-    return selectedDeviceIds.slice(start, end);
-  }, [selectedDeviceIds, detailPage]);
-
-  const totalDetailPages = Math.ceil(selectedDeviceIds.length / detailPageSize);
-
-  const fetchPaymentHistory = async (customerId, dynamicProductId) => {
-    const { data, error } = await supabase
-      .from('debt_payments')
-      .select('payment_amount, paid_to, payment_date, created_at')
-      .eq('store_id', storeId)
-      .eq('customer_id', customerId)
-      .eq('dynamic_product_id', dynamicProductId)
-      .order('payment_date', { ascending: false });
-
-    if (error) {
-      console.error(error);
-      toast.error('Failed to fetch payment history.');
-      return;
-    }
-
-    setPaymentHistory(data || []);
-  };
-
-  const openHistoryModal = async debt => {
-    setSelectedDebt(debt);
-    await fetchPaymentHistory(debt.customer_id, debt.dynamic_product_id);
-    setShowHistoryModal(true);
-  };
-
-  const openDetailModal = debt => {
-    setSelectedDeviceIds(debt.deviceIds || []);
-    setDetailPage(1);
-    setShowDetailModal(true);
-  };
-
-  const openModal = debt => {
-    setSelectedDebt(debt);
-    setPayAmount('');
-    setPaidTo('');
-    setShowModal(true);
-  };
-
-  const submitPayment = async e => {
-    e.preventDefault();
-    if (!selectedDebt) return;
-
-    const payment = parseFloat(payAmount);
-    if (isNaN(payment) || payment <= 0) {
-      toast.error('Please enter a valid payment amount.');
-      return;
-    }
-
-    if (payment > selectedDebt.remaining_balance) {
-      toast.error(`Payment cannot exceed remaining balance of ₦${selectedDebt.remaining_balance.toFixed(2)}.`);
-      return;
-    }
-
-    const newDeposited = selectedDebt.deposited + payment;
-    const newRemainingBalance = selectedDebt.owed - newDeposited;
-
-    const paymentData = {
-      store_id: storeId,
-      customer_id: selectedDebt.customer_id,
-      dynamic_product_id: selectedDebt.dynamic_product_id,
-      customer_name: selectedDebt.customer_name,
-      product_name: selectedDebt.product_name,
-      phone_number: selectedDebt.phone_number || null,
-      supplier: selectedDebt.supplier || null,
-      device_id: selectedDebt.deviceIds.join(','),
-      qty: selectedDebt.qty,
-      owed: selectedDebt.owed,
-      deposited: newDeposited,
-      remaining_balance: newRemainingBalance,
-      paid_to: paidTo || null,
-      date: new Date().toISOString().split('T')[0],
-    };
-
+  // Remove device ID from product
+  const removeDeviceId = async (deviceId) => {
+    if (!showDetail) return;
+    if (!window.confirm(`Remove device ID ${deviceId} from ${showDetail.name}?`)) return;
     try {
-      const { data: newDebt, error: debtError } = await supabase
-        .from('debts')
-        .insert([paymentData])
-        .select('id')
-        .single();
-      if (debtError) throw debtError;
-
-      const paymentRecord = {
-        store_id: storeId,
-        customer_id: selectedDebt.customer_id,
-        dynamic_product_id: selectedDebt.dynamic_product_id,
-        debt_id: newDebt.id,
-        payment_amount: payment,
-        paid_to: paidTo || null,
-        payment_date: new Date().toISOString().split('T')[0],
-      };
-      const { error: paymentError } = await supabase.from('debt_payments').insert([paymentRecord]);
-      if (paymentError) throw paymentError;
-
-      toast.success(`Payment of ₦${payment.toFixed(2)} recorded successfully${paidTo ? ` via ${paidTo}` : ''}!`);
-      setShowModal(false);
-      fetchDebts();
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to record payment.');
+      const updatedDeviceList = showDetail.deviceList.filter(id => id !== deviceId);
+      const { error } = await supabase
+        .from('dynamic_product')
+        .update({
+          dynamic_product_imeis: updatedDeviceList.join(',')
+        })
+        .eq('id', showDetail.id);
+      if (error) {
+        toast.error('Failed to remove device ID');
+        console.error(error);
+        return;
+      }
+      const { data: inv } = await supabase
+        .from('dynamic_inventory')
+        .select('available_qty, quantity_sold')
+        .eq('dynamic_product_id', showDetail.id)
+        .eq('store_id', storeId)
+        .maybeSingle();
+      if (inv) {
+        await supabase
+          .from('dynamic_inventory')
+          .update({
+            available_qty: Math.max(0, (inv.available_qty || 0) - 1),
+            last_updated: new Date().toISOString()
+          })
+          .eq('dynamic_product_id', showDetail.id)
+          .eq('store_id', storeId);
+      }
+      setShowDetail({
+        ...showDetail,
+        deviceList: updatedDeviceList
+      });
+      setRefreshDeviceList(prev => !prev);
+      toast.success('Device ID removed');
+    } catch (error) {
+      console.error('Error removing device ID:', error);
+      toast.error('An error occurred');
     }
   };
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+  // Pagination
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
+    [filtered, currentPage]
+  );
+
+  // Add handlers
+  const handleAddChange = (idx, field, val) => {
+    const f = [...addForm];
+    f[idx][field] = val;
+    setAddForm(f);
+  };
+
+  const handleAddId = (pIdx, iIdx, val) => {
+    const f = [...addForm];
+    f[pIdx].deviceIds[iIdx] = val;
+    setAddForm(f);
+  };
+
+  const addIdField = pIdx => {
+    const f = [...addForm];
+    f[pIdx].deviceIds.push('');
+    setAddForm(f);
+  };
+
+  const removeIdField = (pIdx, iIdx) => {
+    const f = [...addForm];
+    f[pIdx].deviceIds.splice(iIdx, 1);
+    setAddForm(f);
+  };
+
+  const addAnotherProduct = () => {
+    setAddForm(prev => [...prev, { name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }]);
+  };
+
+  const removeProductForm = (index) => {
+    setAddForm(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Create products
+  const createProducts = async e => {
+    e.preventDefault();
+    if (!addForm.length) return toast.error('Add at least one product');
+    for (const p of addForm) {
+      if (!p.name.trim() || p.deviceIds.filter(d => d.trim()).length === 0)
+        return toast.error('Name and at least one Device ID required');
+    }
+    const toInsert = addForm.map(p => ({
+      store_id: storeId,
+      name: p.name,
+      description: p.description,
+      purchase_price: parseFloat(p.purchase_price) || 0,
+      purchase_qty: parseInt(p.purchase_qty) || p.deviceIds.filter(d => d).length,
+      selling_price: parseFloat(p.selling_price) || 0,
+      suppliers_name: p.suppliers_name,
+      dynamic_product_imeis: p.deviceIds.filter(d => d.trim()).join(',')
+    }));
+    const { data: newProds, error } = await supabase.from('dynamic_product').insert(toInsert).select();
+    if (error) return toast.error('Failed to add products');
+
+    const invUpdates = newProds.map(p => ({
+      dynamic_product_id: p.id,
+      store_id: storeId,
+      available_qty: p.dynamic_product_imeis.split(',').length,
+      quantity_sold: 0,
+      last_updated: new Date().toISOString()
+    }));
+    await supabase.from('dynamic_inventory').upsert(invUpdates, { onConflict: ['dynamic_product_id', 'store_id'] });
+
+    toast.success('Products added');
+    setShowAdd(false);
+    setAddForm([{ name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }]);
+    fetchProducts();
+  };
+
+  // Enhanced Edit functionality
+  const openEdit = p => {
+    setEditing(p);
+    setEditForm({
+      name: p.name,
+      description: p.description,
+      purchase_price: p.purchase_price,
+      selling_price: p.selling_price,
+      suppliers_name: p.suppliers_name,
+      deviceIds: [...p.deviceList] // Initialize with existing device IDs
+    });
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleDeviceIdChange = (idx, val) => {
+    const arr = [...editForm.deviceIds];
+    arr[idx] = val;
+    setEditForm(prev => ({ ...prev, deviceIds: arr }));
+  };
+
+  const addDeviceId = () => {
+    setEditForm(prev => ({ ...prev, deviceIds: [...prev.deviceIds, ''] }));
+  };
+
+  const removeEditDeviceId = idx => {
+    setEditForm(prev => ({
+      ...prev,
+      deviceIds: prev.deviceIds.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const saveEdit = async () => {
+    // Validate inputs
+    if (!editForm.name.trim()) {
+      return toast.error('Product name is required');
+    }
+
+    // Process device IDs: filter out empty, trim, and deduplicate
+    const cleanedDeviceIds = Array.from(
+      new Set(editForm.deviceIds.filter(id => id.trim()).map(id => id.trim()))
+    );
+
+    if (cleanedDeviceIds.length === 0) {
+      return toast.error('At least one Device ID is required');
+    }
+
+    // Update product information
+    const { error: prodErr } = await supabase
+      .from('dynamic_product')
+      .update({
+        name: editForm.name,
+        description: editForm.description,
+        purchase_price: parseFloat(editForm.purchase_price) || 0,
+        purchase_qty: cleanedDeviceIds.length,
+        selling_price: parseFloat(editForm.selling_price) || 0,
+        suppliers_name: editForm.suppliers_name,
+        dynamic_product_imeis: cleanedDeviceIds.join(',')
+      })
+      .eq('id', editing.id);
+
+    if (prodErr) {
+      console.error(prodErr);
+      return toast.error('Failed to update product');
+    }
+
+    // Update inventory
+    const { data: inv } = await supabase
+      .from('dynamic_inventory')
+      .select('available_qty, quantity_sold')
+      .eq('dynamic_product_id', editing.id)
+      .eq('store_id', storeId)
+      .maybeSingle();
+
+    const newAvail = cleanedDeviceIds.length;
+
+    await supabase
+      .from('dynamic_inventory')
+      .upsert({
+        dynamic_product_id: editing.id,
+        store_id: storeId,
+        available_qty: newAvail,
+        quantity_sold: inv?.quantity_sold || 0,
+        last_updated: new Date().toISOString()
+      }, { onConflict: ['dynamic_product_id', 'store_id'] });
+
+    toast.success('Product updated successfully');
+    setEditing(null);
+    fetchProducts();
+  };
+
+  // Delete
+  const deleteProduct = async p => {
+    if (!window.confirm(`Delete ${p.name}?`)) return;
+    await supabase.from('dynamic_product').delete().eq('id', p.id);
+    await supabase.from('dynamic_inventory').delete()
+      .eq('dynamic_product_id', p.id)
+      .eq('store_id', storeId);
+    toast.success('Deleted');
+    fetchProducts();
+  };
 
   return (
-    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white">
-      <ToastContainer position="top-right" autoClose={3000} />
-
-      {/* Toggle Manager Button */}
-      <div className="text-center mb-6">
+    <div className="p-4 mt-4 dark:bg-gray-900 dark:text-white mt-48">
+      <ToastContainer />
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Search by name or Device ID..."
+          className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
         <button
-          onClick={() => setShowManager(prev => !prev)}
-          className="inline-flex items-center bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded text-sm sm:text-base hover:bg-indigo-700 transition-all"
         >
-          {showManager ? (
-            <>
-              <FaTimes className="mr-2" /> Close Record Payment
-            </>
-          ) : (
-            <>
-              <FaPlus className="mr-2" /> Re-payment
-            </>
-          )}
+          <FaPlus className="text-sm sm:text-base" />
+          <span className="hidden sm:inline">Add</span>
         </button>
       </div>
 
-      {showManager && (
-        <>
-          <h1 className="text-3xl font-bold text-center text-indigo-700 mb-4 dark:text-indigo-300">Debt Payments</h1>
-
-          {/* Summary Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-red-800 dark:text-red-300">Unpaid Devices</h3>
-              <p className="text-2xl font-bold">{unpaidDevices}</p>
-            </div>
-            <div className="bg-red-100 dark:bg-red-900 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-red-800 dark:text-red-300">Unpaid Worth</h3>
-              <p className="text-2xl font-bold">₦{unpaidWorth.toFixed(2)}</p>
-            </div>
-            <div className="bg-green-100 dark:bg-green-900 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">Paid Devices</h3>
-              <p className="text-2xl font-bold">{paidDevices}</p>
-            </div>
-            <div className="bg-green-100 dark:bg-green-900 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">Paid Amount</h3>
-              <p className="text-2xl font-bold">₦{paidAmount.toFixed(2)}</p>
-            </div>
-          </div>
-
-          {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-            <div className="w-full sm:w-1/2">
-              <input
-                type="text"
-                placeholder="Search by customer, product, device ID, or payment type..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full pl-4 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
-              />
-            </div>
-            <div className="w-full sm:w-1/4">
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-                className="w-full pl-4 pr-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
-              >
-                <option value="All">All Debts</option>
-                <option value="Paid">Paid</option>
-                <option value="Unpaid">Unpaid</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto rounded-lg shadow mb-4">
-            <table className="min-w-full bg-white dark:bg-gray-900">
-              <thead>
-                <tr className="bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-indigo-600">
-                  {[
-                    { label: 'Customer', key: 'customer_name' },
-                    { label: 'Product', key: 'product_name' },
-                    { label: 'Device IDs', key: null },
-                    { label: 'Owed', key: 'owed' },
-                    { label: 'Paid', key: 'deposited' },
-                    { label: 'Balance', key: 'remaining_balance' },
-                    { label: 'Paid To', key: 'paid_to' },
-                    { label: 'Last Payment', key: 'last_payment_date' },
-                    { label: 'Actions', key: null },
-                  ].map(({ label, key }) => (
-                    <th
-                      key={label}
-                      className="px-4 py-3 text-left text-sm font-bold cursor-pointer"
-                      onClick={() => key && handleSort(key)}
-                    >
-                      <div className="flex items-center">
-                        {label}
-                        {key && (
-                          <span className="ml-1">
-                            {sortColumn === key ? (
-                              sortDirection === 'asc' ? (
-                                <FaSortUp />
-                              ) : (
-                                <FaSortDown />
-                              )
-                            ) : (
-                              <FaSort className="text-gray-400" />
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDebts.map(d => (
-                  <tr
-                    key={d.id}
-                    className={
-                      d.status === 'paid'
-                        ? 'bg-green-50 dark:bg-green-900'
-                        : d.status === 'partial'
-                        ? 'bg-yellow-50 dark:bg-yellow-900'
-                        : 'bg-red-50 dark:bg-red-900'
-                    }
-                  >
-                    <td className="px-4 py-3 text-sm truncate">{d.customer_name}</td>
-                    <td className="px-4 py-3 text-sm truncate">{d.product_name}</td>
-                    <td className="px-4 py-3 text-sm truncate">
-                      <button
-                        onClick={() => openDetailModal(d)}
-                        className="text-indigo-600 hover:underline focus:outline-none"
-                      >
-                        View {d.deviceIds.length} ID{d.deviceIds.length !== 1 ? 's' : ''}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">₦{(d.owed || 0).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm text-right">₦{(d.deposited || 0).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm text-right">₦{(d.remaining_balance || 0).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm truncate">{d.paid_to || '-'}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {d.last_payment_date ? new Date(d.last_payment_date).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-center space-x-2">
-                      {d.status === 'paid' ? (
-                        <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-300">
-                          <FaCheckCircle /> Paid
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => openModal(d)}
-                          className="inline-flex items-center px-3 py-1 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition"
-                        >
-                          <FaPlus className="mr-1" /> Pay
-                        </button>
-                      )}
-                      <button
-                        onClick={() => openHistoryModal(d)}
-                        className="inline-flex items-center px-3 py-1 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition"
-                        title="View Payment History"
-                      >
-                        <FaHistory className="mr-1" /> History
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {filteredDebts.length === 0 && (
-                  <tr>
-                    <td colSpan="9" className="text-center text-gray-500 py-4 dark:text-gray-400">
-                      No debts found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex justify-between items-center">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 bg-gray-200 rounded-full disabled:opacity-50 dark:bg-gray-700 dark:text-white"
-            >
-              Previous
-            </button>
-            <span className="text-sm">Page {page} of {totalPages}</span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-4 py-2 bg-gray-200 rounded-full disabled:opacity-50 dark:bg-gray-700 dark:text-white"
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Payment Modal */}
-      {showModal && selectedDebt && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4 z-50">
+      {showAdd && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <form
-            onSubmit={submitPayment}
-            className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md space-y-4 dark:bg-gray-900 dark:text-white"
+            onSubmit={createProducts}
+            className="bg-white dark:bg-gray-900 max-w-xl w-full max-h-[80vh] overflow-y-auto p-6 rounded-lg shadow-lg space-y-6"
           >
-            <h2 className="text-xl font-semibold">Pay for {selectedDebt.customer_name}</h2>
-            <p>
-              <span className="font-medium">Product:</span> {selectedDebt.product_name}
-            </p>
-            <p>
-              <span className="font-medium">Device IDs:</span>{' '}
-              {selectedDebt.deviceIds.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => openDetailModal(selectedDebt)}
-                  className="text-indigo-600 hover:underline"
-                >
-                  View {selectedDebt.deviceIds.length} ID{selectedDebt.deviceIds.length !== 1 ? 's' : ''}
-                </button>
-              ) : (
-                '-'
-              )}
-            </p>
-            <p>
-              <span className="font-medium">Remaining Balance:</span> ₦{(selectedDebt.remaining_balance || 0).toFixed(2)}
-            </p>
-            <label className="block">
-              <span className="font-medium">Payment Amount:</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max={selectedDebt.remaining_balance}
-                value={payAmount}
-                onChange={e => setPayAmount(e.target.value)}
-                required
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
-              />
-            </label>
-            <label className="block">
-              <span className="font-medium">Payment To (e.g., Cash, UBA, etc):</span>
-              <input
-                type="text"
-                value={paidTo}
-                onChange={e => setPaidTo(e.target.value)}
-                placeholder="Enter Name of the bank the money was sent to or cash"
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 dark:bg-gray-900 dark:text-white"
-              />
-            </label>
-            <div className="flex justify-end gap-3">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">Add Products</h2>
+
+            {addForm.map((p, pi) => (
+              <div key={pi} className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg relative shadow-sm bg-gray-50 dark:bg-gray-800">
+                {addForm.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeProductForm(pi)}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-lg"
+                    title="Remove this product"
+                  >
+                    ×
+                  </button>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Product Name"
+                    value={p.name}
+                    onChange={e => handleAddChange(pi, 'name', e.target.value)}
+                    className="p-2 border rounded w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Supplier Name"
+                    value={p.suppliers_name}
+                    onChange={e => handleAddChange(pi, 'suppliers_name', e.target.value)}
+                    className="p-2 border rounded w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <textarea
+                    placeholder="Description"
+                    value={p.description}
+                    onChange={e => handleAddChange(pi, 'description', e.target.value)}
+                    className="p-2 border rounded w-full md:col-span-2 resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    rows={3}
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Purchase Price"
+                    value={p.purchase_price}
+                    onChange={e => handleAddChange(pi, 'purchase_price', e.target.value)}
+                    className="p-2 border rounded w-full md:col-span-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Selling Price"
+                    value={p.selling_price}
+                    onChange={e => handleAddChange(pi, 'selling_price', e.target.value)}
+                    className="p-2 border rounded w-full md:col-span-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Device IDs</label>
+                  {p.deviceIds.map((id, i) => (
+                    <div key={i} className="flex gap-2 mt-2">
+                      <input
+                        value={id}
+                        onChange={e => handleAddId(pi, i, e.target.value)}
+                        placeholder="Device ID"
+                        className="flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeIdField(pi, i)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Remove ID"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addIdField(pi)}
+                    className="mt-2 text-indigo-600 hover:underline text-sm dark:text-indigo-400"
+                  >
+                    + Add Device ID
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition dark:bg-gray-700 dark:text-white"
+                onClick={addAnotherProduct}
+                className="text-indigo-600 hover:underline text-sm dark:text-indigo-400"
               >
-                Cancel
+                + Add Another Product
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-              >
-                Record Payment
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdd(false)}
+                  className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </form>
         </div>
       )}
 
-      {/* Device IDs Modal */}
-      {showDetailModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-900 dark:text-white">
-            <h2 className="text-xl font-semibold mb-4">{selectedDebt?.product_name} Device IDs</h2>
+      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded shadow">
+        <table className="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+          <thead className="bg-gray-100 dark:bg-gray-700 text-xs uppercase text-gray-600 dark:text-gray-400">
+            <tr>
+              <th className="px-4 py-3 whitespace-nowrap">Name</th>
+              <th className="px-4 py-3 whitespace-nowrap">Description</th>
+              <th className="px-4 py-3 whitespace-nowrap">Purchase</th>
+              <th className="px-4 py-3 whitespace-nowrap">Qty</th>
+              <th className="px-4 py-3 whitespace-nowrap">Selling</th>
+              <th className="px-4 py-3 whitespace-nowrap">Supplier</th>
+              <th className="px-4 py-3 whitespace-nowrap">Product ID</th>
+              <th className="px-4 py-3 whitespace-nowrap">Date</th>
+              <th className="px-4 py-3 whitespace-nowrap">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {paginated.map((p) => (
+              <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <td className="px-4 py-3 whitespace-nowrap">{p.name}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.description}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.purchase_price?.toFixed(2)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.deviceList.length}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.selling_price?.toFixed(2)}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{p.suppliers_name}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <button
+                    onClick={() => setShowDetail(p)}
+                    className="text-blue-600 hover:underline focus:outline-none dark:text-blue-400"
+                  >
+                    {p.device_id || 'View'}
+                  </button>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {new Date(p.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => openEdit(p)}
+                      className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                      title="Edit"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      onClick={() => deleteProduct(p)}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      title="Delete"
+                    >
+                      <FaTrashAlt />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center gap-2 mt-4">
+        <button
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(cp => cp - 1)}
+          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+        >
+          Prev
+        </button>
+        <span className="px-3 py-1">{currentPage} / {totalPages || 1}</span>
+        <button
+          disabled={currentPage === totalPages || totalPages === 0}
+          onClick={() => setCurrentPage(cp => cp + 1)}
+          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+        >
+          Next
+        </button>
+      </div>
+
+      {showDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded max-w-xl w-full max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">{showDetail.name} Device IDs</h2>
+
             {isLoadingSoldStatus ? (
               <div className="flex justify-center py-4">
-                <p>Loading device status...</p>
+                <p className="text-gray-600 dark:text-gray-400">Loading device status...</p>
               </div>
             ) : (
-              <>
+              <div>
                 <ul className="mt-2 divide-y divide-gray-200 dark:divide-gray-700">
                   {paginatedDevices.map((id, i) => {
                     const q = search.trim().toLowerCase();
                     const match = id.toLowerCase().includes(q);
                     const isSold = soldDeviceIds.includes(id);
                     return (
-                      <li
-                        key={i}
-                        className={`py-2 px-1 flex items-center justify-between ${
-                          match ? 'bg-yellow-50 dark:bg-yellow-900' : ''
-                        }`}
-                      >
+                      <li key={i} className={`py-2 px-1 flex items-center justify-between ${match ? 'bg-yellow-50 dark:bg-yellow-800' : ''}`}>
                         <div className="flex items-center">
-                          <span className={match ? 'font-semibold' : ''}>{id}</span>
+                          <span className={match ? 'font-semibold' : ''}>
+                            {id}
+                          </span>
                           {isSold && (
                             <span className="ml-2 px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full dark:bg-red-900 dark:text-red-300">
                               SOLD
                             </span>
                           )}
                         </div>
+                        <button
+                          onClick={() => removeDeviceId(id)}
+                          className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                          title="Remove this device ID"
+                        >
+                          <FaTrashAlt size={14} />
+                        </button>
                       </li>
                     );
                   })}
                 </ul>
+
                 {totalDetailPages > 1 && (
                   <div className="flex justify-between items-center mt-4 text-sm text-gray-700 dark:text-gray-300">
                     <button
                       onClick={() => setDetailPage(p => Math.max(p - 1, 1))}
                       disabled={detailPage === 1}
-                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-white"
+                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
                     >
                       Prev
                     </button>
@@ -631,18 +625,19 @@ export default function DebtPaymentManager() {
                     <button
                       onClick={() => setDetailPage(p => Math.min(p + 1, totalDetailPages))}
                       disabled={detailPage === totalDetailPages}
-                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-white"
+                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
                     >
                       Next
                     </button>
                   </div>
                 )}
-              </>
+              </div>
             )}
-            <div className="flex justify-end mt-4">
+
+            <div className="mt-4 flex justify-end">
               <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition dark:bg-gray-700 dark:text-white"
+                onClick={() => setShowDetail(null)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
               >
                 Close
               </button>
@@ -651,61 +646,121 @@ export default function DebtPaymentManager() {
         </div>
       )}
 
-      {/* Payment History Modal */}
-      {showHistoryModal && selectedDebt && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md space-y-4 dark:bg-gray-900 dark:text-white">
-            <h2 className="text-xl font-semibold">Payment History for {selectedDebt.customer_name}</h2>
-            <p>
-              <span className="font-medium">Product:</span> {selectedDebt.product_name}
-            </p>
-            <p>
-              <span className="font-medium">Device IDs:</span>{' '}
-              {selectedDebt.deviceIds.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => openDetailModal(selectedDebt)}
-                  className="text-indigo-600 hover:underline"
-                >
-                  View {selectedDebt.deviceIds.length} ID{selectedDebt.deviceIds.length !== 1 ? 's' : ''}
-                </button>
-              ) : (
-                '-'
-              )}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white dark:bg-gray-900">
-                <thead>
-                  <tr className="bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-indigo-600">
-                    <th className="px-4 py-2 text-left text-sm font-bold">Payment Amount</th>
-                    <th className="px-4 py-2 text-left text-sm font-bold">Paid To</th>
-                    <th className="px-4 py-2 text-left text-sm font-bold">Payment Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paymentHistory.map((p, index) => (
-                    <tr key={index} className="border-b dark:border-gray-700">
-                      <td className="px-4 py-2 text-sm">₦{(p.payment_amount || 0).toFixed(2)}</td>
-                      <td className="px-4 py-2 text-sm">{p.paid_to || '-'}</td>
-                      <td className="px-4 py-2 text-sm">{new Date(p.payment_date).toLocaleDateString()}</td>
-                    </tr>
+      {/* Enhanced Edit Modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded max-w-xl w-full max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Product</h2>
+
+            <div className="space-y-4">
+              {/* Product Details Section */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Product Information</h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Name</label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={e => handleEditChange('name', e.target.value)}
+                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={e => handleEditChange('description', e.target.value)}
+                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editForm.purchase_price}
+                      onChange={e => handleEditChange('purchase_price', e.target.value)}
+                      className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Selling Price</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editForm.selling_price}
+                      onChange={e => handleEditChange('selling_price', e.target.value)}
+                      className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supplier Name</label>
+                  <input
+                    type="text"
+                    value={editForm.suppliers_name}
+                    onChange={e => handleEditChange('suppliers_name', e.target.value)}
+                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Device IDs Section */}
+              <div className="space-y-3 pt-4 border-t dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Device IDs</h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Device IDs</label>
+                  {editForm.deviceIds.map((id, i) => (
+                    <div key={i} className="flex gap-2 mt-2">
+                      <input
+                        value={id}
+                        onChange={e => handleDeviceIdChange(i, e.target.value)}
+                        placeholder="Device ID"
+                        className="flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeEditDeviceId(i)}
+                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ))}
-                  {paymentHistory.length === 0 && (
-                    <tr>
-                      <td colSpan="3" className="text-center text-gray-500 py-4 dark:text-gray-400">
-                        No payment history found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  <button
+                    type="button"
+                    onClick={addDeviceId}
+                    className="mt-2 text-indigo-600 hover:underline text-sm dark:text-indigo-400"
+                  >
+                    + Add Device ID
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-end">
+
+            <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => setShowHistoryModal(false)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition dark:bg-gray-700 dark:text-white"
+                type="button"
+                onClick={() => setEditing(null)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
               >
-                Close
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Save Changes
               </button>
             </div>
           </div>
