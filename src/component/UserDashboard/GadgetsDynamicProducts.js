@@ -4,7 +4,7 @@ import { FaEdit, FaTrashAlt, FaPlus } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-export default function DynamicProducts() {
+function DynamicProducts() {
   const storeId = localStorage.getItem('store_id');
 
   // STATES
@@ -17,7 +17,6 @@ export default function DynamicProducts() {
     { name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }
   ]);
 
-  // Enhanced editing state to include all device IDs
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -25,7 +24,7 @@ export default function DynamicProducts() {
     purchase_price: '',
     selling_price: '',
     suppliers_name: '',
-    deviceIds: [] // Changed from editIds to deviceIds for clarity
+    deviceIds: []
   });
 
   const [showDetail, setShowDetail] = useState(null);
@@ -127,7 +126,7 @@ export default function DynamicProducts() {
     }
   }, [showDetail, checkSoldDevices]);
 
-  // Remove device ID from product
+  // Remove device ID from product (details modal)
   const removeDeviceId = async (deviceId) => {
     if (!showDetail) return;
     if (!window.confirm(`Remove device ID ${deviceId} from ${showDetail.name}?`)) return;
@@ -187,6 +186,11 @@ export default function DynamicProducts() {
 
   const handleAddId = (pIdx, iIdx, val) => {
     const f = [...addForm];
+    const trimmedVal = val.trim();
+    if (trimmedVal && f[pIdx].deviceIds.includes(trimmedVal)) {
+      toast.error(`Device ID "${trimmedVal}" already exists in this product`);
+      return;
+    }
     f[pIdx].deviceIds[iIdx] = val;
     setAddForm(f);
   };
@@ -211,14 +215,45 @@ export default function DynamicProducts() {
     setAddForm(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Create products
+  // Create products with uniqueness check
   const createProducts = async e => {
     e.preventDefault();
-    if (!addForm.length) return toast.error('Add at least one product');
-    for (const p of addForm) {
-      if (!p.name.trim() || p.deviceIds.filter(d => d.trim()).length === 0)
-        return toast.error('Name and at least one Device ID required');
+    if (!addForm.length) {
+      toast.error('Add at least one product');
+      return;
     }
+    for (const p of addForm) {
+      if (!p.name.trim() || p.deviceIds.filter(d => d.trim()).length === 0) {
+        toast.error('Name and at least one Device ID required');
+        return;
+      }
+    }
+
+    const allNewIds = addForm.flatMap(p => p.deviceIds.filter(id => id.trim()).map(id => id.trim()));
+    const uniqueNewIds = new Set(allNewIds);
+    if (uniqueNewIds.size < allNewIds.length) {
+      toast.error('Duplicate Device IDs detected within the new products');
+      return;
+    }
+
+    const { data: existingProducts, error: fetchError } = await supabase
+      .from('dynamic_product')
+      .select('id, dynamic_product_imeis')
+      .eq('store_id', storeId);
+    if (fetchError) {
+      toast.error('Failed to validate Device IDs');
+      return;
+    }
+
+    const existingIds = existingProducts
+      .flatMap(p => p.dynamic_product_imeis ? p.dynamic_product_imeis.split(',').map(id => id.trim()) : [])
+      .filter(id => id);
+    const duplicates = allNewIds.filter(id => existingIds.includes(id));
+    if (duplicates.length > 0) {
+      toast.error(`Device IDs already exist in other products: ${duplicates.join(', ')}`);
+      return;
+    }
+
     const toInsert = addForm.map(p => ({
       store_id: storeId,
       name: p.name,
@@ -230,7 +265,10 @@ export default function DynamicProducts() {
       dynamic_product_imeis: p.deviceIds.filter(d => d.trim()).join(',')
     }));
     const { data: newProds, error } = await supabase.from('dynamic_product').insert(toInsert).select();
-    if (error) return toast.error('Failed to add products');
+    if (error) {
+      toast.error('Failed to add products');
+      return;
+    }
 
     const invUpdates = newProds.map(p => ({
       dynamic_product_id: p.id,
@@ -256,7 +294,7 @@ export default function DynamicProducts() {
       purchase_price: p.purchase_price,
       selling_price: p.selling_price,
       suppliers_name: p.suppliers_name,
-      deviceIds: [...p.deviceList] // Initialize with existing device IDs
+      deviceIds: [...p.deviceList]
     });
   };
 
@@ -265,6 +303,11 @@ export default function DynamicProducts() {
   };
 
   const handleDeviceIdChange = (idx, val) => {
+    const trimmedVal = val.trim();
+    if (trimmedVal && editForm.deviceIds.some((id, i) => i !== idx && id.trim() === trimmedVal)) {
+      toast.error(`Device ID "${trimmedVal}" already exists in this product`);
+      return;
+    }
     const arr = [...editForm.deviceIds];
     arr[idx] = val;
     setEditForm(prev => ({ ...prev, deviceIds: arr }));
@@ -282,21 +325,45 @@ export default function DynamicProducts() {
   };
 
   const saveEdit = async () => {
-    // Validate inputs
     if (!editForm.name.trim()) {
-      return toast.error('Product name is required');
+      toast.error('Product name is required');
+      return;
     }
 
-    // Process device IDs: filter out empty, trim, and deduplicate
-    const cleanedDeviceIds = Array.from(
-      new Set(editForm.deviceIds.filter(id => id.trim()).map(id => id.trim()))
-    );
+    const cleanedDeviceIds = editForm.deviceIds
+      .filter(id => id.trim())
+      .map(id => id.trim());
 
     if (cleanedDeviceIds.length === 0) {
-      return toast.error('At least one Device ID is required');
+      toast.error('At least one Device ID is required');
+      return;
     }
 
-    // Update product information
+    const uniqueIds = new Set(cleanedDeviceIds);
+    if (uniqueIds.size < cleanedDeviceIds.length) {
+      toast.error('Duplicate Device IDs detected within this product');
+      return;
+    }
+
+    const { data: existingProducts, error: fetchError } = await supabase
+      .from('dynamic_product')
+      .select('id, dynamic_product_imeis')
+      .eq('store_id', storeId)
+      .neq('id', editing.id);
+    if (fetchError) {
+      toast.error('Failed to validate Device IDs');
+      return;
+    }
+
+    const existingIds = existingProducts
+      .flatMap(p => p.dynamic_product_imeis ? p.dynamic_product_imeis.split(',').map(id => id.trim()) : [])
+      .filter(id => id);
+    const duplicates = cleanedDeviceIds.filter(id => existingIds.includes(id));
+    if (duplicates.length > 0) {
+      toast.error(`Device IDs already exist in other products: ${duplicates.join(', ')}`);
+      return;
+    }
+
     const { error: prodErr } = await supabase
       .from('dynamic_product')
       .update({
@@ -312,10 +379,10 @@ export default function DynamicProducts() {
 
     if (prodErr) {
       console.error(prodErr);
-      return toast.error('Failed to update product');
+      toast.error('Failed to update product');
+      return;
     }
 
-    // Update inventory
     const { data: inv } = await supabase
       .from('dynamic_inventory')
       .select('available_qty, quantity_sold')
@@ -372,7 +439,7 @@ export default function DynamicProducts() {
       </div>
 
       {showAdd && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 mt-24">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <form
             onSubmit={createProducts}
             className="bg-white dark:bg-gray-900 max-w-xl w-full max-h-[80vh] overflow-y-auto p-6 rounded-lg shadow-lg space-y-6"
@@ -441,7 +508,11 @@ export default function DynamicProducts() {
                         value={id}
                         onChange={e => handleAddId(pi, i, e.target.value)}
                         placeholder="Device ID"
-                        className="flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className={`flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                          id.trim() && p.deviceIds.some((otherId, j) => j !== i && otherId.trim() === id.trim())
+                            ? 'border-red-500'
+                            : ''
+                        }`}
                       />
                       <button
                         type="button"
@@ -519,7 +590,7 @@ export default function DynamicProducts() {
                 <td className="px-4 py-3 whitespace-nowrap">
                   <button
                     onClick={() => setShowDetail(p)}
-                    className="text-blue-600 hover:underline focus:outline-none dark:text-blue-400"
+                    className="text-indigo-600 hover:underline focus:outline-none dark:text-indigo-400"
                   >
                     {p.device_id || 'View'}
                   </button>
@@ -551,7 +622,6 @@ export default function DynamicProducts() {
         </table>
       </div>
 
-      {/* Pagination */}
       <div className="flex justify-center gap-2 mt-4">
         <button
           disabled={currentPage === 1}
@@ -646,14 +716,12 @@ export default function DynamicProducts() {
         </div>
       )}
 
-      {/* Enhanced Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 mt-24">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-900 p-6 rounded max-w-xl w-full max-h-[80vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Product</h2>
 
             <div className="space-y-4">
-              {/* Product Details Section */}
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Product Information</h3>
 
@@ -713,7 +781,6 @@ export default function DynamicProducts() {
                 </div>
               </div>
 
-              {/* Device IDs Section */}
               <div className="space-y-3 pt-4 border-t dark:border-gray-700">
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Device IDs</h3>
 
@@ -725,7 +792,11 @@ export default function DynamicProducts() {
                         value={id}
                         onChange={e => handleDeviceIdChange(i, e.target.value)}
                         placeholder="Device ID"
-                        className="flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className={`flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                          id.trim() && editForm.deviceIds.some((otherId, j) => j !== i && otherId.trim() === id.trim())
+                            ? 'border-red-500'
+                            : ''
+                        }`}
                       />
                       <button
                         type="button"
@@ -769,3 +840,5 @@ export default function DynamicProducts() {
     </div>
   );
 }
+
+export default DynamicProducts;
