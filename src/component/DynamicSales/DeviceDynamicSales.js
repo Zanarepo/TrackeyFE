@@ -743,90 +743,93 @@ export default function SalesTracker() {
 
       {/* Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 mt-24">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveEdit();
-            }}
-            className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-md"
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 mt-24">
+  <form
+    onSubmit={(e) => {
+      e.preventDefault();
+      saveEdit();
+    }}
+    className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto"
+  >
+    <h2 className="text-xl font-bold mb-4">Edit Sale #{editing}</h2>
+    {['quantity', 'unit_price', 'deviceIds', 'payment_method'].map((field) => (
+      <div className="mb-4" key={field}>
+        <label className="block mb-1 text-sm font-medium capitalize">
+          {field.replace('Ids', ' IDs').replace('_', ' ')}
+        </label>
+        {field === 'payment_method' ? (
+          <select
+            name={field}
+            value={saleForm[field] || ''}
+            onChange={(e) => handleEditChange(field, e.target.value)}
+            className="w-full p-2 border rounded dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
           >
-            <h2 className="text-xl font-bold mb-4">Edit Sale #{editing}</h2>
-            {['quantity', 'unit_price', 'deviceIds', 'payment_method'].map((field) => (
-              <div className="mb-4" key={field}>
-                <label className="block mb-1 text-sm font-medium capitalize">{field.replace('Ids', ' IDs').replace('_', ' ')}</label>
-                {field === 'payment_method' ? (
-                  <select
-                    name={field}
-                    value={saleForm[field] || ''}
-                    onChange={(e) => handleEditChange(field, e.target.value)}
-                    className="w-full p-2 border rounded dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
-                  >
-                    <option value="">Select payment method…</option>
-                    <option>Cash</option>
-                    <option>Bank Transfer</option>
-                    <option>Card</option>
-                    <option>Wallet</option>
-                  </select>
-                ) : field === 'deviceIds' ? (
-                  <div>
-                    {saleForm.deviceIds.map((id, deviceIdx) => (
-                      <div key={`edit-device-${deviceIdx}`} className="flex items-center gap-2 mb-2">
-                        <input
-                          type="text"
-                          value={id}
-                          onChange={(e) => handleEditChange('deviceIds', e.target.value, deviceIdx)}
-                          placeholder="Enter device ID"
-                          className="flex-1 p-2 border rounded dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeEditDeviceId(deviceIdx)}
-                          className="p-2 text-red-600 hover:text-red-800"
-                        >
-                          <FaTrashAlt />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={(e) => addEditDeviceId(e)}
-                      className="flex items-center gap-1 text-green-600 hover:text-green-800"
-                    >
-                      <FaPlus /> Add Device ID
-                    </button>
-                  </div>
-                ) : (
-                  <input
-                    type="number"
-                    step={field === 'unit_price' ? '0.01' : undefined}
-                    name={field}
-                    value={saleForm[field] || ''}
-                    onChange={(e) => handleEditChange(field, e.target.value)}
-                    className="w-full p-2 border rounded dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
-                  />
-                )}
+            <option value="">Select payment method…</option>
+            <option>Cash</option>
+            <option>Bank Transfer</option>
+            <option>Card</option>
+            <option>POS</option>
+          </select>
+        ) : field === 'deviceIds' ? (
+          <div>
+            {saleForm.deviceIds.map((id, deviceIdx) => (
+              <div key={`edit-device-${deviceIdx}`} className="flex items-center gap-2 mb-2">
+                <input
+                  type="text"
+                  value={id}
+                  onChange={(e) => handleEditChange('deviceIds', e.target.value, deviceIdx)}
+                  placeholder="Enter device ID"
+                  className="flex-1 p-2 border rounded dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeEditDeviceId(deviceIdx)}
+                  className="p-2 text-red-600 hover:text-red-800"
+                >
+                  <FaTrashAlt />
+                </button>
               </div>
             ))}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-              >
-                Save
-              </button>
-            </div>
-          </form>
-        </div>
+            <button
+              type="button"
+              onClick={(e) => addEditDeviceId(e)}
+              className="flex items-center gap-1 text-green-600 hover:text-green-800"
+            >
+              <FaPlus /> Add Device ID
+            </button>
+          </div>
+        ) : (
+          <input
+            type="number"
+            step={field === 'unit_price' ? '0.01' : undefined}
+            name={field}
+            value={saleForm[field] || ''}
+            onChange={(e) => handleEditChange(field, e.target.value)}
+            className="w-full p-2 border rounded dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        )}
+      </div>
+    ))}
+    <div className="flex justify-end gap-2">
+      <button
+        type="button"
+        onClick={() => setEditing(null)}
+        className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+      >
+        Save
+      </button>
+    </div>
+  </form>
+</div>
+
       )}
 
       {/* Device IDs Modal */}
