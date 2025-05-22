@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
-import { FaEdit, FaTrashAlt, FaPlus } from 'react-icons/fa';
+import { FaEdit, FaPlus } from 'react-icons/fa';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -30,7 +30,7 @@ function DynamicProducts() {
   const [showDetail, setShowDetail] = useState(null);
   const [soldDeviceIds, setSoldDeviceIds] = useState([]);
   const [isLoadingSoldStatus, setIsLoadingSoldStatus] = useState(false);
-  const [refreshDeviceList, setRefreshDeviceList] = useState(false);
+  const [refreshDeviceList,] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -126,50 +126,6 @@ function DynamicProducts() {
     }
   }, [showDetail, checkSoldDevices]);
 
-  // Remove device ID from product (details modal)
-  const removeDeviceId = async (deviceId) => {
-    if (!showDetail) return;
-    if (!window.confirm(`Remove device ID ${deviceId} from ${showDetail.name}?`)) return;
-    try {
-      const updatedDeviceList = showDetail.deviceList.filter(id => id !== deviceId);
-      const { error } = await supabase
-        .from('dynamic_product')
-        .update({
-          dynamic_product_imeis: updatedDeviceList.join(',')
-        })
-        .eq('id', showDetail.id);
-      if (error) {
-        toast.error('Failed to remove device ID');
-        console.error(error);
-        return;
-      }
-      const { data: inv } = await supabase
-        .from('dynamic_inventory')
-        .select('available_qty, quantity_sold')
-        .eq('dynamic_product_id', showDetail.id)
-        .eq('store_id', storeId)
-        .maybeSingle();
-      if (inv) {
-        await supabase
-          .from('dynamic_inventory')
-          .update({
-            available_qty: Math.max(0, (inv.available_qty || 0) - 1),
-            last_updated: new Date().toISOString()
-          })
-          .eq('dynamic_product_id', showDetail.id)
-          .eq('store_id', storeId);
-      }
-      setShowDetail({
-        ...showDetail,
-        deviceList: updatedDeviceList
-      });
-      setRefreshDeviceList(prev => !prev);
-      toast.success('Device ID removed');
-    } catch (error) {
-      console.error('Error removing device ID:', error);
-      toast.error('An error occurred');
-    }
-  };
 
   // Pagination
   const paginated = useMemo(
@@ -653,13 +609,7 @@ function DynamicProducts() {
                             </span>
                           )}
                         </div>
-                        <button
-                          onClick={() => removeDeviceId(id)}
-                          className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                          title="Remove this device ID"
-                        >
-                          <FaTrashAlt size={14} />
-                        </button>
+                       
                       </li>
                     );
                   })}
