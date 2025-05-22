@@ -1,962 +1,779 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { supabase } from '../../supabaseClient';
-import { FaEdit, FaTrashAlt, FaPlus, FaCamera } from 'react-icons/fa';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import BarcodeScannerComponent from 'react-qr-barcode-scanner';
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from "../../supabaseClient";
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
-function DynamicProducts() {
-  const storeId = localStorage.getItem('store_id');
+const tooltipVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
-  // STATES
-  const [products, setProducts] = useState([]);
-  const [filtered, setFiltered] = useState([]);
-  const [search, setSearch] = useState('');
-
-  const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState([
-    { name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }
-  ]);
-
+export default function ReturnsByDeviceIdManager() {
+  const storeId = localStorage.getItem("store_id");
+  const [, setStore] = useState(null);
+  const [receiptIdQuery, setReceiptIdQuery] = useState('');
+  const [deviceIdQuery, setDeviceIdQuery] = useState('');
+  const [queriedReceipts, setQueriedReceipts] = useState([]);
+  const [returns, setReturns] = useState([]);
+  const [filteredReturns, setFilteredReturns] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [editing, setEditing] = useState(null);
-  const [editForm, setEditForm] = useState({
-    name: '',
-    description: '',
-    purchase_price: '',
-    selling_price: '',
-    suppliers_name: '',
-    deviceIds: []
+  const [form, setForm] = useState({
+    receipt_id: "",
+    customer_address: "",
+    product_name: "",
+    device_id: "",
+    qty: "",
+    amount: "",
+    remark: "",
+    status: "",
+    returned_date: ""
   });
+  const [error, setError] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
 
-  const [showDetail, setShowDetail] = useState(null);
-  const [soldDeviceIds, setSoldDeviceIds] = useState([]);
-  const [isLoadingSoldStatus, setIsLoadingSoldStatus] = useState(false);
-  const [refreshDeviceList, setRefreshDeviceList] = useState(false);
+  const returnsRef = useRef();
 
-  // Barcode scanning states
-  const [showScanner, setShowScanner] = useState(false);
-  const [scannerTarget, setScannerTarget] = useState(null); // { modal: 'add'|'edit', productIndex: number, deviceIndex: number }
-  const [scannerError, setScannerError] = useState(null);
+  const onboardingSteps = [
+    {
+      target: '.receipt-id-query',
+      content: 'Search for sales by receipt ID to view all associated device IDs.',
+    },
+    {
+      target: '.device-id-query',
+      content: 'Alternatively, search by a specific device ID.',
+    },
+    {
+      target: '.add-return',
+      content: 'Add a new return after finding a matching sale.',
+    },
+    {
+      target: '.search-returns',
+      content: 'Search existing returns by customer, product, or status.',
+    },
+  ];
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-
-  // For modal device ID pagination
-  const [detailPage, setDetailPage] = useState(1);
-  const detailPageSize = 5;
-
-  const filteredDevices = useMemo(() => {
-    return showDetail?.deviceList || [];
-  }, [showDetail]);
-
-  const totalDetailPages = Math.ceil(filteredDevices.length / detailPageSize);
-
-  const paginatedDevices = useMemo(() => {
-    const start = (detailPage - 1) * detailPageSize;
-    const end = start + detailPageSize;
-    return filteredDevices.slice(start, end);
-  }, [filteredDevices, detailPage]);
-
-  // Validate IMEI (15-digit number)
-  const validateIMEI = (imei) => {
-    const imeiRegex = /^\d{15}$/;
-    return imeiRegex.test(imei);
-  };
-
-  // Fetch products
-  const fetchProducts = useCallback(async () => {
-    if (!storeId) return;
-    const { data, error } = await supabase
-      .from('dynamic_product')
-      .select('id, name, description, purchase_price, purchase_qty, selling_price, suppliers_name, device_id, dynamic_product_imeis, created_at')
-      .eq('store_id', storeId)
-      .order('id', { ascending: true });
-    if (error) {
-      toast.error('Failed to fetch products');
-      return;
-    }
-    const withIds = data.map(p => ({
-      ...p,
-      deviceList: p.dynamic_product_imeis ? p.dynamic_product_imeis.split(',').filter(id => id.trim()) : []
-    }));
-    setProducts(withIds);
-    setFiltered(withIds);
-  }, [storeId]);
-
-  useEffect(() => { fetchProducts(); }, [fetchProducts, refreshDeviceList]);
-
-  // Search filter
   useEffect(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) {
-      setFiltered(products);
-    } else {
-      setFiltered(
-        products.filter(p =>
-          p.name.toLowerCase().includes(q) ||
-          p.deviceList.some(id => id.toLowerCase().includes(q))
-        )
-      );
-    }
-    setCurrentPage(1);
-  }, [search, products]);
-
-  // Check which device IDs are sold
-  const checkSoldDevices = useCallback(async (deviceIds) => {
-    if (!deviceIds || deviceIds.length === 0) return [];
-    setIsLoadingSoldStatus(true);
-    try {
-      const normalizedIds = deviceIds.map(id => id.trim());
-      const { data, error } = await supabase
-        .from('dynamic_sales')
-        .select('device_id')
-        .in('device_id', normalizedIds);
-      if (error) {
-        console.error('Error fetching sold devices:', error);
-        return [];
-      }
-      const soldIds = data.map(item => item.device_id.trim());
-      setSoldDeviceIds(soldIds);
-      return soldIds;
-    } catch (error) {
-      console.error('Error:', error);
-      return [];
-    } finally {
-      setIsLoadingSoldStatus(false);
+    if (!localStorage.getItem('returnsManagerOnboardingCompleted')) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
   }, []);
 
   useEffect(() => {
-    if (showDetail && showDetail.deviceList.length > 0) {
-      checkSoldDevices(showDetail.deviceList);
-    } else {
-      setSoldDeviceIds([]);
+    if (!storeId) {
+      setError("Store ID is missing. Please log in or select a store.");
+      return;
     }
-  }, [showDetail, checkSoldDevices]);
+    supabase
+      .from("stores")
+      .select("shop_name,business_address,phone_number")
+      .eq("id", storeId)
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          setError("Failed to fetch store details: " + error.message);
+        } else {
+          setStore(data);
+        }
+      });
+  }, [storeId]);
 
-  // Handle barcode scan
-  const handleScan = (err, result) => {
-    if (result) {
-      const scannedIMEI = result.text.trim();
-      if (!validateIMEI(scannedIMEI)) {
-        toast.error('Invalid IMEI: Must be a 15-digit number');
-        return;
-      }
+  useEffect(() => {
+    if (!receiptIdQuery && !deviceIdQuery) {
+      setQueriedReceipts([]);
+      setError(null);
+      return;
+    }
 
-      if (scannerTarget) {
-        const { modal, productIndex, deviceIndex } = scannerTarget;
+    const fetchSalesAndReceipts = async () => {
+      try {
+        let saleGroupIds = [];
+        let salesData = [];
 
-        if (modal === 'add') {
-          const form = [...addForm];
-          if (form[productIndex].deviceIds.includes(scannedIMEI)) {
-            toast.error(`Device ID "${scannedIMEI}" already exists in this product`);
-            return;
+        if (receiptIdQuery) {
+          // Step 1: Fetch receipt by receipt_id
+          const { data: receiptData, error: receiptError } = await supabase
+            .from('receipts')
+            .select('id, sale_group_id, receipt_id, customer_address, product_name, phone_number, sales_qty, sales_amount')
+            .eq('store_receipt_id', storeId)
+            .eq('receipt_id', receiptIdQuery)
+            .single();
+
+          if (receiptError || !receiptData) {
+            throw new Error(`No receipt found for ID: ${receiptIdQuery}`);
           }
-          form[productIndex].deviceIds[deviceIndex] = scannedIMEI;
-          setAddForm(form);
-        } else if (modal === 'edit') {
-          if (editForm.deviceIds.some((id, i) => i !== deviceIndex && id.trim() === scannedIMEI)) {
-            toast.error(`Device ID "${scannedIMEI}" already exists in this product`);
-            return;
+
+          saleGroupIds = [receiptData.sale_group_id];
+
+          // Step 2: Fetch dynamic_sales by sale_group_id
+          const { data: sales, error: salesError } = await supabase
+            .from('dynamic_sales')
+            .select(`
+              id,
+              dynamic_product_id,
+              store_id,
+              quantity,
+              device_id,
+              unit_price,
+              amount,
+              payment_method,
+              sale_group_id,
+              dynamic_product (
+                id,
+                name,
+                dynamic_product_imeis
+              )
+            `)
+            .eq('store_id', storeId)
+            .eq('sale_group_id', receiptData.sale_group_id);
+
+          if (salesError) {
+            throw new Error("Failed to fetch sales: " + salesError.message);
           }
-          const arr = [...editForm.deviceIds];
-          arr[deviceIndex] = scannedIMEI;
-          setEditForm(prev => ({ ...prev, deviceIds: arr }));
+
+          salesData = sales;
+        } else if (deviceIdQuery) {
+          // Step 3: Fetch dynamic_sales where device_id or dynamic_product_imeis may contain the ID
+          const { data: sales, error: salesError } = await supabase
+            .from('dynamic_sales')
+            .select(`
+              id,
+              dynamic_product_id,
+              store_id,
+              quantity,
+              device_id,
+              unit_price,
+              amount,
+              payment_method,
+              sale_group_id,
+              dynamic_product (
+                id,
+                name,
+                dynamic_product_imeis
+              )
+            `)
+            .eq('store_id', storeId)
+            .or(`device_id.ilike.%${deviceIdQuery}%,dynamic_product_imeis.ilike.%${deviceIdQuery}%`);
+
+          if (salesError) {
+            throw new Error("Failed to fetch sales: " + salesError.message);
+          }
+
+          if (!sales || sales.length === 0) {
+            throw new Error(`No sales found for device ID: ${deviceIdQuery}`);
+          }
+
+          // Step 4: Filter for exact matches and generate one row per matching device ID
+          salesData = [];
+          sales.forEach(sale => {
+            const deviceIds = sale.device_id ? sale.device_id.split(',').map(id => id.trim()) : [];
+            const productImeis = sale.dynamic_product?.dynamic_product_imeis
+              ? sale.dynamic_product.dynamic_product_imeis.split(',').map(id => id.trim())
+              : [];
+            const allDeviceIds = [...new Set([...deviceIds, ...productImeis])];
+
+            // Create a row for each exact match
+            if (allDeviceIds.includes(deviceIdQuery)) {
+              salesData.push({
+                ...sale,
+                device_id: deviceIdQuery // Override to show only the queried ID
+              });
+            }
+          });
+
+          if (salesData.length === 0) {
+            throw new Error(`No exact match found for device ID: ${deviceIdQuery}`);
+          }
+
+          saleGroupIds = salesData.map(s => s.sale_group_id).filter(id => id != null);
         }
 
-        setShowScanner(false);
-        setScannerTarget(null);
-        toast.success(`Scanned IMEI: ${scannedIMEI}`);
+        // Step 5: Fetch receipts by sale_group_id
+        const { data: receiptsData, error: receiptsError } = await supabase
+          .from('receipts')
+          .select('id, sale_group_id, receipt_id, customer_address, product_name, phone_number, sales_qty, sales_amount')
+          .eq('store_receipt_id', storeId)
+          .in('sale_group_id', saleGroupIds);
+
+        if (receiptsError) {
+          throw new Error("Failed to fetch receipts: " + receiptsError.message);
+        }
+
+        // Step 6: Process sales data into rows
+        const combinedData = salesData.map(sale => {
+          const product = sale.dynamic_product;
+          const receipt = receiptsData.find(r => r.sale_group_id === sale.sale_group_id);
+          const deviceIds = deviceIdQuery ? [deviceIdQuery] : (sale.device_id?.split(',').filter(id => id.trim()) || []);
+          const quantity = deviceIdQuery ? 1 : deviceIds.length;
+          const unitPrice = sale.unit_price || sale.amount / sale.quantity;
+          const totalAmount = unitPrice * quantity;
+
+          return {
+            id: sale.id,
+            receipt_id: receipt?.id,
+            receipt_code: receipt?.receipt_id || 'Unknown',
+            customer_address: receipt?.customer_address || null,
+            product_name: product.name,
+            device_ids: deviceIds,
+            phone_number: receipt?.phone_number || null,
+            quantity: quantity,
+            unit_price: unitPrice,
+            amount: totalAmount,
+            payment_method: sale.payment_method,
+            sale_group_id: sale.sale_group_id
+          };
+        });
+
+        console.log('Queried Sales and Receipts:', combinedData);
+        setQueriedReceipts(combinedData);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        setQueriedReceipts([]);
+      }
+    };
+
+    fetchSalesAndReceipts();
+  }, [receiptIdQuery, deviceIdQuery, storeId]);
+
+  useEffect(() => {
+    if (!storeId) return;
+
+    const fetchReturns = async () => {
+      try {
+        const { data: receiptsData, error: receiptsError } = await supabase
+          .from('receipts')
+          .select('id, receipt_id, sale_group_id')
+          .eq('store_receipt_id', storeId);
+
+        if (receiptsError) {
+          throw new Error("Failed to fetch receipts: " + receiptsError.message);
+        }
+
+        const receiptIds = receiptsData.map(r => r.id);
+
+        const { data: returnsData, error: returnsError } = await supabase
+          .from('returns')
+          .select('*')
+          .in('receipt_id', receiptIds);
+
+        if (returnsError) {
+          throw new Error("Failed to fetch returns: " + returnsError.message);
+        }
+
+        const combinedReturns = returnsData.map(ret => {
+          const receipt = receiptsData.find(r => r.id === ret.receipt_id);
+          return {
+            ...ret,
+            receipt_code: receipt ? receipt.receipt_id : 'Unknown',
+            sale_group_id: receipt ? receipt.sale_group_id : null
+          };
+        });
+
+        console.log('Fetched Returns:', combinedReturns);
+        setReturns(combinedReturns || []);
+        setFilteredReturns(combinedReturns || []);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    fetchReturns();
+  }, [storeId]);
+
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    setFilteredReturns(
+      returns.filter(r => {
+        const fields = [
+          r.customer_address,
+          r.product_name,
+          r.device_id,
+          String(r.qty),
+          r.amount != null ? `₦${r.amount.toFixed(2)}` : '',
+          r.remark,
+          r.status,
+          r.returned_date,
+          r.receipt_code
+        ];
+        return fields.some(f => f?.toString().toLowerCase().includes(term));
+      })
+    );
+  }, [searchTerm, returns]);
+
+  useEffect(() => {
+    if (returnsRef.current) {
+      returnsRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [returns]);
+
+  const handleNextStep = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(onboardingStep + 1);
+    } else {
+      setShowOnboarding(false);
+      localStorage.setItem('returnsManagerOnboardingCompleted', 'true');
+    }
+  };
+
+  const handleSkipOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('returnsManagerOnboardingCompleted', 'true');
+  };
+
+  const getTooltipPosition = (target) => {
+    const element = document.querySelector(target);
+    if (!element) return { top: 0, left: 0 };
+    const rect = element.getBoundingClientRect();
+    return {
+      top: rect.bottom + window.scrollY + 10,
+      left: rect.left + window.scrollX,
+    };
+  };
+
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+
+    if (name === 'receipt_id' && value) {
+      const selectedReceipt = queriedReceipts.find(r => r.receipt_id === parseInt(value));
+      if (selectedReceipt) {
+        setForm(f => ({
+          ...f,
+          receipt_id: value,
+          customer_address: selectedReceipt.customer_address || "",
+          product_name: selectedReceipt.product_name,
+          device_id: selectedReceipt.device_ids.join(', '),
+          qty: selectedReceipt.quantity || "",
+          amount: selectedReceipt.amount || ""
+        }));
       }
     }
-    if (err && err.message !== 'No barcode or QR code found') {
-      setScannerError('Scanning error: ' + err.message);
-    }
   };
 
-  // Open scanner
-  const openScanner = (modal, productIndex, deviceIndex) => {
-    setScannerTarget({ modal, productIndex, deviceIndex });
-    setShowScanner(true);
-    setScannerError(null);
-  };
-
-  // Remove device ID from product (details modal)
-  const removeDeviceId = async (deviceId) => {
-    if (!showDetail) return;
-    if (!window.confirm(`Remove device ID ${deviceId} from ${showDetail.name}?`)) return;
-    try {
-      const updatedDeviceList = showDetail.deviceList.filter(id => id !== deviceId);
-      const { error } = await supabase
-        .from('dynamic_product')
-        .update({
-          dynamic_product_imeis: updatedDeviceList.join(',')
-        })
-        .eq('id', showDetail.id);
-      if (error) {
-        toast.error('Failed to remove device ID');
-        console.error(error);
-        return;
-      }
-      const { data: inv } = await supabase
-        .from('dynamic_inventory')
-        .select('available_qty, quantity_sold')
-        .eq('dynamic_product_id', showDetail.id)
-        .eq('store_id', storeId)
-        .maybeSingle();
-      if (inv) {
-        await supabase
-          .from('dynamic_inventory')
-          .update({
-            available_qty: Math.max(0, (inv.available_qty || 0) - 1),
-            last_updated: new Date().toISOString()
-          })
-          .eq('dynamic_product_id', showDetail.id)
-          .eq('store_id', storeId);
-      }
-      setShowDetail({
-        ...showDetail,
-        deviceList: updatedDeviceList
-      });
-      setRefreshDeviceList(prev => !prev);
-      toast.success('Device ID removed');
-    } catch (error) {
-      console.error('Error removing device ID:', error);
-      toast.error('An error occurred');
-    }
-  };
-
-  // Pagination
-  const paginated = useMemo(
-    () => filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
-    [filtered, currentPage]
-  );
-
-  // Add handlers
-  const handleAddChange = (idx, field, val) => {
-    const f = [...addForm];
-    f[idx][field] = val;
-    setAddForm(f);
-  };
-
-  const handleAddId = (pIdx, iIdx, val) => {
-    const f = [...addForm];
-    const trimmedVal = val.trim();
-    if (trimmedVal && f[pIdx].deviceIds.includes(trimmedVal)) {
-      toast.error(`Device ID "${trimmedVal}" already exists in this product`);
-      return;
-    }
-    f[pIdx].deviceIds[iIdx] = val;
-    setAddForm(f);
-  };
-
-  const addIdField = pIdx => {
-    const f = [...addForm];
-    f[pIdx].deviceIds.push('');
-    setAddForm(f);
-  };
-
-  const removeIdField = (pIdx, iIdx) => {
-    const f = [...addForm];
-    f[pIdx].deviceIds.splice(iIdx, 1);
-    setAddForm(f);
-  };
-
-  const addAnotherProduct = () => {
-    setAddForm(prev => [...prev, { name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }]);
-  };
-
-  const removeProductForm = (index) => {
-    setAddForm(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // Create products with uniqueness check
-  const createProducts = async e => {
-    e.preventDefault();
-    if (!addForm.length) {
-      toast.error('Add at least one product');
-      return;
-    }
-    for (const p of addForm) {
-      if (!p.name.trim() || p.deviceIds.filter(d => d.trim()).length === 0) {
-        toast.error('Name and at least one Device ID required');
-        return;
-      }
-      // Validate IMEIs
-      const invalidIMEIs = p.deviceIds.filter(id => id.trim() && !validateIMEI(id.trim()));
-      if (invalidIMEIs.length > 0) {
-        toast.error(`Invalid IMEIs: ${invalidIMEIs.join(', ')}. Must be 15-digit numbers.`);
-        return;
-      }
-    }
-
-    const allNewIds = addForm.flatMap(p => p.deviceIds.filter(id => id.trim()).map(id => id.trim()));
-    const uniqueNewIds = new Set(allNewIds);
-    if (uniqueNewIds.size < allNewIds.length) {
-      toast.error('Duplicate Device IDs detected within the new products');
-      return;
-    }
-
-    const { data: existingProducts, error: fetchError } = await supabase
-      .from('dynamic_product')
-      .select('id, dynamic_product_imeis')
-      .eq('store_id', storeId);
-    if (fetchError) {
-      toast.error('Failed to validate Device IDs');
-      return;
-    }
-
-    const existingIds = existingProducts
-      .flatMap(p => p.dynamic_product_imeis ? p.dynamic_product_imeis.split(',').map(id => id.trim()) : [])
-      .filter(id => id);
-    const duplicates = allNewIds.filter(id => existingIds.includes(id));
-    if (duplicates.length > 0) {
-      toast.error(`Device IDs already exist in other products: ${duplicates.join(', ')}`);
-      return;
-    }
-
-    const toInsert = addForm.map(p => ({
-      store_id: storeId,
-      name: p.name,
-      description: p.description,
-      purchase_price: parseFloat(p.purchase_price) || 0,
-      purchase_qty: parseInt(p.purchase_qty) || p.deviceIds.filter(d => d).length,
-      selling_price: parseFloat(p.selling_price) || 0,
-      suppliers_name: p.suppliers_name,
-      dynamic_product_imeis: p.deviceIds.filter(d => d.trim()).join(',')
-    }));
-    const { data: newProds, error } = await supabase.from('dynamic_product').insert(toInsert).select();
-    if (error) {
-      toast.error('Failed to add products');
-      return;
-    }
-
-    const invUpdates = newProds.map(p => ({
-      dynamic_product_id: p.id,
-      store_id: storeId,
-      available_qty: p.dynamic_product_imeis.split(',').length,
-      quantity_sold: 0,
-      last_updated: new Date().toISOString()
-    }));
-    await supabase.from('dynamic_inventory').upsert(invUpdates, { onConflict: ['dynamic_product_id', 'store_id'] });
-
-    toast.success('Products added');
-    setShowAdd(false);
-    setAddForm([{ name: '', description: '', purchase_price: '', purchase_qty: '', selling_price: '', suppliers_name: '', deviceIds: [''] }]);
-    fetchProducts();
-  };
-
-  // Enhanced Edit functionality
-  const openEdit = p => {
-    setEditing(p);
-    setEditForm({
-      name: p.name,
-      description: p.description,
-      purchase_price: p.purchase_price,
-      selling_price: p.selling_price,
-      suppliers_name: p.suppliers_name,
-      deviceIds: [...p.deviceList]
+  const openEdit = r => {
+    setEditing(r);
+    setForm({
+      receipt_id: r.receipt_id.toString(),
+      customer_address: r.customer_address || "",
+      product_name: r.product_name,
+      device_id: r.device_id || "",
+      qty: r.qty || "",
+      amount: r.amount || "",
+      remark: r.remark || "",
+      status: r.status || "",
+      returned_date: r.returned_date || ""
     });
   };
 
-  const handleEditChange = (field, value) => {
-    setEditForm(prev => ({ ...prev, [field]: value }));
+  const saveReturn = async () => {
+    if (!form.receipt_id || isNaN(parseInt(form.receipt_id))) {
+      setError("Please select a valid receipt.");
+      return;
+    }
+
+    const returnData = {
+      receipt_id: parseInt(form.receipt_id),
+      customer_address: form.customer_address,
+      product_name: form.product_name,
+      device_id: form.device_id,
+      qty: parseInt(form.qty),
+      amount: parseFloat(form.amount),
+      remark: form.remark,
+      status: form.status,
+      returned_date: form.returned_date
+    };
+
+    try {
+      if (editing && editing.id) {
+        await supabase.from("returns").update(returnData).eq("id", editing.id);
+      } else {
+        await supabase.from("returns").insert([returnData]);
+      }
+
+      setEditing(null);
+      setForm({
+        receipt_id: "",
+        customer_address: "",
+        product_name: "",
+        device_id: "",
+        qty: "",
+        amount: "",
+        remark: "",
+        status: "",
+        returned_date: ""
+      });
+      setError(null);
+
+      const { data: receiptsData, error: receiptsError } = await supabase
+        .from('receipts')
+        .select('id, receipt_id, sale_group_id')
+        .eq('store_receipt_id', storeId);
+
+      if (receiptsError) {
+        throw new Error("Failed to fetch receipts: " + receiptsError.message);
+      }
+
+      const receiptIds = receiptsData.map(r => r.id);
+
+      const { data: returnsData, error: returnsError } = await supabase
+        .from('returns')
+        .select('*')
+        .in('receipt_id', receiptIds);
+
+      if (returnsError) {
+        throw new Error("Failed to fetch updated returns: " + returnsError.message);
+      }
+
+      const combinedReturns = returnsData.map(ret => {
+        const receipt = receiptsData.find(r => r.id === ret.receipt_id);
+        return {
+          ...ret,
+          receipt_code: receipt ? receipt.receipt_id : 'Unknown',
+          sale_group_id: receipt ? receipt.sale_group_id : null
+        };
+      });
+
+      console.log('Updated Returns:', combinedReturns);
+      setReturns(combinedReturns || []);
+      setFilteredReturns(combinedReturns || []);
+    } catch (err) {
+      setError("Failed to save return: " + err.message);
+    }
   };
 
-  const handleDeviceIdChange = (idx, val) => {
-    const trimmedVal = val.trim();
-    if (trimmedVal && editForm.deviceIds.some((id, i) => i !== idx && id.trim() === trimmedVal)) {
-      toast.error(`Device ID "${trimmedVal}" already exists in this product`);
-      return;
+  const deleteReturn = async id => {
+    try {
+      await supabase.from("returns").delete().eq("id", id);
+
+      const { data: receiptsData, error: receiptsError } = await supabase
+        .from('receipts')
+        .select('id, receipt_id, sale_group_id')
+        .eq('store_receipt_id', storeId);
+
+      if (receiptsError) {
+        throw new Error("Failed to fetch receipts: " + receiptsError.message);
+      }
+
+      const receiptIds = receiptsData.map(r => r.id);
+
+      const { data: returnsData, error: returnsError } = await supabase
+        .from('returns')
+        .select('*')
+        .in('receipt_id', receiptIds);
+
+      if (returnsError) {
+        throw new Error("Failed to fetch updated returns: " + returnsError.message);
+      }
+
+      const combinedReturns = returnsData.map(ret => {
+        const receipt = receiptsData.find(r => r.id === ret.receipt_id);
+        return {
+          ...ret,
+          receipt_code: receipt ? receipt.receipt_id : 'Unknown',
+          sale_group_id: receipt ? receipt.sale_group_id : null
+        };
+      });
+
+      console.log('Updated Returns after Delete:', combinedReturns);
+      setReturns(combinedReturns || []);
+      setFilteredReturns(combinedReturns || []);
+    } catch (err) {
+      setError("Failed to delete return: " + err.message);
     }
-    const arr = [...editForm.deviceIds];
-    arr[idx] = val;
-    setEditForm(prev => ({ ...prev, deviceIds: arr }));
   };
 
-  const addDeviceId = () => {
-    setEditForm(prev => ({ ...prev, deviceIds: [...prev.deviceIds, ''] }));
-  };
-
-  const removeEditDeviceId = idx => {
-    setEditForm(prev => ({
-      ...prev,
-      deviceIds: prev.deviceIds.filter((_, i) => i !== idx)
-    }));
-  };
-
-  const saveEdit = async () => {
-    if (!editForm.name.trim()) {
-      toast.error('Product name is required');
-      return;
-    }
-
-    const cleanedDeviceIds = editForm.deviceIds
-      .filter(id => id.trim())
-      .map(id => id.trim());
-
-    if (cleanedDeviceIds.length === 0) {
-      toast.error('At least one Device ID is required');
-      return;
-    }
-
-    // Validate IMEIs
-    const invalidIMEIs = cleanedDeviceIds.filter(id => !validateIMEI(id));
-    if (invalidIMEIs.length > 0) {
-      toast.error(`Invalid IMEIs: ${invalidIMEIs.join(', ')}. Must be 15-digit numbers.`);
-      return;
-    }
-
-    const uniqueIds = new Set(cleanedDeviceIds);
-    if (uniqueIds.size < cleanedDeviceIds.length) {
-      toast.error('Duplicate Device IDs detected within this product');
-      return;
-    }
-
-    const { data: existingProducts, error: fetchError } = await supabase
-      .from('dynamic_product')
-      .select('id, dynamic_product_imeis')
-      .eq('store_id', storeId)
-      .neq('id', editing.id);
-    if (fetchError) {
-      toast.error('Failed to validate Device IDs');
-      return;
-    }
-
-    const existingIds = existingProducts
-      .flatMap(p => p.dynamic_product_imeis ? p.dynamic_product_imeis.split(',').map(id => id.trim()) : [])
-      .filter(id => id);
-    const duplicates = cleanedDeviceIds.filter(id => existingIds.includes(id));
-    if (duplicates.length > 0) {
-      toast.error(`Device IDs already exist in other products: ${duplicates.join(', ')}`);
-      return;
-    }
-
-    const { error: prodErr } = await supabase
-      .from('dynamic_product')
-      .update({
-        name: editForm.name,
-        description: editForm.description,
-        purchase_price: parseFloat(editForm.purchase_price) || 0,
-        purchase_qty: cleanedDeviceIds.length,
-        selling_price: parseFloat(editForm.selling_price) || 0,
-        suppliers_name: editForm.suppliers_name,
-        dynamic_product_imeis: cleanedDeviceIds.join(',')
-      })
-      .eq('id', editing.id);
-
-    if (prodErr) {
-      console.error(prodErr);
-      toast.error('Failed to update product');
-      return;
-    }
-
-    const { data: inv } = await supabase
-      .from('dynamic_inventory')
-      .select('available_qty, quantity_sold')
-      .eq('dynamic_product_id', editing.id)
-      .eq('store_id', storeId)
-      .maybeSingle();
-
-    const newAvail = cleanedDeviceIds.length;
-
-    await supabase
-      .from('dynamic_inventory')
-      .upsert({
-        dynamic_product_id: editing.id,
-        store_id: storeId,
-        available_qty: newAvail,
-        quantity_sold: inv?.quantity_sold || 0,
-        last_updated: new Date().toISOString()
-      }, { onConflict: ['dynamic_product_id', 'store_id'] });
-
-    toast.success('Product updated successfully');
-    setEditing(null);
-    fetchProducts();
-  };
-
-  // Delete
-  const deleteProduct = async p => {
-    if (!window.confirm(`Delete ${p.name}?`)) return;
-    await supabase.from('dynamic_product').delete().eq('id', p.id);
-    await supabase.from('dynamic_inventory').delete()
-      .eq('dynamic_product_id', p.id)
-      .eq('store_id', storeId);
-    toast.success('Deleted');
-    fetchProducts();
-  };
+  if (!storeId) {
+    return <div className="p-4 text-center text-red-500">Store ID is missing. Please log in or select a store.</div>;
+  }
 
   return (
-<div className="p-4 mt-4 dark:bg-gray-900 dark:text-white mt-24">
-      <ToastContainer />
-      <div className="flex gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Search by name or Device ID..."
-          className="flex-1 p-2 border rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded text-sm sm:text-base hover:bg-indigo-700 transition-all"
-        >
-          <FaPlus className="text-sm sm:text-base" />
-          <span className="hidden sm:inline">Add</span>
-        </button>
-      </div>
-
-      {showAdd && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <form
-            onSubmit={createProducts}
-            className="bg-white dark:bg-gray-900 max-w-xl w-full max-h-[80vh] overflow-y-auto p-6 rounded-lg shadow-lg space-y-6"
-          >
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">Add Products</h2>
-
-            {addForm.map((p, pi) => (
-              <div key={pi} className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg relative shadow-sm bg-gray-50 dark:bg-gray-800">
-                {addForm.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeProductForm(pi)}
-                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-lg"
-                    title="Remove this product"
-                  >
-                    ×
-                  </button>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Product Name"
-                    value={p.name}
-                    onChange={e => handleAddChange(pi, 'name', e.target.value)}
-                    className="p-2 border rounded w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Supplier Name"
-                    value={p.suppliers_name}
-                    onChange={e => handleAddChange(pi, 'suppliers_name', e.target.value)}
-                    className="p-2 border rounded w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                  <textarea
-                    placeholder="Description"
-                    value={p.description}
-                    onChange={e => handleAddChange(pi, 'description', e.target.value)}
-                    className="p-2 border rounded w-full md:col-span-2 resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    rows={3}
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Purchase Price"
-                    value={p.purchase_price}
-                    onChange={e => handleAddChange(pi, 'purchase_price', e.target.value)}
-                    className="p-2 border rounded w-full md:col-span-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Selling Price"
-                    value={p.selling_price}
-                    onChange={e => handleAddChange(pi, 'selling_price', e.target.value)}
-                    className="p-2 border rounded w-full md:col-span-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Device IDs</label>
-                  {p.deviceIds.map((id, i) => (
-                    <div key={i} className="flex gap-2 mt-2 items-center">
-                      <input
-                        value={id}
-                        onChange={e => handleAddId(pi, i, e.target.value)}
-                        placeholder="Device ID"
-                        className={`flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                          id.trim() && p.deviceIds.some((otherId, j) => j !== i && otherId.trim() === id.trim())
-                            ? 'border-red-500'
-                            : ''
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => openScanner('add', pi, i)}
-                        className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                        title="Scan Barcode"
-                      >
-                        <FaCamera />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeIdField(pi, i)}
-                        className="text-red-500 hover:text-red-700"
-                        title="Remove ID"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => addIdField(pi)}
-                    className="mt-2 text-indigo-600 hover:underline text-sm dark:text-indigo-400"
-                  >
-                    + Add Device ID
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={addAnotherProduct}
-                className="text-indigo-600 hover:underline text-sm dark:text-indigo-400"
-              >
-                + Add Another Product
-              </button>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAdd(false)}
-                  className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </form>
+    <div className="p-0 space-y-6 dark:bg-gray-900 dark:text-white ">
+      {error && (
+        <div className="p-4 mb-4 bg-red-100 text-red-700 rounded">
+          {error}
         </div>
       )}
 
-      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded shadow">
-        <table className="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
-          <thead className="bg-gray-100 dark:bg-gray-700 text-xs uppercase text-gray-600 dark:text-gray-400">
-            <tr>
-              <th className="px-4 py-3 whitespace-nowrap">Name</th>
-              <th className="px-4 py-3 whitespace-nowrap">Description</th>
-              <th className="px-4 py-3 whitespace-nowrap">Purchase</th>
-              <th className="px-4 py-3 whitespace-nowrap">Qty</th>
-              <th className="px-4 py-3 whitespace-nowrap">Selling</th>
-              <th className="px-4 py-3 whitespace-nowrap">Supplier</th>
-              <th className="px-4 py-3 whitespace-nowrap">Product ID</th>
-              <th className="px-4 py-3 whitespace-nowrap">Date</th>
-              <th className="px-4 py-3 whitespace-nowrap">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {paginated.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                <td className="px-4 py-3 whitespace-nowrap">{p.name}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{p.description}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{p.purchase_price?.toFixed(2)}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{p.deviceList.length}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{p.selling_price?.toFixed(2)}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{p.suppliers_name}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <button
-                    onClick={() => setShowDetail(p)}
-                    className="text-indigo-600 hover:underline focus:outline-none dark:text-indigo-400"
-                  >
-                    {p.device_id || 'View'}
-                  </button>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {new Date(p.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => openEdit(p)}
-                      className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
-                      title="Edit"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      onClick={() => deleteProduct(p)}
-                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                      title="Delete"
-                    >
-                      <FaTrashAlt />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Returns by Receipt or Device ID</h2>
 
-      <div className="flex justify-center gap-2 mt-4">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage(cp => cp - 1)}
-          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-        >
-          Prev
-        </button>
-        <span className="px-3 py-1">{currentPage} / {totalPages || 1}</span>
-        <button
-          disabled={currentPage === totalPages || totalPages === 0}
-          onClick={() => setCurrentPage(cp => cp + 1)}
-          className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-        >
-          Next
-        </button>
-      </div>
+        <div className="w-full mb-4 flex flex-col sm:flex-row gap-4">
+          <input
+            type="text"
+            value={receiptIdQuery}
+            onChange={e => setReceiptIdQuery(e.target.value)}
+            placeholder="Enter Receipt ID (e.g., RCPT-123-456789)"
+            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white receipt-id-query"
+          />
+          <input
+            type="text"
+            value={deviceIdQuery}
+            onChange={e => setDeviceIdQuery(e.target.value)}
+            placeholder="Enter Device ID"
+            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white device-id-query"
+          />
+        </div>
 
-      {showDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded max-w-xl w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">{showDetail.name} Device IDs</h2>
-
-            {isLoadingSoldStatus ? (
-              <div className="flex justify-center py-4">
-                <p className="text-gray-600 dark:text-gray-400">Loading device status...</p>
-              </div>
-            ) : (
-              <div>
-                <ul className="mt-2 divide-y divide-gray-200 dark:divide-gray-700">
-                  {paginatedDevices.map((id, i) => {
-                    const q = search.trim().toLowerCase();
-                    const match = id.toLowerCase().includes(q);
-                    const isSold = soldDeviceIds.includes(id);
-                    return (
-                      <li key={i} className={`py-2 px-1 flex items-center justify-between ${match ? 'bg-yellow-50 dark:bg-yellow-800' : ''}`}>
-                        <div className="flex items-center">
-                          <span className={match ? 'font-semibold' : ''}>
-                            {id}
-                          </span>
-                          {isSold && (
-                            <span className="ml-2 px-2 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full dark:bg-red-900 dark:text-red-300">
-                              SOLD
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => removeDeviceId(id)}
-                          className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                          title="Remove this device ID"
-                        >
-                          <FaTrashAlt size={14} />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                {totalDetailPages > 1 && (
-                  <div className="flex justify-between items-center mt-4 text-sm text-gray-700 dark:text-gray-300">
-                    <button
-                      onClick={() => setDetailPage(p => Math.max(p - 1, 1))}
-                      disabled={detailPage === 1}
-                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-                    >
-                      Prev
-                    </button>
-                    <span>
-                      Page {detailPage} of {totalDetailPages}
-                    </span>
-                    <button
-                      onClick={() => setDetailPage(p => Math.min(p + 1, totalDetailPages))}
-                      disabled={detailPage === totalDetailPages}
-                      className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setShowDetail(null)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-              >
-                Close
-              </button>
+        {queriedReceipts.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-md font-semibold mb-2">Matching Sales</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border rounded-lg">
+                <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
+                  <tr>
+                    <th className="text-left px-4 py-2 border-b">Receipt ID</th>
+                    <th className="text-left px-4 py-2 border-b">Customer Address</th>
+                    <th className="text-left px-4 py-2 border-b">Product</th>
+                    <th className="text-left px-4 py-2 border-b">Device ID</th>
+                    <th className="text-left px-4 py-2 border-b">Phone Number</th>
+                    <th className="text-left px-4 py-2 border-b">Qty</th>
+                    <th className="text-left px-4 py-2 border-b">Unit Price</th>
+                    <th className="text-left px-4 py-2 border-b">Amount</th>
+                    <th className="text-left px-4 py-2 border-b">Payment Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queriedReceipts.map((r, index) => (
+                    <tr key={`${r.sale_group_id}-${index}`} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
+                      <td className="px-4 py-2 border-b truncate">{r.receipt_code}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.customer_address || '-'}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.product_name}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.device_ids[0]}</td>
+                      <td className="px-4 py-2 border-b truncate">{r.phone_number || '-'}</td>
+                      <td className="px-4 py-2 border-b">{r.quantity}</td>
+                      <td className="px-4 py-2 border-b">₦{r.unit_price.toFixed(2)}</td>
+                      <td className="px-4 py-2 border-b">₦{r.amount.toFixed(2)}</td>
+                      <td className="px-4 py-2 border-b">{r.payment_method}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
+        )}
+
+        <div className="mb-4">
+          <button
+            onClick={() => setEditing({})}
+            className={`px-4 py-2 rounded text-white add-return ${queriedReceipts.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600'}`}
+            disabled={queriedReceipts.length === 0}
+          >
+            Add Return
+          </button>
         </div>
-      )}
 
-      {editing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded max-w-xl w-full max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Product</h2>
+        <div className="w-full mb-4">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search returns..."
+            className="flex-1 border px-4 py-2 rounded dark:bg-gray-900 dark:text-white search-returns"
+          />
+        </div>
 
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Product Information</h3>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Name</label>
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={e => handleEditChange('name', e.target.value)}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                  <textarea
-                    value={editForm.description}
-                    onChange={e => handleEditChange('description', e.target.value)}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={editForm.purchase_price}
-                      onChange={e => handleEditChange('purchase_price', e.target.value)}
-                      className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Selling Price</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={editForm.selling_price}
-                      onChange={e => handleEditChange('selling_price', e.target.value)}
-                      className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supplier Name</label>
-                  <input
-                    type="text"
-                    value={editForm.suppliers_name}
-                    onChange={e => handleEditChange('suppliers_name', e.target.value)}
-                    className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Device IDs</h3>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Device IDs</label>
-                  {editForm.deviceIds.map((id, i) => (
-                    <div key={i} className="flex gap-2 mt-2 items-center">
-                      <input
-                        value={id}
-                        onChange={e => handleDeviceIdChange(i, e.target.value)}
-                        placeholder="Device ID"
-                        className={`flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                          id.trim() && editForm.deviceIds.some((otherId, j) => j !== i && otherId.trim() === id.trim())
-                            ? 'border-red-500'
-                            : ''
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => openScanner('edit', 0, i)}
-                        className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                        title="Scan Barcode"
-                      >
-                        <FaCamera />
+        <div ref={returnsRef} className="overflow-x-auto">
+          <table className="min-w-full text-sm border rounded-lg">
+            <thead className="bg-gray-100 dark:bg-gray-900 dark:text-indigo-600">
+              <tr>
+                <th className="text-left px-4 py-2 border-b">Customer Address</th>
+                <th className="text-left px-4 py-2 border-b">Product</th>
+                <th className="text-left px-4 py-2 border-b">Device ID</th>
+                <th className="text-left px-4 py-2 border-b">Qty</th>
+                <th className="text-left px-4 py-2 border-b">Amount</th>
+                <th className="text-left px-4 py-2 border-b">Remark</th>
+                <th className="text-left px-4 py-2 border-b">Status</th>
+                <th className="text-left px-4 py-2 border-b">Returned Date</th>
+                <th className="text-left px-4 py-2 border-b">Receipt ID</th>
+                <th className="text-left px-4 py-2 border-b">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReturns.map((r, index) => (
+                <tr key={r.id} className="hover:bg-gray-100 dark:bg-gray-900 dark:text-white">
+                  <td className="px-4 py-2 border-b truncate">{r.customer_address || '-'}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.product_name}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.device_id || '-'}</td>
+                  <td className="px-4 py-2 border-b">{r.qty}</td>
+                  <td className="px-4 py-2 border-b">₦{r.amount.toFixed(2)}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.remark || '-'}</td>
+                  <td className="px-4 py-2 border-b">{r.status}</td>
+                  <td className="px-4 py-2 border-b">{r.returned_date}</td>
+                  <td className="px-4 py-2 border-b truncate">{r.receipt_code}</td>
+                  <td className="px-4 py-2 border-b">
+                    <div className="flex gap-3">
+                      <button onClick={() => openEdit(r)} className={`hover:text-indigo-600 dark:bg-gray-900 dark:text-white edit-return-${index}`}>
+                        <FaEdit />
                       </button>
                       <button
-                        type="button"
-                        onClick={() => removeEditDeviceId(i)}
-                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        onClick={() => deleteReturn(r.id)}
+                        className="hover:text-red-600 dark:bg-gray-900 dark:text-white"
                       >
-                        ×
+                        <FaTrashAlt />
                       </button>
                     </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredReturns.length === 0 && (
+                <tr>
+                  <td colSpan="10" className="text-center text-gray-500 py-4 dark:bg-gray-900 dark:text-white">
+                    No returns found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {editing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-auto mt-24">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-full sm:max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-6 dark:bg-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold text-center">{editing.id ? 'Edit Return' : 'Add Return'}</h2>
+
+            <div className="space-y-4">
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Receipt</span>
+                <select
+                  name="receipt_id"
+                  value={form.receipt_id}
+                  onChange={handleChange}
+                  className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
+                  required
+                >
+                  <option value="">Select Receipt</option>
+                  {queriedReceipts.map(r => (
+                    <option key={r.receipt_id} value={r.receipt_id}>
+                      {r.receipt_code} - {r.product_name} ({r.customer_address || 'No Address'})
+                    </option>
                   ))}
-                  <button
-                    type="button"
-                    onClick={addDeviceId}
-                    className="mt-2 text-indigo-600 hover:underline text-sm dark:text-indigo-400"
-                  >
-                    + Add Device ID
-                  </button>
-                </div>
-              </div>
+                </select>
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Customer Address</span>
+                <input
+                  name="customer_address"
+                  value={form.customer_address}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Product</span>
+                <input
+                  name="product_name"
+                  value={form.product_name}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Device ID</span>
+                <input
+                  name="device_id"
+                  value={form.device_id}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Quantity</span>
+                <input
+                  name="qty"
+                  value={form.qty}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block w-full">
+                <span className="font-semibold block mb-1">Amount</span>
+                <input
+                  name="amount"
+                  value={form.amount}
+                  readOnly
+                  className="border p-2 w-full rounded bg-gray-100 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              {['remark', 'status', 'returned_date'].map(field => (
+                <label key={field} className="block w-full">
+                  <span className="font-semibold capitalize block mb-1">
+                    {field.replace('_', ' ')}
+                  </span>
+                  <input
+                    type={field === 'returned_date' ? 'date' : 'text'}
+                    name={field}
+                    value={form[field]}
+                    onChange={handleChange}
+                    className="border p-2 w-full rounded dark:bg-gray-900 dark:text-white"
+                    required={field !== 'remark'}
+                  />
+                </label>
+              ))}
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-              >
+              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-500 text-white rounded">
                 Cancel
               </button>
               <button
-                type="button"
-                onClick={saveEdit}
-                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                onClick={saveReturn}
+                className={`px-4 py-2 rounded text-white ${form.receipt_id && !isNaN(parseInt(form.receipt_id)) ? 'bg-indigo-600' : 'bg-gray-400 cursor-not-allowed'}`}
+                disabled={!form.receipt_id || isNaN(parseInt(form.receipt_id))}
               >
-                Save Changes
+                Save
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {showScanner && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded max-w-lg w-full">
-            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Scan IMEI Barcode</h2>
-            {scannerError ? (
-              <div className="text-red-600 dark:text-red-400 mb-4">{scannerError}</div>
-            ) : (
-              <div className="relative w-full h-64">
-                <BarcodeScannerComponent
-                  width="100%"
-                  height="100%"
-                  onUpdate={handleScan}
-                  facingMode="environment"
-                  constraints={{ facingMode: 'environment' }}
-                />
-              </div>
-            )}
-            <div className="flex justify-end gap-3 mt-4">
+      {showOnboarding && onboardingStep < onboardingSteps.length && (
+        <motion.div
+          className="fixed z-[9999] bg-indigo-600 dark:bg-gray-900 border rounded-lg shadow-lg p-4 w-[90vw] max-w-sm sm:max-w-xs overflow-auto"
+          style={{
+            ...getTooltipPosition(onboardingSteps[onboardingStep].target),
+            maxHeight: '90vh',
+          }}
+          variants={tooltipVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <p className="text-sm text-white dark:text-gray-300 mb-2">
+            {onboardingSteps[onboardingStep].content}
+          </p>
+          <div className="flex justify-between items-center flex-wrap gap-y-2">
+            <span className="text-sm text-gray-200">
+              Step {onboardingStep + 1} of {onboardingSteps.length}
+            </span>
+            <div className="space-x-2">
               <button
-                onClick={() => {
-                  setShowScanner(false);
-                  setScannerTarget(null);
-                  setScannerError(null);
-                }}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                onClick={handleSkipOnboarding}
+                className="text-sm text-gray-300 hover:text-gray-800 dark:text-gray-300"
               >
-                Cancel
+                Skip
+              </button>
+              <button
+                onClick={handleNextStep}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded"
+              >
+                {onboardingStep + 1 === onboardingSteps.length ? 'Finish' : 'Next'}
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );
 }
-
-export default DynamicProducts;
