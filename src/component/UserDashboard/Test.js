@@ -488,7 +488,7 @@ function DynamicProducts() {
   };
 
   return (
-    <div className="p-4 mt-4 dark:bg-gray-900 dark:text-white mt-48">
+<div className="p-4 mt-4 dark:bg-gray-900 dark:text-white mt-24">
       <ToastContainer />
       <div className="flex gap-2 mb-4">
         <input
