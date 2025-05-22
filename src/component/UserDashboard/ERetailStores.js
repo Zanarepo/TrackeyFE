@@ -25,10 +25,12 @@ import ExpenseTracker   from './ExpenseTracker';
 //import DynamicDebtTracker      from '../VariexContents/DynamicDebtTracker';
 import Customers        from './Customers';
 //import VariexFeature  from '../DynamicSales/VariexFeature';
-import Receipts from '../VariexContents/Receipts'
-import ReturnedItems from '../VariexContents/ReturnedItems'
+//import Receipts from '../VariexContents/Receipts'
+//import ReturnedItems from '../VariexContents/ReturnedItems'
 import DebtTracker from './DebtTracker'
 import DeviceDynamicSales from '../DynamicSales/DeviceDynamicSales';
+import DynamicReceipts from '../VariexContents/DynamicReceipts';
+import DynamicReturnedItems from '../VariexContents/DynamicReturnedItems';
 
 
 
@@ -73,7 +75,7 @@ const tools = [
     label: 'Sales Receipts',
     icon: <FaReceipt className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Monitor store expenses.',
-    component: <Receipts />,
+    component: <DynamicReceipts />,
   },
 
 
@@ -82,7 +84,7 @@ const tools = [
     label: ' Returned Items Tracker',
     icon: < FaUndoAlt className="text-5xl sm:text-6xl text-indigo-600" />,
     desc: 'Track returned items from customers.',
-    component: <ReturnedItems/>,
+    component: <DynamicReturnedItems/>,
   },
 
 
